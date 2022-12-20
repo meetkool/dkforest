@@ -1,0 +1,104 @@
+{{ define "base" }}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="/public/img/favicon.ico?v={{ .VERSION }}" rel="icon" type="image/x-icon" />
+    <meta charset="UTF-8">
+    <title>{{ block "title" . }}DarkForest{{ end }}</title>
+    {{ block "extra-head" . }}{{ end }}
+    <link rel="stylesheet" type="text/css" href="/public/css/bootstrap.min.css?v={{ .VERSION }}" />
+    <link rel="stylesheet" type="text/css" href="/public/css/style.css?v={{ .VERSION }}" />
+    {{ block "sse" . }}
+    {{ end }}
+</head>
+<body>
+
+
+{{ block "navbar" . }}
+    <nav style="padding: 0px 8px 0px 0px;" class="navbar navbar-expand-sm navbar-dark bg-dark{{ block "nav-mb" . }} mb-3{{ end }}">
+        <a style="padding: 0px 0px;"  class="navbar-brand" href="/">
+            {{ if .AuthUser }}
+                {{ if eq .AuthUser.Theme 1 }}
+                    <img src="/public/img/logo_christmas.png" alt="logo" />
+                {{ else }}
+                    <img src="/public/img/logo.png" alt="logo" />
+                {{ end }}
+            {{ else }}
+                <img src="/public/img/logo.png" alt="logo" />
+            {{ end }}
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="container-fluid">
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                {{ block "left-menu" . }}
+                    <ul class="navbar-nav mr-auto">
+                        {{ if .AuthUser }}
+                            <li class="nav-item"><a class="nav-link" href="/">{{ t "Home" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/news">{{ t "News" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/chat">{{ t "Chat" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/forum">{{ t "Forum" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/links">{{ t "Links" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/chess">{{ t "Chess" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/vip">{{ t "VIP" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/club">{{ t "Club" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="http://yylovpz7taca7jfrub3wltxabzzjp34fngj5lpwl6eo47ekt5cxs6mid.onion" rel="noopener noreferrer" target="_blank">{{ t "Git" . }}</a></li>
+                        {{ end }}
+                    </ul>
+                {{ end }}
+
+                <div class="navbar-right">
+                    <ul class="navbar-nav mr-auto">
+                        {{ if .AuthUser }}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#">{{ .AuthUser.Username }}</a>
+                                <div class="dropdown-menu dropdown-menu-right dropdown-content">
+                                    <a class="dropdown-item" href="/u/{{ .AuthUser.Username }}">{{ t "Public profile" . }}</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="/settings/account">{{ t "Settings" . }}</a>
+                                    {{ if .AuthUser.IsAdmin }}
+                                        <a class="dropdown-item" href="/admin">{{ t "Admin" . }}</a>
+                                    {{ end }}
+                                    <div class="dropdown-divider"></div>
+                                    <form action="/logout" method="post">
+                                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                                        <button type="submit" class="dropdown-item" role="link" style="cursor: pointer;">{{ t "Sign out" . }}</button>
+                                    </form>
+                                    {{- /*
+                                        {{ if not .AuthUser.IsHellbanned }}
+                                            <form action="/logout" method="post">
+                                                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                                                <button type="submit" class="dropdown-item" role="link" style="cursor: pointer;">{{ t "Sign out" . }}</button>
+                                            </form>
+                                        {{ else }}
+                                            <button type="button" class="dropdown-item" role="link" style="cursor: pointer;">{{ t "Sign out" . }}</button>
+                                        {{ end }}
+                                    */ -}}
+                                </div>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/settings/inbox">
+                                    {{ if gt .InboxCount 0 }}
+                                        <span class="badge badge-danger">{{ .InboxCount }}</span>
+                                    {{ else }}
+                                        <span class="badge badge-secondary">{{ .InboxCount }}</span>
+                                    {{ end }}
+                                </a>
+                            </li>
+                        {{ else }}
+                            <li class="nav-item"><a class="nav-link" href="/login">{{ t "Login" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/signup">{{ t "Register" . }}</a></li>
+                        {{ end }}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+{{ end }}
+
+
+{{ block "content" . }}{{ end }}
+
+</body>
+</html>{{ end }}

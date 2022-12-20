@@ -1,0 +1,51 @@
+{{ define "extra-head" }}
+<style>
+    textarea {
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: scroll;
+    }
+</style>
+{{ end }}
+
+{{ define "navbar" }}&nbsp;{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <div class="row">
+        <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-6 offset-xl-3">
+            {{ if .Data.Error }}
+                <div class="alert alert-danger">{{ .Data.Error }}</div>
+            {{ end }}
+            <div class="card mb-3">
+                <div class="card-header">
+                    {{ t "PGP public key (step 1)" . }}
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                        <input type="hidden" name="formName" value="pgp_step1" />
+                        <div class="form-group">
+            <!--                <label for="pgp_public_key">{{ t "PGP public key" . }}</label>-->
+                            <textarea name="pgp_public_key" id="pgp_public_key" rows="10" class="form-control{{ if .Data.ErrorPGPPublicKey }} is-invalid{{ end }}" style="font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;"{{ if .Data.ErrorPGPPublicKey }} autofocus{{ end }}>{{ .Data.PGPPublicKey }}</textarea>
+                            {{ if .Data.ErrorPGPPublicKey }}
+                                <div class="invalid-feedback">{{ .Data.ErrorPGPPublicKey }}</div>
+                            {{ end }}
+                        </div>
+                        <div class="form-group">
+                            <input id="gpg_mode_decrypt" name="gpg_mode" value="0" type="radio" checked /><label for="gpg_mode_decrypt">Decrypt code</label>
+                            <input id="gpg_mode_sign" name="gpg_mode" value="1" type="radio" /><label for="gpg_mode_sign">Sign message</label>
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" value="{{ t "Use PGP public key" . }}" class="btn btn-primary" />
+                            <a href="/settings/pgp" class="btn btn-secondary">{{ t "Cancel" . }}</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ end }}

@@ -1,0 +1,25 @@
+{{ define "sub-content" }}
+    <h3>Sessions <small>({{ len .Data.Sessions }})</small></h3>
+    {{ range .Data.Sessions }}
+        <div class="card mb-3">
+            <div class="card-body">
+                {{ t "Created at" $ }}: {{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}<br />
+                {{ t "Expires at" $ }}: {{ .ExpiresAt.Format "Jan 02, 2006 15:04:05" }}<br />
+                {{ if .CurrentSession }}
+                    {{ t "Your current session" $ }}
+                    <form method="post" class="mt-3">
+                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                        <input type="hidden" name="formName" value="revoke_all_other_sessions" />
+                        <button type="submit" class="btn btn-danger btn-sm">{{ t "Revoke all other sessions" $ }}</button>
+                    </form>
+                {{ else }}
+                    <form method="post">
+                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                        <input type="hidden" name="sessionToken" value="{{ .Token }}" />
+                        <button type="submit" class="btn btn-danger btn-sm">{{ t "Revoke" $ }}</button>
+                    </form>
+                {{ end }}
+            </div>
+        </div>
+    {{ end }}
+{{ end }}

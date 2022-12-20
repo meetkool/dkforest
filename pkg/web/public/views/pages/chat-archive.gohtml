@@ -1,0 +1,161 @@
+{{ define "extra-head" }}
+<style>
+    .mod-btn {
+        width: 16px; height: 16px;
+        margin: 0; padding: 0;
+        border: 1px solid gray;
+        display: inline;
+        text-align: center;
+        vertical-align: middle;
+        user-select: none;
+        background-color: #444;
+        color: #ea2a2a;
+        -webkit-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+        -moz-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+        -webkit-border-radius: 3px;
+        -moz-border-radius: 3px;
+    }
+    .mod-btn:hover {
+        background-color: #222;
+    }
+    .delete_msg_btn {
+        font-size: 15px;
+        line-height: 1;
+    }
+    .delete_msg_btn::after { content: "×"; }
+    .hb_btn {
+        font-size: 10px;
+        line-height: 1.4;
+    }
+    .hb_btn::after { content: "hb"; }
+    .k_btn {
+        font-size: 10px;
+        line-height: 1.4;
+    }
+    .k_btn::after { content: "k"; }
+
+    :target {
+        -webkit-animation: target-fade 3s 1;
+        -moz-animation: target-fade 3s 1;
+    }
+
+    @-webkit-keyframes target-fade {
+        0% { background-color: rgba(255,213,0,0.5); }
+        100% { background-color: rgba(0,0,0,0); }
+    }
+
+    @-moz-keyframes target-fade {
+        0% { background-color: rgba(255,213,0,0.5); }
+        100% { background-color: rgba(0,0,0,0); }
+    }
+    .sysmsg { color: #fff; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+    small { font-size: 80%; font-weight: 400; }
+    .msg p:first-of-type { display: inline; }
+    strong { font-weight: bold; }
+    em { font-style: italic; }
+    ul { list-style-type: disc; margin: 0 0 0 15px; padding: 0; margin-bottom: 0 !important; }
+    pre { border: 1px solid #2b442b; padding: 2px; margin: 2px 0; max-height: 300px; overflow: auto; background-color: rgba(39,40,34,0.6) !important; }
+    code {  border: 1px solid #2b442b; color: #f92672; padding: 0 2px; margin: 0px 0; background-color: rgba(39,40,34,0.6) !important; }
+</style>
+{{ end }}
+
+{{ define "title" }}dkf - #{{ .Data.Room.Name }} archive{{ end }}
+
+{{ define "content" }}
+
+<div class="container-fluid">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/chat/{{ .Data.Room.Name }}">{{ .Data.Room.Name }}</a></li>
+            <li class="breadcrumb-item active">{{ t "Archive" . }}</li>
+        </ol>
+    </nav>
+
+    <div class="mb-3">
+        {{ range .Data.Messages }}
+            {{ if (.UserCanSee $.AuthUser) }}
+                <div class="msg" style="border-bottom: 1px solid #444; color: #888; position: relative;{{ if and (or .User.IsHellbanned .IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7);{{ end }}" id="{{ .UUID }}">
+                    {{ if (.UserCanDelete $.AuthUser) }}
+                        {{ if not .TooOldToDelete }}
+                            <form method="post" action="/api/v1/chat/messages/delete/{{ .UUID }}" style="display: inline;">
+                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                <button class="mod-btn delete_msg_btn" title="delete"></button>
+                            </form>
+                        {{ else if or (and $.AuthUser.IsModerator .TooOldToDelete (ne .UserID $.AuthUser.ID)) $.AuthUser.IsAdmin (and .Room.OwnerUserID (eq (derefUserID .Room.OwnerUserID) $.AuthUser.ID)) }}
+                            <form method="post" action="/api/v1/chat/messages/delete/{{ .UUID }}" style="display: inline;">
+                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                <button class="mod-btn delete_msg_btn" style="color: orange;" title="delete"></button>
+                            </form>
+                        {{ else if $.AuthUser.IsModerator }}
+                            <div style="display: inline-block; width: 16px;"></div>
+                        {{ else }}
+                            <div style="display: inline-block; width: 16px;"></div>
+                        {{ end }}
+                        {{ if $.AuthUser.IsModerator }}
+                            {{ if ne .UserID $.AuthUser.ID }}
+                                <form method="post" action="/api/v1/users/{{ .UserID }}/toggle-hellban" style="display: inline;">
+                                    <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                    <button class="mod-btn hb_btn" style="color: orange; {{ if .User.IsHellbanned }}text-decoration: line-through;{{ end }}" title="hellban"></button>
+                                </form>
+                                <form method="post" action="/api/v1/users/{{ .UserID }}/kick" style="display: inline;">
+                                    <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                    <button class="mod-btn k_btn" style="color: orange;" title="kick"></button>
+                                </form>
+                            {{ else }}
+                                <div style="display: inline-block; width: 36px;"></div>
+                            {{ end }}
+                        {{ end }}
+                    {{ else }}
+                        {{ if and $.AuthUser.IsModerator }}
+                            <div style="display: inline-block; width: 56px;"></div>
+                        {{ else }}
+                            <div style="display: inline-block; width: 16px;"></div>
+                        {{ end }}
+                    {{ end }}
+                    {{- if ne $.Data.DateFormat "" -}}
+                        <a style="color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px;" href="#{{ .UUID }}" title="{{ .CreatedAt.Format "01-02 15:04:05" }}">{{ .CreatedAt.Format $.Data.DateFormat }}</a>&nbsp;
+                    {{- end -}}
+                    {{- if and $.AuthUser.CanSeeHB (or .IsHellbanned .User.IsHellbanned) (not .ToUserID) -}}
+                        -&nbsp;
+                    {{- else if and .ToUserID (ne .ToUser.ID $.AuthUser.ID) -}}
+                        <a href="/u/{{ .ToUser.Username }}" target="_blank" style="color: #888;">-</a>&nbsp;
+                    {{- else -}}
+                        <a href="/u/{{ .User.Username }}" target="_blank" style="color: #888;">-</a>&nbsp;
+                    {{- end -}}
+                    {{ if .ToUserID }}
+                        [<span {{ .User.GenerateChatStyle | attr }}>{{ .User.Username }}</span> → <span {{ .ToUser.GenerateChatStyle | attr }}>{{ .ToUser.Username }}</span>] -
+                    {{ else if .System }}
+                    {{- else if .IsMe -}}
+                    {{ else }}
+                        {{- if .Moderators -}}<span class="sysmsg">[M]</span>&nbsp;{{- end -}}
+                        <span {{ .User.GenerateChatStyle | attr }}>{{ .User.Username }}</span> -
+                    {{ end }}
+                    {{ if .System }}
+                        <span style="color: #fff; font-family: 'Courier New', Courier, monospace; font-size: 14px;">{{ .Message | safe }}</span>
+                    {{ else }}
+                        {{- if .IsMe -}}
+                            {{- if .Moderators -}}<span class="sysmsg">[M]</span>&nbsp;{{- end -}}
+                            <span style="overflow-wrap: break-word;"><span {{ .User.GenerateChatStyle | attr }}>
+                                    {{ .User.Username }}
+                                    {{ .TrimMe | safe }}
+                                </span>
+                            </span>
+                        {{- else -}}
+                            <span {{ .User.GenerateChatStyle | attr }}><span style="overflow-wrap: break-word;">{{ .Message | safe }}</span></span>
+                        {{- end -}}
+                    {{ end }}
+                </div>
+            {{ end }}
+        {{ else }}
+            <div><em>No message yet</em></div>
+        {{ end }}
+    </div>
+
+    <div class="mb-5">
+        <a href="?p={{ add .Data.CurrentPage -1 }}" class="btn btn-light{{ if le .Data.CurrentPage 1 }} disabled{{ end }}">&laquo; {{ t "Prev" . }}</a>
+        <a href="?p={{ add .Data.CurrentPage 1 }}" class="btn btn-light{{ if eq .Data.CurrentPage .Data.MaxPage }} disabled{{ end }}">{{ t "Next" . }} &raquo;</a>
+    </div>
+</div>
+
+{{ end }}

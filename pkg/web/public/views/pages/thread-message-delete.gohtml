@@ -1,0 +1,17 @@
+{{ define "content" }}
+<div class="container mb-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/forum">Forum</a></li>
+            <li class="breadcrumb-item active">{{ .Data.Thread.Name }}</li>
+            <li class="breadcrumb-item active">Delete message {{ .Data.Message.UUID }}</li>
+        </ol>
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <button class="btn btn-danger">Confirm Delete Message</button>
+            <a class="btn btn-secondary" href="/t/{{ .Data.Thread.UUID }}">Cancel</a>
+        </form>
+    </nav>
+</div>
+
+{{ end }}

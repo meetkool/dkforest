@@ -1,0 +1,9 @@
+-- +migrate Up
+ALTER TABLE users ADD COLUMN notify_new_message TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN notify_tagged TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN notify_pmmed TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN notify_new_message_sound INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN notify_tagged_sound INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN notify_pmmed_sound INTEGER NOT NULL DEFAULT 1;
+
+-- +migrate Down

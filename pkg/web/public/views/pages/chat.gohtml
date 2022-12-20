@@ -1,0 +1,270 @@
+{{ define "extra-head" }}
+    <style>
+        {{ if .Data.RedRoom }}
+        body {
+            background-color: #3b0000 !important;
+        }
+        {{ end }}
+        #chat-top-bar {
+            border: 0;
+            height: {{ if .Data.Multiline }}157{{ else }}57{{ end }}px;
+        }
+        #chat-content {
+            border: 0;
+            border-left: 1px solid #aaa;
+            width: 100%;
+            height: calc(100vh - {{ if .Data.Multiline }}300{{ else }}200{{ end }}px);
+        }
+        .btn-xs {
+            margin: 0 !important;
+            padding: 0 4px !important;
+            font-size: 11px !important;
+        }
+        #logout_btn {
+        }
+        body {
+            {{ if eq .AuthUser.Theme 1 }}
+                background-image: url("/public/img/trees_christmas.png");
+            {{ else }}
+                background-image: url("/public/img/trees.gif");
+            {{ end }}
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: right bottom;
+            background-size: auto calc(100vh - 100px);
+        }
+        #demo1 {
+            display: none;
+        }
+        #demo:checked + label {
+            background: blue;
+            color: white;
+            display: block;
+        }
+        label {
+            display: block;
+            background: lightgrey;
+            width: 100px;
+            height: 100px;
+        }
+
+        #tutorial_btn_next {
+            visibility: hidden;
+            animation: 15s 1s forwards timer_countdown_frames2;
+        }
+        @keyframes timer_countdown_frames2 {
+            99% { visibility: hidden; }
+            100% { visibility: visible; }
+        }
+        #tutorial_secs:before {
+            content: "15";
+            animation: 15s 1s forwards timer_countdown_frames;
+        }
+        @keyframes timer_countdown_frames {
+            0% { content: "15"; }
+            6.6666666667% { content: "14"; }
+            13.3333333333% { content: "13"; }
+            20% { content: "12"; }
+            26.6666666667% { content: "11"; }
+            33.3333333333% { content: "10"; }
+            40% { content: "9"; }
+            46.6666666667% { content: "8"; }
+            53.3333333333% { content: "7"; }
+            60% { content: "6"; }
+            66.6666666667% { content: "5"; }
+            73.3333333333% { content: "4"; }
+            80% { content: "3"; }
+            86.6666666667% { content: "2"; }
+            93.3333333333% { content: "1"; }
+            100% { content: "0"; }
+        }
+        .modal {
+            -moz-backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+        }
+        @-moz-document url-prefix() {
+            .modal {
+                background-color: rgba(0, 0, 0, .6);
+            }
+        }
+    </style>
+{{ end }}
+
+{{ define "title" }}dkf - #{{ .Data.Room.Name }}{{ end }}
+
+{{ define "content" }}
+
+<!--<div style="position: absolute; background-color: #00a379; width: 400px; height: 300px;">-->
+<!--    Upload file-->
+<!--    <input type="checkbox" id="demo"/>-->
+<!--    <label for="demo" id="demo1">I'm a square. Click me.</label>-->
+<!--</div>-->
+
+{{ if .Data.DisplayTutorial }}
+    {{ if eq .AuthUser.ChatTutorial 0 }}
+    <div class="modal d-block">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tutorial (1/3)</h5>
+                </div>
+                <div class="modal-body">
+                    Rules of this chat:
+                    <ul>
+                        <li>No cp</li>
+                        <li>Be civil</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <span>Wait for <span id="tutorial_secs"></span> seconds</span>
+                    <form method="post">
+                        <input type="hidden" name="formName" value="tutorialP1">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}">
+                        <button type="submit" class="btn btn-primary" id="tutorial_btn_next">I agree</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ else if eq .AuthUser.ChatTutorial 1 }}
+    <div class="modal d-block">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tutorial (2/3)</h5>
+                </div>
+                <div class="modal-body">
+                    Trolls will be kicked on sight
+                </div>
+                <div class="modal-footer">
+                    <span>Wait for <span id="tutorial_secs"></span> seconds</span>
+                    <form method="post">
+                        <input type="hidden" name="formName" value="tutorialP2">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}">
+                        <button type="submit" class="btn btn-primary" id="tutorial_btn_next">I understand</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ else if eq .AuthUser.ChatTutorial 2 }}
+    <div class="modal d-block">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tutorial (3/3)</h5>
+                </div>
+                <div class="modal-body">
+                    Enjoy your stay
+                </div>
+                <div class="modal-footer">
+                    <span>Wait for <span id="tutorial_secs"></span> seconds</span>
+                    <form method="post">
+                        <input type="hidden" name="formName" value="tutorialP3">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}">
+                        <button type="submit" class="btn btn-primary" id="tutorial_btn_next">Complete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+{{ end }}
+
+<div class="container-fluid">
+    <div>
+        {{ if .AuthUser.ChatBarAtBottom }}
+            <div>
+                <iframe id="chat-content" name="iframe2" src="/api/v1/chat/messages/{{ .Data.Room.Name }}{{ .Data.ChatQueryParams }}"></iframe>
+            </div>
+        {{ end }}
+        <div>
+            > {{ t "Room" . }} #{{ .Data.Room.Name }}
+            <div style="padding-left: 30px;" class="d-inline">
+<!--                {{ if and .Data.Room.OwnerUserID (eq (derefUserID .Data.Room.OwnerUserID) .AuthUser.ID) }}-->
+<!--                    <a href="/chat/{{ .Data.Room.Name }}/settings" class="btn btn-xs btn-secondary">{{ t "Room settings" . }}</a>-->
+<!--                {{ end }}-->
+                {{ if .Data.Room.Password }}
+                    <form method="post" style="display: inline-block">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                        <button type="submit" value="logout" name="btn_submit" id="logout_btn" class="btn btn-xs btn-secondary">{{ t "Logout" . }}</button>
+                    </form>
+                {{ end }}
+                {{ if not .Data.IsOfficialRoom }}
+                    {{ if .Data.IsSubscribed }}
+                        <form method="post" style="display: inline-block" action="/api/v1/rooms/{{ .Data.Room.Name }}/unsubscribe">
+                            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                            <button type="submit" class="btn btn-xs btn-secondary">{{ t "Unsubscribe" . }}</button>
+                        </form>
+                    {{ else }}
+                        <form method="post" style="display: inline-block" action="/api/v1/rooms/{{ .Data.Room.Name }}/subscribe">
+                            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                            <button type="submit" class="btn btn-xs btn-secondary">{{ t "Subscribe" . }}</button>
+                        </form>
+                    {{ end }}
+                {{ end }}
+                {{ if and .Data.Room.OwnerUserID (eq (derefUserID .Data.Room.OwnerUserID) .AuthUser.ID) }}
+                    <a href="/chat/{{ .Data.Room.Name }}/delete" class="btn btn-xs btn-danger">{{ t "Delete room" . }}</a>
+                {{ end }}
+            </div>
+        </div>
+        <div>
+            <iframe id="chat-top-bar" name="iframe1" src="/api/v1/chat/top-bar/{{ .Data.Room.Name }}{{ .Data.ChatQueryParams }}" sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation" style="width: 100%;"></iframe>
+        </div>
+        {{ if not .AuthUser.ChatBarAtBottom }}
+            <div>
+                <iframe id="chat-content" name="iframe2" src="/api/v1/chat/messages/{{ .Data.Room.Name }}{{ .Data.ChatQueryParams }}"></iframe>
+            </div>
+        {{ end }}
+        <div>
+            <a href="/api/v1/chat/messages/{{ .Data.Room.Name }}{{ .Data.ChatQueryParams }}" target="iframe2" class="btn btn-xs btn-secondary" title="Refresh messages">&#8635;</a>
+            <a href="/chat/{{ .Data.Room.Name }}/archive">{{ t "Read all messages" . }}</a>
+            {{ if .Data.ToggleMentions }}
+                <a href="?mentionsOnly=0" class="btn btn-xs btn-success" title="Only Mentions are displayed">Toggle @</a>
+            {{ else }}
+                <a href="?mentionsOnly=1" class="btn btn-xs btn-secondary" title="All messages displayed">Toggle @</a>
+            {{ end }}
+            {{ if eq .Data.TogglePms 1 }}
+                <a href="?pmonly=2" class="btn btn-xs btn-success" title="Only PMs are displayed">Toggle PM</a>
+            {{ else if eq .Data.TogglePms 2 }}
+                <a href="?pmonly=0" class="btn btn-xs btn-warning" title="PMs are hidden">Toggle PM</a>
+            {{ else }}
+                <a href="?pmonly=1" class="btn btn-xs btn-secondary" title="All messages displayed">Toggle PM</a>
+            {{ end }}
+            <form method="post" class="d-inline-block">
+                <input type="hidden" name="formName" value="toggle-ignored" />
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <button class="btn btn-xs {{ if .AuthUser.DisplayIgnored }}btn-warning{{ else }}btn-secondary{{ end }}" title="toggle ignored users">Toggle ignored</button>
+            </form>
+            {{ if .AuthUser.IsModerator }}
+                <form method="post" class="d-inline-block">
+                    <input type="hidden" name="formName" value="toggle-m" />
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button class="btn btn-xs {{ if .AuthUser.DisplayModerators }}btn-secondary{{ else }}btn-warning{{ end }}" title="toggle moderators messages">Toggle M</button>
+                </form>
+            {{ end }}
+            {{ if .AuthUser.CanSeeHB }}
+                <form method="post" class="d-inline-block">
+                    <input type="hidden" name="formName" value="toggle-hb" />
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button class="btn btn-xs btn-secondary" title="toggle hellban messages">Toggle HB ({{ if .AuthUser.DisplayHellbanned }}on{{ else }}off{{ end }})</button>
+                </form>
+            {{ end }}
+            {{ if .AuthUser.ChatReadMarkerEnabled }}
+                <form method="post" class="d-inline-block">
+                    <input type="hidden" name="formName" value="update-read-marker" />
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button class="btn btn-xs btn-secondary">Update read marker</button>
+                </form>
+            {{ end }}
+            <form method="post" class="d-inline-block">
+                <input type="hidden" name="formName" value="afk" />
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <button class="btn btn-xs {{ if .AuthUser.AFK }}btn-danger{{ else }}btn-secondary{{ end }}">afk</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ end }}

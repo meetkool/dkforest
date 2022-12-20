@@ -1,0 +1,18 @@
+{{ define "sub-content" }}
+    <h3>Security <small>({{ len .Data.Logs }})</small></h3>
+    <p>These logs are kept for 7 days</p>
+    <table class="table table-striped table-hover table-sm table-novpadding">
+        <tr>
+            <td>Message</td>
+            <td>Created at</td>
+        </tr>
+        {{ range .Data.Logs }}
+            <tr>
+                <td>{{ .Message }}</td>
+                <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
+            </tr>
+        {{ else }}
+            <tr><td colspan="2"><em>No logs to display</em></td></tr>
+        {{ end }}
+    </table>
+{{ end }}

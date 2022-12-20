@@ -1,0 +1,71 @@
+{{ define "extra-head" }}
+<style>
+    .unread_room       { color: #2392da; text-decoration: none; }
+    .unread_room:hover { color: #004970; text-decoration: underline; }
+    .timestamp {
+        color: #aaa;
+        font-size: 11px;
+    }
+</style>
+{{ end }}
+
+{{ define "title" }}dkf - rooms{{ end }}
+
+{{ define "content" }}
+
+<div class="container-fluid">
+    <div class="pb-2 mt-4 mb-4 border-bottom">
+        <div class="float-right">
+            <a href="/chat/create-room" class="btn btn-success">
+                <i class="fa fa-plus fa-fw"></i> Create room
+            </a>
+        </div>
+        <h2>Rooms</h2>
+    </div>
+
+    <table class="table table-striped table-sm table-novpadding table-dark">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Owner</th>
+                <th class="text-center">Password</th>
+                <th class="text-center">Permanent</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Data.Rooms }}
+                <tr>
+                    <td><a href="/chat/{{ .Name }}"{{ if .IsUnread }} class="unread_room"{{ end }}>{{ .Name }}</a></td>
+                    <td>
+                        {{ if .OwnerUser }}
+                            <a href="/u/{{ .OwnerUser.Username }}" {{ .OwnerUser.GenerateChatStyle | attr }}>{{ .OwnerUser.Username }}</a><br />
+                            <span class="timestamp">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+                        {{ else }}
+                            <em>n/a</em>
+                        {{ end }}
+                    </td>
+                    <td class="text-center align-middle">
+                        {{ if .Password }}
+                        <span style="color: green;">Y</span>
+                        {{ else }}
+                        <span style="color: red;">N</span>
+                        {{ end }}
+                    </td>
+                    <td class="text-center align-middle">
+                        {{ if .IsEphemeral }}
+                        <span style="color: red;">N</span>
+                        {{ else }}
+                        <span style="color: green;">Y</span>
+                        {{ end }}
+                    </td>
+                </tr>
+            {{ else }}
+                <tr>
+                    <td colspan="4"><em>No room to display</em></td>
+                </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</div>
+
+{{ end }}

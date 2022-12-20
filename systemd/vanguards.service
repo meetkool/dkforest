@@ -1,0 +1,15 @@
+[Unit]
+Description=vanguards
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=debian-tor
+WorkingDirectory=/home/debian-tor
+ExecStart=/usr/local/bin/vanguards --control_port  6666
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,27 @@
+{{ define "pagination" }}
+{{ if gt .Data.MaxPage 1 }}
+<nav>
+    <ul class="pagination">
+    {{ if gt .Data.CurrentPage 1 }}
+        <li class="page-item">
+            <a href="?p={{ add .Data.CurrentPage -1 }}{{ if $.Data.Search }}&search={{ $.Data.Search }}{{ end }}" class="page-link">
+                <span>&laquo;</span>
+            </a>
+        </li>
+    {{ end }}
+    {{ range $i := N 1 .Data.MaxPage }}
+        <li{{ if eq $i $.Data.CurrentPage }} class="page-item active"{{ else }} class="page-item"{{ end }}>
+            <a href="?p={{ $i }}{{ if $.Data.Search }}&search={{ $.Data.Search }}{{ end }}" class="page-link">{{ $i }}</a>
+        </li>
+    {{ end }}
+    {{ if lt .Data.CurrentPage .Data.MaxPage }}
+        <li class="page-item">
+            <a href="?p={{ add .Data.CurrentPage 1 }}{{ if $.Data.Search }}&search={{ $.Data.Search }}{{ end }}" class="page-link">
+                <span>&raquo;</span>
+            </a>
+        </li>
+    {{ end }}
+    </ul>
+</nav>
+{{ end }}
+{{ end }}

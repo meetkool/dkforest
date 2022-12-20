@@ -1,0 +1,57 @@
+{{ define "title" }}dkf - torchess{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <div>
+
+        <h3>TorChess p2p chess over tor</h3>
+        <div class="mb-3"><time datetime="2022-03-22 00:00">Mar 22, 2022</time></div>
+
+        <p class="mt-5 mb-4">
+            To host a room, you need to ensure that "tor control" is running on port 9051 (<code>ControlPort 9051</code> in your torrc file)<br />
+            To join a room, you have to ensure that "tor proxy" is running on port 9050 (<code>SOCKSPort 9050</code> in your torrc file)<br />
+        </p>
+
+        <p class="mt-5 mb-4">
+            This application is open source on
+            <a href="http://yylovpz7taca7jfrub3wltxabzzjp34fngj5lpwl6eo47ekt5cxs6mid.onion/n0tr1v/torchess" rel="noopener noreferrer" target="_blank">this git server</a>
+            <br />
+        </p>
+
+        <p>
+            <a href="/torchess/downloads">Download pre-build official application</a>
+        </p>
+
+        <img src="/public/img/torchess/1.png" alt="" />
+
+        <h3 class="mt-3">Whonix</h3>
+
+        <p>w
+            If you are getting <code>failed to get service id: 510 Command filtered</code> error on whonix<br />
+            You need to set a profile for onion-grater:<br />
+        </p>
+
+        <pre><code>---
+- exe-paths:
+    - '*'
+  users:
+    - '*'
+  hosts:
+    - '*'
+  commands:
+    ADD_ONION:
+      - pattern:     'NEW:BEST Flags=DiscardPK Port=80,6790 Port=81,6789'
+        replacement: 'NEW:BEST Flags=DiscardPK Port=80,{client-address}:6790 Port=81,{client-address}:6789'
+    DEL_ONION:
+      - '.+'</code></pre>
+
+        <p>
+            You also need to start the application with <code>--app-ip 0.0.0.0</code>
+        </p>
+
+        <div style="height: 100px;"></div>
+    </div>
+</div>
+
+{{ end }}

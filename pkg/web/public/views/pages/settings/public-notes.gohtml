@@ -1,0 +1,44 @@
+{{ define "sub-extra-head" }}
+<style>
+    textarea {
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: scroll;
+        background-color: rgba(255,255,255,.2) !important;
+        color: #fff !important;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link active" href="/settings/public-notes">Public</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/private-notes">Private</a>
+    </li>
+</ul>
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "Public notes" . }}
+    </div>
+    <div class="card-body">
+        {{ if .Data.Error }}
+            <div class="alert alert-danger">{{ .Data.Error }}</div>
+        {{ end }}
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <textarea name="public_notes" rows="20" class="form-control" placeholder="This note will be shown in your public profile">{{ .Data.Notes.Notes }}</textarea>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{ end }}

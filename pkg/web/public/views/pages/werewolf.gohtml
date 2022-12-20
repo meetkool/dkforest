@@ -1,0 +1,63 @@
+{{ define "content" }}
+
+{{/* 1643905378254628000 */}}
+<div class="container mb-5">
+    <div>
+
+        <h3>How to play werewolf in the Dark Forest!</h3>
+
+        <p>
+            Based on <a href="https://anjuansimmons.com/blog/how-to-play-werewolf-over-zoom">https://anjuansimmons.com/blog/how-to-play-werewolf-over-zoom</a><br />
+            <a href="https://werewolf.chat/Main_Page">https://werewolf.chat</a>
+        </p>
+
+        <p>
+            6-8 Players : 1 Werwolf<br />
+            9-11 Players : 2 Werewolves<br />
+            12-14 Players: 3 Werewolves<br />
+            15-17 Players: 4 Werewolves<br />
+            18-20 Players: 5 Werewolves<br />
+        </p>
+
+        <p>
+            Steps:<br />
+            - Narrator creates a room<br />
+            - Narrator creates a "werewolf" group using <code>/addgroup werewolf</code><br />
+            - Narrator randomly select the werewolves and add them and himself to the group <code>/gadduser werewolf username</code><br />
+            - Narrator write into the werewolf group to ensure everyone can see the messages<br />
+            - Narrator confirms the group has everyone with <code>/gusers werewolf</code><br />
+            - Narrator lock the group <code>/glock werewolf</code>
+            <br />
+            - Elect a "Seer" (person who can see the identity of someone during the night)<br />
+            - Elect a "Healer" (person who can save someone during the night)<br />
+            <br />
+            - First day people talk about their lives<br />
+            - Night, "Townspeople, go to sleep" (everyone shut up)<br />
+            - Unlock the group <code>/gunlock werewolf</code><br />
+            - <code>/g werewolf Werewolves, who do you to kill?"</code><br />
+            - figure it out<br />
+            - Lock the group <code>/glock werewolf</code><br />
+            - Narrator talk to "Seer" <code>/pm seer Seer, who do you want to identify?</code><br />
+            - Narrator talk to "Healer" <code>/pm healer Healer, who do you want to save?</code><br />
+            - Narrator <code>Townspeople, wake up</code><br />
+            - If someone died: <code>Everyone wakes up to see a trail of blood leading to the forrest. There you find Peter’s mangled remains by the Great Oak. Curiously, there are deep claw marks in the bark of the surrounding trees. It looks like Peter put up a fight.</code><br />
+            - If the person selected by the Werewolves was saved by the Healer, then the Narrator announces that someone was attacked last night, but they survived. No other information is provided to the players.<br />
+            - Discussion by the Townspeople<br />
+            - Townspeople can execute someone or not (vote majority)<br />
+        </p>
+
+        <h2>All commands</h2>
+        <p>
+            Create group: <code>/addgroup groupName</code><br />
+            Remove group: <code>/rmgroup groupName</code><br />
+            List groups: <code>/groups</code><br />
+            Lock group: <code>/glock groupName</code><br />
+            Unlock group: <code>/gunlock groupName</code><br />
+            List group users: <code>/gusers groupName</code><br />
+            Add user to group: <code>/gadduser groupName username</code><br />
+            Remove user from group: <code>/grmuser groupName username</code><br />
+        </p>
+    </div>
+</div>
+
+{{ end }}

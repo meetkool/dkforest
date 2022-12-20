@@ -1,0 +1,15 @@
+[Unit]
+Description=tor1
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=debian-tor
+WorkingDirectory=/root/dist
+ExecStart=/usr/bin/tor -f /etc/tor/torrc2
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

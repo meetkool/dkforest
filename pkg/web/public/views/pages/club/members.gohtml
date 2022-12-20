@@ -1,0 +1,12 @@
+{{ define "sub-content" }}
+<table class="table table-hover table-striped">
+    <tr>
+        <th>Username</th>
+    </tr>
+    {{ range .Data.Members }}
+        <tr>
+            <td><a href="/u/{{ .Username }}" {{ .GenerateChatStyle | attr }}>{{ .Username }}</a></td>
+        </tr>
+    {{ end }}
+</table>
+{{ end }}

@@ -1,0 +1,70 @@
+{{ define "title" }}dkf - bhcli{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <div>
+
+        <h3>Chat CLI client for "Black Hat Chat"</h3>
+        <div class="mb-3"><time datetime="2021-09-01 00:00">Sep 01, 2021</time></div>
+
+        <p class="mt-5 mb-4">
+            This chat client works with both
+            <a href="http://blkh4ylofapg42tj6ht565klld5i42dhjtysvsnnswte4xt4uvnfj5qd.onion" rel="noopener noreferrer" target="_blank">Black Hat Chat</a> and
+            <a href="http://danschat356lctri3zavzh6fbxg2a7lo6z3etgkctzzpspewu7zdsaqd.onion" rel="noopener noreferrer" target="_blank">Daniel's Chat</a>
+            <br />
+
+            Among other productivity features, it also gives you "sound" notifications when someone "tag" you or "pm" you.<br/>
+            It also use a lot less CPU than tor browser does on these websites.<br />
+
+            This application is written in <a href="https://www.rust-lang.org/" rel="noopener noreferrer" target="_blank">Rust</a> and is open source on
+            <a href="http://yylovpz7taca7jfrub3wltxabzzjp34fngj5lpwl6eo47ekt5cxs6mid.onion/n0tr1v/bhcli" rel="noopener noreferrer" target="_blank">this git server</a>
+            <br />
+        </p>
+
+        <p>
+            <a href="/bhcli/downloads">Download pre-build official application</a>
+        </p>
+
+        <p class="mt-5 mb-4">
+            To login, you can either use environment variables, application flags, or stdin user input.<br />
+            The captcha (if you need to enter it) will be displayed within the terminal.<br />
+            The `-m` flag force the application to ask for captcha.<br />
+        </p>
+        <img src="/public/img/bhcli/login.gif" alt="" />
+        <p class="mt-5 mb-4">
+            To quickly tag someone, you can select a message then type `t`<br />
+            This will enter the "edit mode" with `@username ` already typed.
+        </p>
+        <img src="/public/img/bhcli/tagging.gif" alt="" />
+        <p class="mt-5 mb-4">
+            To quickly PM someone, you can select a message then type `p`<br />
+            This will enter the "edit mode" with `/pm username ` already typed.<br />
+            The prefix stays there after sending a message.
+        </p>
+        <img src="/public/img/bhcli/pm.gif" alt="" />
+        <p class="mt-5 mb-4">
+            To delete the last message, you can type `/dl`<br />
+            If you want to delete more messages, `/dl5` will delete the last 5 messages.
+        </p>
+        <img src="/public/img/bhcli/dlx.gif" alt="" />
+        <p class="mt-5 mb-4">
+            To quickly kick someone, you can select a message then type `ctrl+k`<br />
+            This will enter the "edit mode" with `/kick username ` already typed.
+        </p>
+        <img src="/public/img/bhcli/kick.gif" alt="" />
+        <p class="mt-5 mb-4">
+            If you wish to copy a message in clipboard, you can select a message and type `y`
+        </p>
+        <img src="/public/img/bhcli/copy_clipboard.gif" alt="" />
+
+        <p class="mt-5 mb-4">
+            <strong>Bonus:</strong>
+            This application also work on "Daniel's chat" if you use the `--dan` flag.
+        </p>
+
+        <div style="height: 100px;"></div>
+    </div>
+</div>
+
+{{ end }}

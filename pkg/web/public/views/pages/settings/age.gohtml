@@ -1,0 +1,36 @@
+{{ define "sub-extra-head" }}
+<style>
+    textarea {
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: scroll;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "Age public key" . }}
+    </div>
+    <div class="card-body">
+        <p>
+            <a href="https://github.com/FiloSottile/age">https://github.com/FiloSottile/age</a>
+        </p>
+        <div class="form-group">
+            {{ if .Data.AgePublicKey }}
+                Public key: <span style="color: #eaac45">{{ .Data.AgePublicKey }}</span><br />
+            {{ end }}
+        </div>
+        <div class="form-group">
+            {{ if .Data.AgePublicKey }}
+                <a href="/settings/age/add" class="btn btn-primary">{{ t "Edit Age public key" . }}</a>
+            {{ else }}
+                <a href="/settings/age/add" class="btn btn-primary">{{ t "Add Age public key" . }}</a>
+            {{ end }}
+        </div>
+    </div>
+</div>
+
+{{ end }}

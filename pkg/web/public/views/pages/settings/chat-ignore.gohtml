@@ -1,0 +1,71 @@
+{{ define "extra-head" }}
+<style>
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat">General</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat/pm">PM</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/settings/chat/ignore">Ignore</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat/snippets">Snippets</a>
+    </li>
+</ul>
+
+{{ if .Data.Error }}
+    <div class="alert alert-danger">{{ .Data.Error }}</div>
+{{ end }}
+
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "Ignore settings" . }}
+    </div>
+    <div class="card-body">
+        <div>
+            Ignore list:
+            <table class="table table-striped table-hover table-sm table-novpadding">
+                {{ range .Data.IgnoredUsers }}
+                    <tr>
+                        <td style="width: 40px;">
+                            <form method="post" class="d-inline">
+                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                <input type="hidden" name="formName" value="rmIgnored" />
+                                <input type="hidden" name="userID" value="{{ .IgnoredUser.ID }}" />
+                                <button class="btn btn-xs btn-danger">×</button>
+                            </form>
+                        </td>
+                        <td><span {{ .IgnoredUser.GenerateChatStyle | attr }}>{{ .IgnoredUser.Username }}</span></td>
+                    </tr>
+                {{ else }}
+                    <tr><td colspan="2"><em>No users in the list</em></td></tr>
+                {{ end }}
+            </table>
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                <input type="hidden" name="formName" value="addIgnored" />
+                <div class="input-group" style="width: 300px;">
+                    <input type="text" name="username" value="{{ .Data.AddIgnored }}" class="form-control" placeholder="Username" />
+                    <div class="input-group-append">
+                        <button class="btn btn-sm btn-primary">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ end }}

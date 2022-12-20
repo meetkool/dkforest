@@ -1,0 +1,158 @@
+{{ define "title" }}dkf - new-link{{ end }}
+
+{{ define "content" }}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/links">Links</a></li>
+            {{ if .Data.IsEdit }}
+                <li class="breadcrumb-item active">{{ t "Edit link" . }}</li>
+            {{ else }}
+                <li class="breadcrumb-item active">{{ t "New link" . }}</li>
+            {{ end }}
+        </ol>
+    </nav>
+
+
+    <div class="card mb-3">
+        <div class="card-header">
+            {{ if .Data.IsEdit }}
+                {{ t "Edit link" . }}
+            {{ else }}
+                {{ t "New link" . }}
+            {{ end }}
+        </div>
+        <div class="card-body">
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <input type="hidden" name="formName" value="createLink" />
+                <div class="form-group">
+                    <label for="link">{{ t "Link" . }}</label>
+                    <input name="link" id="link" placeholder="http://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.onion" value="{{ .Data.Link }}" class="form-control{{ if .Data.ErrorLink }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorLink }} autofocus{{ end }} />
+                    {{ if .Data.ErrorLink }}<div class="invalid-feedback">{{ .Data.ErrorLink }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <label for="title">{{ t "Title" . }}</label>
+                    <input name="title" id="title" placeholder="Title" value="{{ .Data.Title }}" class="form-control{{ if .Data.ErrorTitle }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorTitle }} autofocus{{ end }} />
+                    {{ if .Data.ErrorTitle }}<div class="invalid-feedback">{{ .Data.ErrorTitle }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <label for="description">{{ t "Description" . }}</label>
+                    <textarea name="description" id="description" placeholder="Description" class="form-control{{ if .Data.ErrorDescription }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorDescription }} autofocus{{ end }}>{{ .Data.Description }}</textarea>
+                    {{ if .Data.ErrorDescription }}<div class="invalid-feedback">{{ .Data.ErrorDescription }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <label for="shorthand">{{ t "Shorthand" . }}</label>
+                    <input name="shorthand" id="shorthand" placeholder="Shorthand" value="{{ .Data.Shorthand }}" class="form-control{{ if .Data.ErrorShorthand }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorShorthand }} autofocus{{ end }} />
+                    {{ if .Data.ErrorShorthand }}<div class="invalid-feedback">{{ .Data.ErrorShorthand }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <label for="categories">{{ t "Categories" . }}</label>
+                    <input name="categories" id="categories" placeholder="Categories eg: category1,category2,category3" value="{{ .Data.Categories }}" class="form-control{{ if .Data.ErrorCategories }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorCategories }} autofocus{{ end }} />
+                    {{ if .Data.ErrorCategories }}<div class="invalid-feedback">{{ .Data.ErrorCategories }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <label for="tags">{{ t "Tags" . }}</label>
+                    <input name="tags" id="tags" placeholder="Tags eg: marketplace,casino,chat" value="{{ .Data.Tags }}" class="form-control{{ if .Data.ErrorTags }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorTags }} autofocus{{ end }} />
+                    {{ if .Data.ErrorTags }}<div class="invalid-feedback">{{ .Data.ErrorTags }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    {{ if .Data.IsEdit }}
+                        <input type="submit" value="{{ t "Edit link" . }}" class="btn btn-primary" />
+                    {{ else }}
+                        <input type="submit" value="{{ t "Create link" . }}" class="btn btn-primary" />
+                    {{ end }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{ if .Data.IsEdit }}
+        <div class="card mb-3">
+            <div class="card-header">
+                {{ t "Mirrors" . }}
+            </div>
+            <div class="card-body">
+                <table class="table table-novpadding table-sm table-striped table-hover">
+                    <tr>
+                        <th>URL</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                    {{ range .Data.Mirrors }}
+                        <tr>
+                            <td>{{ .MirrorURL }}</td>
+                            <td class="text-right"><a href="/links/mirrors/{{ .ID }}/delete" class="btn btn-danger btn-sm" title="Delete">X</a></td>
+                        </tr>
+                    {{ else }}
+                        <tr>
+                            <td colspan="3"><em>No mirrors</em></td>
+                        </tr>
+                    {{ end }}
+                </table>
+                <hr />
+                <form method="post">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <input type="hidden" name="formName" value="createMirror" />
+                    <div class="form-group">
+                        <label for="mirror_link">{{ t "Link" . }}</label>
+                        <input name="mirror_link" id="mirror_link" placeholder="http://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.onion" value="{{ .Data.MirrorLink }}" class="form-control{{ if .Data.ErrorMirrorLink }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorMirrorLink }} autofocus{{ end }} />
+                        {{ if .Data.ErrorMirrorLink }}<div class="invalid-feedback">{{ .Data.ErrorMirrorLink }}</div>{{ end }}
+                    </div>
+                    <div class="form-group">
+                        <input type="submit" value="{{ t "Create mirror" . }}" class="btn btn-primary" />
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+        <div class="card-header">
+            {{ t "PGP" . }}
+        </div>
+        <div class="card-body">
+            <table class="table table-novpadding table-sm table-striped table-hover">
+                <tr>
+                    <th>Title</th>
+                    <th>Public key</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+                {{ range .Data.LinkPgps }}
+                    <tr>
+                        <td>{{ .Title }}</td>
+                        <td>{{ .PgpPublicKey | trunc 100 }}</td>
+                        <td class="text-right"><a href="/links/pgp/{{ .ID }}/delete" class="btn btn-danger btn-sm" title="Delete">X</a></td>
+                    </tr>
+                {{ else }}
+                    <tr>
+                        <td colspan="3"><em>No public keys</em></td>
+                    </tr>
+                {{ end }}
+            </table>
+            <hr />
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <input type="hidden" name="formName" value="createPgp" />
+                <div class="form-group">
+                    <label for="pgp_title">{{ t "Title" . }}</label>
+                    <input name="pgp_title" id="pgp_title" placeholder="" value="{{ .Data.PGPTitle }}" class="form-control{{ if .Data.ErrorPGPTitle }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorPGPTitle }} autofocus{{ end }} />
+                    {{ if .Data.ErrorPGPTitle }}<div class="invalid-feedback">{{ .Data.ErrorPGPTitle }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <label for="pgp_description">{{ t "Description" . }}</label>
+                    <input name="pgp_description" id="pgp_description" placeholder="" value="{{ .Data.PGPDescription }}" class="form-control{{ if .Data.ErrorPGPDescription }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorPGPDescription }} autofocus{{ end }} />
+                    {{ if .Data.ErrorPGPDescription }}<div class="invalid-feedback">{{ .Data.ErrorPGPDescription }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <label for="pgp_public_key">{{ t "Public key" . }}</label>
+                    <textarea name="pgp_public_key" id="pgp_public_key" class="form-control{{ if .Data.ErrorPGPPublicKey }} is-invalid{{ end }}" type="text" {{ if .Data.ErrorPGPPublicKey }} autofocus{{ end }}>{{ .Data.PGPPublicKey }}</textarea>
+                    {{ if .Data.ErrorPGPPublicKey }}<div class="invalid-feedback">{{ .Data.ErrorPGPPublicKey }}</div>{{ end }}
+                </div>
+                <div class="form-group">
+                    <input type="submit" value="{{ t "Create PGP" . }}" class="btn btn-primary" />
+                </div>
+            </form>
+        </div>
+    </div>
+    {{ end }}
+</div>
+{{ end }}

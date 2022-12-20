@@ -1,0 +1,63 @@
+{{ define "extra-head" }}
+<style>
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<form method="post">
+    <input type="hidden" name="formName" value="createFiledrop" />
+    <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+    <button type="submit" class="btn btn-primary btn-sm">New filedrop</button>
+</form>
+
+<div class="card mb-3">
+    <div class="card-header">
+        Filedrop
+    </div>
+    <div class="card-body">
+        <div class="mb-3">{{ .Data.TotalSize | int64bytes }}</div>
+        <table class="table table-sm table-striped table-hover">
+            <tr>
+                <th>UUID</th>
+                <th>File name</th>
+                <th>File size</th>
+                <th>Created at</th>
+                <th class="text-right">Actions</th>
+            </tr>
+            {{ range .Data.Filedrops }}
+                <tr>
+                    <td>
+                        {{ if .FileName }}
+                            {{ .UUID }}
+                        {{ else }}
+                            <a href="/file-drop/{{ .UUID }}">{{ .UUID }}</a>
+                        {{ end }}
+                    </td>
+                    <td><a href="/admin/file-drop/{{ .FileName }}">{{ .OrigFileName }}</a></td>
+                    <td>{{ .FileSize | int64bytes }}</td>
+                    <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
+                    <td class="text-right">
+                        <form method="post">
+                            <input type="hidden" name="formName" value="deleteFiledrop" />
+                            <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                            <input type="hidden" name="file_name" value="{{ .FileName }}" />
+                            <button type="submit" class="btn btn-danger btn-sm">×</button>
+                        </form>
+                    </td>
+                </tr>
+            {{ else }}
+                <tr>
+                    <td colspan="5"><em>No file to display</em></td>
+                </tr>
+            {{ end }}
+        </table>
+    </div>
+</div>
+
+{{ end }}

@@ -1,0 +1,16 @@
+vendor
+downloads
+downloads-bhcli
+downloads-torchess
+tmp
+key.pem
+bindata
+dist
+*.lic
+screenshot*
+uploads
+filedrop
+.idea
+*.db
+*.csv
+cmd/n0tr1v

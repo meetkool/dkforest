@@ -1,0 +1,225 @@
+{{ define "sub-content" }}
+<div class="page-header" style="margin: 0 0 15px 0;">
+    <h4 class="pull-left" style="margin: 6px 0;">
+        {{ if .Data.IsEdit }}
+            {{ t "Update user" . }}
+        {{ else }}
+            {{ t "Create user" . }}
+        {{ end }}
+    </h4>
+    <div class="pull-right" style="position:relative;top:0px;"></div>
+    <div class="clearfix"></div>
+</div>
+
+<form autocomplete="on" novalidate method="post">
+    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+    <fieldset>
+        <div class="row">
+            <div class="center-block">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+
+                <div class="form-group{{ if .Data.Errors.Username }} has-error{{ end }}">
+                    <div class="input-group">
+                        <span class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-user fa-lg fa-fw"></i></span>
+                        </span>
+                        <input name="username" value="{{ .Data.Username }}" class="form-control {{ if .Data.Errors.Username }} is-invalid{{ end }}" placeholder="{{ t "Username" . }}" type="text" autofocus required />
+                    </div>
+                    {{ if .Data.Errors.Username }}<div class="invalid-feedback d-block">{{ .Data.Errors.Username }}</div>{{ end }}
+                </div>
+
+                <div class="form-group{{ if .Data.Errors.Password }} has-error{{ end }}">
+                    <div class="input-group">
+                        <span class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-lock fa-lg fa-fw"></i></span>
+                        </span>
+                        <input name="password" value="{{ .Data.Password }}" class="form-control {{ if .Data.Errors.Password }} is-invalid{{ end }}" placeholder="{{ t "Password" . }}" type="password" required />
+                    </div>
+                    {{ if .Data.Errors.Password }}<div class="invalid-feedback d-block">{{ .Data.Errors.Password }}</div>{{ end }}
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <span class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-lock fa-lg fa-fw"></i></span>
+                        </span>
+                        <input name="repassword" value="{{ .Data.RePassword }}" class="form-control" placeholder="{{ t "Retype password" . }}" type="password" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <span class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-lock fa-lg fa-fw"></i></span>
+                        </span>
+                        <input name="api_key" value="{{ .Data.ApiKey }}" class="form-control" placeholder="{{ t "API key" . }}" type="text" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <span class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-user fa-lg fa-fw"></i></span>
+                        </span>
+                        <select name="role" class="form-control">
+                            <option value="member"{{ if eq .Data.Role "member" }} selected{{ end }}>member</option>
+                            <option value="moderator"{{ if eq .Data.Role "moderator" }} selected{{ end }}>moderator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <span class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-user fa-lg fa-fw"></i></span>
+                        </span>
+                        <input name="chat_color" value="{{ .Data.ChatColor }}" class="form-control" placeholder="{{ t "Chat color" . }}" type="text" required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="chat_font">{{ t "Chat font" . }}</label>
+                    <select name="chat_font" id="chat_font" class="form-control">
+                        {{ range .Data.AllFonts }}
+                            <option value="{{ .Value }}" style="font-family:{{ .Style | css }}"{{ if eq $.Data.ChatFont .Value  }} selected{{ end }}>{{ .Display }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="verified" id="verified" value="1"{{ if .Data.Verified }} checked{{ end }} />
+                        <label for="verified" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="verified">{{ t "Verified" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="is_club_member" id="is_club_member" value="1"{{ if .Data.IsClubMember }} checked{{ end }} />
+                        <label for="is_club_member" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="is_club_member">{{ t "Is club member" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="isAdmin" id="isAdmin" value="1"{{ if .Data.IsAdmin }} checked{{ end }} />
+                        <label for="isAdmin" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="isAdmin">{{ t "Is admin" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="isHellbanned" id="isHellbanned" value="1"{{ if .Data.IsHellbanned }} checked{{ end }} />
+                        <label for="isHellbanned" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="isHellbanned">{{ t "Is hellbanned" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_upload_file" id="can_upload_file" value="1"{{ if .Data.CanUploadFile }} checked{{ end }} />
+                        <label for="can_upload_file" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_upload_file">{{ t "Can upload file" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_use_forum" id="can_use_forum" value="1"{{ if .Data.CanUseForum }} checked{{ end }} />
+                        <label for="can_use_forum" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_use_forum">{{ t "Can use forum" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_change_username" id="can_change_username" value="1"{{ if .Data.CanChangeUsername }} checked{{ end }} />
+                        <label for="can_change_username" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_change_username">{{ t "Can change username" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_change_color" id="can_change_color" value="1"{{ if .Data.CanChangeColor }} checked{{ end }} />
+                        <label for="can_change_color" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_change_color">{{ t "Can change color" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_use_multiline" id="can_use_multiline" value="1"{{ if .Data.CanUseMultiline }} checked{{ end }} />
+                        <label for="can_use_multiline" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_use_multiline">{{ t "Can use multiline" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_see_hellbanned" id="can_see_hellbanned" value="1"{{ if .Data.CanSeeHellbanned }} checked{{ end }} />
+                        <label for="can_see_hellbanned" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_see_hellbanned">{{ t "Can see HB" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="is_incognito" id="is_incognito" value="1"{{ if .Data.IsIncognito }} checked{{ end }} />
+                        <label for="is_incognito" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="is_incognito">{{ t "Incognito" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="vetted" id="vetted" value="1"{{ if .Data.Vetted }} checked{{ end }} />
+                        <label for="vetted" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="vetted">{{ t "Vetted" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="collect_metadata" id="collect_metadata" value="1"{{ if .Data.CollectMetadata }} checked{{ end }} />
+                        <label for="collect_metadata" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="collect_metadata">{{ t "Collect metadata" . }}</label>
+                </div>
+
+                <div class="form-group">
+                    {{ if .Data.IsEdit }}
+                        <input type="submit" class="btn btn-primary" value="{{ t "Update user" . }}" />
+                    {{ else }}
+                        <input type="submit" class="btn btn-primary" value="{{ t "Create user" . }}" />
+                    {{ end }}
+                </div>
+
+            </div>
+        </div>
+    </fieldset>
+</form>
+
+<form method="post" class="d-inline">
+    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+    <input type="hidden" name="formName" value="reset_tutorial" />
+    <input type="submit" class="btn btn-secondary" value="Reset tutorial ({{ .Data.ChatTutorial }})" />
+</form>
+
+<a href="/u/{{ .Data.Username }}" class="btn btn-secondary">Public profile</a>
+<a href="/admin/users/{{ .Data.User.ID }}/security-logs" class="btn btn-secondary">Security logs</a>
+
+<div>
+    Signup metadata: {{ .Data.SignupMetadata }}
+</div>
+<div>
+    Public msgs: {{ .Data.User.GeneralMessagesCount }}
+</div>
+
+{{ end }}

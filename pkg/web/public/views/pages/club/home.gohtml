@@ -1,0 +1,47 @@
+{{ define "title" }}dkf - club{{ end }}
+
+{{ define "sub-content" }}
+
+<div class="pb-2 mb-4 border-bottom">
+    <div class="float-right">
+        <a href="/club/new-thread" class="btn btn-success">
+            <i class="fa fa-plus fa-fw"></i> New thread
+        </a>
+    </div>
+    <h2>Club section</h2>
+</div>
+
+<p>Welcome to the club section</p>
+
+<table class="table table-striped">
+    <tr>
+        <th>Thread name</th>
+        <th>Author</th>
+        <th>Date</th>
+        <th>Last Message</th>
+    </tr>
+    {{ range .Data.ForumThreads }}
+        <tr>
+            <td>
+                {{ if .IsUnread }}
+                    <div style="color: green; width: 30px; display: inline-block;">&#9679;</div>
+                {{ else }}
+                    <div style="color: green; width: 30px; display: inline-block;">&nbsp;</div>
+                {{ end }}
+                <a href="/club/threads/{{ .ID }}">{{ .Name }}</a>
+            </td>
+            <td><span style="color: {{ .AuthorChatColor }};">{{ .Author }}</span></td>
+            <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
+            <td>
+                <span style="color: {{ .LastMsgChatColor }};">{{ .LastMsgAuthor }}</span> -
+                {{ .LastMsgCreatedAt.Format "Jan 02, 2006 15:04:05" }}
+            </td>
+        </tr>
+    {{ else }}
+        <tr>
+            <td><em>No thread to display</em></td>
+        </tr>
+    {{ end }}
+</table>
+
+{{ end }}

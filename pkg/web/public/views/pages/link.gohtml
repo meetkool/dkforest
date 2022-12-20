@@ -1,0 +1,63 @@
+{{ define "title" }}dkf - link - {{ .Data.Link.Title }}{{ end }}
+
+{{ define "content" }}
+<div class="container-fluid mb-5">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/links">Links</a></li>
+            <li class="breadcrumb-item active">{{ .Data.Link.Title }}</li>
+        </ol>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="pb-2 mb-4 border-bottom d-flex justify-content-between align-items-center">
+            <h2>{{ .Data.Link.Title }}</h2>
+            <div>
+                {{ if .AuthUser.IsModerator }}
+                    <a href="/links/{{ .Data.Link.UUID }}/edit" class="btn btn-secondary ml-1">Edit</a>
+                    <a href="/links/{{ .Data.Link.UUID }}/delete" class="btn btn-secondary ml-1">Delete</a>
+                {{ end }}
+            </div>
+        </div>
+
+        <strong>Created at:</strong> {{ .Data.Link.CreatedAt.Format "Jan 02, 2006 15:04:05" }}<br />
+        <strong>Link:</strong> <a href="{{ .Data.Link.URL }}" rel="noopener noreferrer" target="_blank">{{ .Data.Link.URL }}</a><br />
+        <strong>Description:</strong><br />
+        {{ .Data.Link.DescriptionSafe | n2br | safe }}<br />
+
+        {{ if .Data.Mirrors }}
+            <hr />
+            <h3>Mirrors</h3>
+            <div>
+                {{ range .Data.Mirrors }}
+                    <div><a href="{{ .MirrorURL }}" rel="noopener noreferrer" target="_blank">{{ .MirrorURL }}</a></div>
+                {{ end }}
+            </div>
+        {{ end }}
+
+        {{ if .Data.PgpKeys }}
+            <hr />
+
+            <h3>Public keys</h3>
+            {{ range .Data.PgpKeys }}
+                <div class="mb-3 pb-4" style="border-bottom: 1px solid #424242;">
+                    <div class="float-right">
+                        <form method="post" action="/api/v1/pgp/{{ .ID }}/download">
+                            <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                            <button class="btn btn-secondary">Download .asc</button>
+                        </form>
+                    </div>
+                    <div>Title: <strong>{{ .Title }}</strong> | <small style="color: #82e17f;">{{ .GetKeyID }}</small></div>
+                    {{ if .Description }}<div>Description: {{ .Description }}</div>{{ end }}
+                    <div>Fingerprint: <span style="color: #82e17f;">{{ .GetKeyFingerprint }}</span></div>
+                    <div>
+                        <textarea id="pgpPublicKey" rows="10" class="form-control" readonly style="max-width: 650px; font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace; white-space: pre; overflow-wrap: normal;">{{ .PgpPublicKey }}</textarea>
+                    </div>
+                </div>
+            {{ end }}
+        {{ end }}
+    </div>
+
+</div>
+{{ end }}

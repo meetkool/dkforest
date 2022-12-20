@@ -1,0 +1,21 @@
+{{ define "extra-head" }}
+    {{ block "sub-extra-head" . }}{{ end }}
+{{ end }}
+
+{{ define "content" }}
+<div class="container-fluid mt-2">
+    <div class="row">
+        <div class="col-4 col-sm-3 col-md-3 col-lg-2 mb-5">
+            <div class="card">
+                <div class="list-group list-group-flush">
+                    <a href="/club" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "home" }} active{{ end }}">{{ t "Home" . }}</a>
+                    <a href="/club/members" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "members" }} active{{ end }}">{{ t "Members" . }}</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-8 col-sm-9 col-md-9 col-lg-10 mb-5">
+            {{ block "sub-content" . }}{{ end }}
+        </div>
+    </div>
+</div>
+{{ end }}

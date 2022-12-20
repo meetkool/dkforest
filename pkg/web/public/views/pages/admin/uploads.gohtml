@@ -1,0 +1,59 @@
+{{ define "extra-head" }}
+<style>
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "File uploaded" . }}
+    </div>
+    <div class="card-body">
+        <div class="mb-3">{{ .Data.TotalSize | int64bytes }}</div>
+        <table class="table table-sm table-striped table-hover">
+            <tr>
+                <th>User</th>
+                <th>File name</th>
+                <th>File size</th>
+                <th class="text-center">Password?</th>
+                <th>Created at</th>
+                <th class="text-right">Actions</th>
+            </tr>
+            {{ range .Data.Uploads }}
+                <tr>
+                    <td>{{ .User.Username }}</td>
+                    <td><a href="/uploads/{{ .FileName }}">{{ .OrigFileName }}</a></td>
+                    <td>{{ .FileSize | int64bytes }}</td>
+                    <td class="text-center">
+                        {{ if .Password }}
+                            <span style="color: green;">Y</span>
+                        {{ else }}
+                            <span style="color: red;">N</span>
+                        {{ end }}
+                    </td>
+                    <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
+                    <td class="text-right">
+                        <form method="post">
+                            <input type="hidden" name="formName" value="deleteUpload" />
+                            <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                            <input type="hidden" name="file_name" value="{{ .FileName }}" />
+                            <button type="submit" class="btn btn-danger btn-sm">×</button>
+                        </form>
+                    </td>
+                </tr>
+            {{ else }}
+                <tr>
+                    <td colspan="6"><em>No file to display</em></td>
+                </tr>
+            {{ end }}
+        </table>
+    </div>
+</div>
+
+{{ end }}

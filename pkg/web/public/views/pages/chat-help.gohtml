@@ -1,0 +1,322 @@
+{{ define "title" }}dkf - chat help{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/chat">Chat</a></li>
+            <li class="breadcrumb-item active">{{ t "Help" . }}</li>
+        </ol>
+    </nav>
+
+    <h3>Slash commands:</h3>
+    <div>
+        <div>
+            <code>/pm username message</code>
+        </div>
+        <p>Will send a private message to the given username</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/inbox username message</code> or <code>/inbox username -e message</code>
+        </div>
+        <p>
+            Will send a message in the user's inbox, even if that person is online at the time<br />
+            "-e" will encrypt the message using the pgp public key in the user's profile.
+        </p>
+    </div>
+
+    <div>
+        <div>
+            <code>/ignore username</code> (or: <code>/i username</code>)
+        </div>
+        <p>Hides all messages from that user</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/ignore</code> (or: <code>/i</code>)
+        </div>
+        <p>List ignored usernames</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/unignore username</code> (or: <code>/ui username</code>)
+        </div>
+        <p>Remove user from your ignored list</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/e</code>
+        </div>
+        <p>Will edit your last message if it is within the past 2 minutes</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/e HH:MM:SS new message</code>
+        </div>
+        <p>Will edit your message with timestamp HH:MM:SS if it is within the past 2 minutes
+        (You can click your name to autofill this command)</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/pmb username</code>
+        </div>
+        <p>Add/remove someone from your PM blacklist</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/pmw username</code>
+        </div>
+        <p>Add/remove someone from your PM whitelist</p>
+    </div>
+
+    <div>
+        <div><code>/d</code></div>
+        <p>Delete last message</p>
+    </div>
+
+    <div>
+        <div><code>/d HH:MM:SS</code></div>
+        <p>Delete message at specified timestamp</p>
+    </div>
+
+    {{ if .AuthUser.IsModerator }}
+        <div>
+            <div><code>/d HH:MM:SS username</code></div>
+            <p>Delete user's message at specified timestamp. Use when timestamp conflict. (moderator only)</p>
+        </div>
+    {{ end }}
+
+    <div>
+        <div><code>/g groupName</code></div>
+        <p>Send message to specified group</p>
+    </div>
+
+    <div>
+        <div><code>/p username</code></div>
+        <p>Get a link to a user's profile page</p>
+    </div>
+
+    <div>
+        <div><code>/unsubscribe roomName</code></div>
+        <p>Unsubscribe from provided room name</p>
+    </div>
+
+    <div>
+        <div><code>/toggle-autocomplete</code></div>
+        <p>Quickly toggle on/off autocomplete of slash commands feature</p>
+    </div>
+
+    {{ if and (not .AuthUser.IsModerator) .AuthUser.CanSeeHB  }}
+        <div>
+            <div>
+                <code>/hbm some message here</code>
+            </div>
+            <p>Send a message that only hellbanned users can see.</p>
+        </div>
+    {{ end }}
+
+    <h4>Private room commands</h4>
+
+    <h5>All users</h5>
+    <div>
+        <div><code>/mode</code></div>
+        <p>Return current room mode (standard | user-whitelist)</p>
+    </div>
+    <div>
+        <div><code>/whitelist</code> (or: <code>/wl</code>)</div>
+        <p>List users in room whitelist</p>
+    </div>
+
+    <h5>Room owner</h5>
+    <div>
+        <div><code>/whitelist username</code> (or: <code>/wl username</code>)</div>
+        <p>Toggle add/remove username from the whitelist</p>
+    </div>
+    <div>
+        <div><code>/mode MODE</code></div>
+        <p>Change room mode. MODE can be either "standard" or "user-whitelist"</p>
+    </div>
+    <div>
+        <div><code>/groups</code></div>
+        <p>Receive a list of all the room groups</p>
+    </div>
+    <div>
+        <div><code>/addgroup groupName</code></div>
+        <p>Add a group to the room</p>
+    </div>
+    <div>
+        <div><code>/rmgroup groupName</code></div>
+        <p>Remove a group from the room</p>
+    </div>
+    <div>
+        <div><code>/glock groupName</code></div>
+        <p>Lock a group</p>
+    </div>
+    <div>
+        <div><code>/gunlock groupName</code></div>
+        <p>Unlock a group</p>
+    </div>
+    <div>
+        <div><code>/gusers groupName</code></div>
+        <p>Receive a list of all users in a group</p>
+    </div>
+    <div>
+        <div><code>/gadduser groupName username</code></div>
+        <p>Add a user to a group</p>
+    </div>
+    <div>
+        <div><code>/grmuser groupName username</code></div>
+        <p>Remove a user from a group</p>
+    </div>
+
+    {{ if .AuthUser.IsModerator }}
+
+    <h4>Moderator commands</h4>
+    <div>
+        <div>
+            <code>/kick username</code> (or: <code>/k username</code>)
+        </div>
+        <p>Deactivate a user account</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/kk username</code>
+        </div>
+        <p>Same as /k but keeps the messages</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/unkick username</code> (or: <code>/uk username</code>)
+        </div>
+        <p>Reactivate a user account</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/hellban username</code> (or: <code>/hb username</code>)
+        </div>
+        <p>Hell ban a user. The user can still post on the chat, but only him can see the messages.</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/unhellban username</code> (or: <code>/uhb username</code>)
+        </div>
+        <p>Deactivate hell ban for the user</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/hbm some message here</code>
+        </div>
+        <p>Send a message that only hellbanned users can see.</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/hbmt HH:MM:SS</code>
+        </div>
+        <p>Will toggle the message at HH:MM:SS between hellban or not</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/m some message here</code>
+        </div>
+        <p>Send a message that only moderators users can see.</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/moderators</code> (or: <code>/mods</code>)
+        </div>
+        <p>Receive a list of all moderators</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/logout username</code>
+        </div>
+        <p>Force logout a user</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/captcha username</code>
+        </div>
+        <p>Force a user to complete a captcha to continue using the website</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/rtuto username</code>
+        </div>
+        <p>Reset user's tutorial</p>
+    </div>
+    {{ end }}
+
+    <h3>Emojis:</h3>
+    <div style="columns: 4 auto;" class="mb-3">
+        <div><span class="emoji" style="background-position: -54px -0px;"    title=":smile:"></span>         <code>:smile:        </code></div>
+        <div><span class="emoji" style="background-position: -18px -0px;"    title=":happy:"></span>         <code>:happy:        </code></div>
+        <div><span class="emoji" style="background-position: -0px -18px;"    title=":happy-sweat:"></span>   <code>:happy-sweat:  </code></div>
+        <div><span class="emoji" style="background-position: -108px -0px;"   title=":heart-eyes:"></span>    <code>:heart-eyes:   </code></div>
+        <div><span class="emoji" style="background-position:  -72px -0px;"   title=":blush:"></span>         <code>:blush:        </code></div>
+        <div><span class="emoji" style="background-position: -252px -18px;"  title=":sleeping:"></span>      <code>:sleeping:     </code></div>
+        <div><span class="emoji" style="background-position: -234px -0px;"   title=":tongue:"></span>        <code>:tongue:       </code></div>
+        <div><span class="emoji" style="background-position: -234px -18px;"  title=":cool:"></span>          <code>:cool:         </code></div>
+        <div><span class="emoji" style="background-position: -90px -0px;"    title=":wink:"></span>          <code>:wink:         </code></div>
+        <div><span class="emoji" style="background-position: -198px -0px;"   title=":crazy:"></span>         <code>:crazy:        </code></div>
+        <div><span class="emoji" style="background-position: -396px -0px;"   title=":joy:"></span>           <code>:joy:          </code></div>
+        <div><span class="emoji" style="background-position: -414px -0px;"   title=":sob:"></span>           <code>:sob:          </code></div>
+        <div><span class="emoji" style="background-position: -90px -18px;"   title=":scream:"></span>        <code>:scream:       </code></div>
+        <div><span class="emoji" style="background-position: -126px -18px;"  title=":angry:"></span>         <code>:angry:        </code></div>
+        <div><span class="emoji" style="background-position: -144px -18px;"  title=":triumph:"></span>       <code>:triumph:      </code></div>
+        <div><span class="emoji" style="background-position: -360px -18px;"  title=":evil:"></span>          <code>:evil:         </code></div>
+        <div><span class="emoji" style="background-position: -54px -54px;"   title=":see-no-evil:"></span>   <code>:see-no-evil:  </code></div>
+        <div><span class="emoji" style="background-position: -72px -54px;"   title=":hear-no-evil:"></span>  <code>:hear-no-evil: </code></div>
+        <div><span class="emoji" style="background-position: -90px -54px;"   title=":speak-no-evil:"></span> <code>:speak-no-evil:</code></div>
+        <div><span class="emoji" style="background-position: -360px -36px;"  title=":cat-happy:"></span>     <code>:cat-happy:    </code></div>
+        <div><span class="emoji" style="background-position: -360px -54px;"  title=":eyes:"></span>          <code>:eyes:         </code></div>
+        <div><span class="emoji" style="background-position: -144px -54px;"  title=":poop:"></span>          <code>:poop:         </code></div>
+        <div><span class="emoji" style="background-position: -432px -54px;"  title=":+1:"></span>            <code>:+1:           </code></div>
+        <div><span class="emoji" style="background-position: -54px -72px;"   title=":wave:"></span>          <code>:wave:         </code></div>
+        <div><span class="emoji" style="background-position: -234px -72px;"  title=":clap:"></span>          <code>:clap:         </code></div>
+        <div><span class="emoji" style="background-position: -162px -54px;"  title=":fire:"></span>          <code>:fire:         </code></div>
+        <div><span class="emoji" style="background-position: -180px -54px;"  title=":sparkles:"></span>      <code>:sparkles:     </code></div>
+        <div><span class="emoji" style="background-position: -270px -54px;"  title=":sweat:"></span>         <code>:sweat:        </code></div>
+        <div><span class="emoji" style="background-position: -180px -108px;" title=":heart:"></span>         <code>:heart:        </code></div>
+        <div><span class="emoji" style="background-position: -198px -108px;" title=":broken-heart:"></span>  <code>:broken-heart: </code></div>
+        <div><span class="emoji" style="background-position: -180px -72px;"  title=":praise:"></span>        <code>:praise:       </code></div>
+        <div><span class="emoji" style="background-position: -108px -54px;"  title=":skull:"></span>         <code>:skull:        </code></div>
+        <div><span class="emoji" style="background-position: -126px -54px;"  title=":alien:"></span>         <code>:alien:        </code></div>
+        <div><span class="emoji" style="background-position: -306px -54px;"  title=":zzz:"></span>           <code>:zzz:          </code></div>
+    </div>
+    <div style="columns: 4 auto;" class="mb-3">
+        <div><span title=":fox:">🦊</span> <code>:fox:</code></div>
+        <div><span title=":popcorn:">🍿</span> <code>:popcorn:</code></div>
+    </div>
+    
+    <table>
+        <tr><td><code>:shrug:</code></td><td> -> <code>¯\_(ツ)_/¯</code></td></tr>
+        <tr><td><code>:flip:</code></td><td> -> <code>(╯°□°)╯︵ ┻━┻</code></td></tr>
+        <tr><td><code>:flip-all:</code></td><td> -> <code>┻━┻︵ \(°□°)/ ︵ ┻━┻</code></td></tr>
+        <tr><td><code>:fix-table:</code></td><td> -> <code>(ヘ･_･)ヘ┳━┳</code></td></tr>
+        <tr><td><code>:disap:</code></td><td> -> <code>ಠ_ಠ</code></td></tr>
+    </table>
+
+    <div class="mb-5"></div>
+</div>
+
+{{ end }}

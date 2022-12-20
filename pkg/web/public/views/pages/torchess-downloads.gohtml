@@ -1,0 +1,39 @@
+{{ define "content" }}
+
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/torchess">TorChess</a></li>
+            <li class="breadcrumb-item active">{{ t "Downloads" . }}</li>
+        </ol>
+    </nav>
+
+    <h2>TorChess</h2>
+
+    <table class="table table-striped table-sm">
+        <thead>
+        <tr>
+            <th>{{ t "File name" . }}</th>
+            <th>{{ t "OS" . }}</th>
+            <th>{{ t "Arch" . }}</th>
+            <th>{{ t "Size" . }}</th>
+            <th>{{ t "SHA256 Checksum" . }}</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{ range .Data.Files }}
+            <tr>
+                <td><a href="/torchess/downloads/{{ .Name }}">{{ .Name }}</a></td>
+                <td>{{ .OS }}</td>
+                <td>{{ .Arch }}</td>
+                <td>{{ .Bytes }}</td>
+                <td class="align-middle" style="font-size: 10px; font-family: monospace;">{{ .Checksum }}</td>
+            </tr>
+        {{ else }}
+            <tr><td colspan="5"><em>{{ t "No files to display" . }}</em></td></tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+
+{{ end }}

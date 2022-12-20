@@ -1,0 +1,33 @@
+{{ define "sub-extra-head" }}
+<style>
+    textarea {
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: scroll;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "PGP public key" . }}
+    </div>
+    <div class="card-body">
+        <div class="form-group">
+            {{ if .Data.PGPPublicKeyID }}
+                Key ID: <span style="color: #eaac45">{{ .Data.PGPPublicKeyID }}</span><br />
+            {{ end }}
+        </div>
+        <div class="form-group">
+            {{ if .Data.PGPPublicKeyID }}
+                <a href="/settings/pgp/add" class="btn btn-primary">{{ t "Edit PGP public key" . }}</a>
+            {{ else }}
+                <a href="/settings/pgp/add" class="btn btn-primary">{{ t "Add PGP public key" . }}</a>
+            {{ end }}
+        </div>
+    </div>
+</div>
+
+{{ end }}

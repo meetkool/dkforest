@@ -1,0 +1,9 @@
+{{ define "content" }}
+
+<div class="container">
+    <h3>Shop</h3>
+    {{ .Data.Invoice.GetURL }}<br />
+    <img src="data:image/png;base64,{{ .Data.Img }}" class="img-thumbnail" />
+</div>
+
+{{ end }}

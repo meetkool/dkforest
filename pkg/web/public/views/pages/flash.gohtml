@@ -1,0 +1,14 @@
+{{ define "extra-head" }}
+<meta http-equiv="refresh" content="3; url={{ .Data.Redirect }}">
+{{ end }}
+
+{{ define "navbar" }}&nbsp;{{ end }}
+
+{{ define "content" }}
+<div class="container">
+    <div class="alert {{ if .Data.Type }}{{ .Data.Type }}{{ else }}alert-success{{ end }}">
+        {{ .Data.Message }}<br />
+        <a href="{{ .Data.Redirect }}">I don't want to wait</a>
+    </div>
+</div>
+{{ end }}

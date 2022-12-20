@@ -1,0 +1,108 @@
+{{ define "sub-extra-head" }}
+<style>
+    .msg p:first-of-type { display: inline; }
+    .delete_msg_btn {
+        font-size: 15px;
+        line-height: 1;
+    }
+    .delete_msg_btn::after { content: "×"; }
+    .mod-btn {
+        width: 16px; height: 16px;
+        margin: 0; padding: 0;
+        border: 1px solid gray;
+        display: inline;
+        text-align: center;
+        vertical-align: middle;
+        user-select: none;
+        background-color: #444;
+        color: #ea2a2a;
+        -webkit-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+        -moz-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+        -webkit-border-radius: 3px;
+        -moz-border-radius: 3px;
+    }
+    .mod-btn:hover {
+        background-color: #222;
+    }
+</style>
+{{ end }}
+
+{{ define "title" }}dkf - inbox{{ end }}
+
+{{ define "sub-content" }}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link active" href="/settings/inbox">Inbox</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/inbox/sent">Sent</a>
+    </li>
+</ul>
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "Chat inbox" . }}
+    </div>
+    <div class="card-body">
+<!--        <div class="mb-3">Messages will be auto deleted after a week.</div>-->
+        <div class="mb-3">
+            <form method="post" action="/api/v1/inbox/delete-all" style="display: inline;">
+                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                <button type="submit" class="btn btn-danger btn-sm">Delete all</button>
+            </form>
+        </div>
+        {{ range .Data.Notifs }}
+            {{ if ne .Notification.ID 0 }}
+                <div style="border-bottom: 1px solid #444; color: #888;">
+                    <form method="post" action="/api/v1/notifications/delete/{{ .Notification.ID }}" style="display: inline;">
+                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                        <button class="mod-btn delete_msg_btn" title="delete"></button>
+                    </form>
+                    {{ if not .Notification.IsRead }}
+                        <span style="color: white;">*</span>
+                    {{ end }}
+                    <span style="color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 23px;">{{ .Notification.CreatedAt.Format "01-02 15:04:05" }}</span> -
+                    <span>{{ .Notification.Message | safe }}</span>
+                </div>
+            {{ else if ne .SessionNotification.ID 0 }}
+                <div style="border-bottom: 1px solid #444; color: #888;">
+                    <form method="post" action="/api/v1/session-notifications/delete/{{ .SessionNotification.ID }}" style="display: inline;">
+                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                        <button class="mod-btn delete_msg_btn" title="delete"></button>
+                    </form>
+                    {{ if not .SessionNotification.IsRead }}
+                        <span style="color: white;">*</span>
+                    {{ end }}
+                    <span style="color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 23px;">{{ .SessionNotification.CreatedAt.Format "01-02 15:04:05" }}</span> -
+                    <span>{{ .SessionNotification.Message | safe }}</span>
+                </div>
+            {{ else }}
+                <div style="border-bottom: 1px solid #444; color: #888;" class="msg">
+                    <form method="post" action="/api/v1/inbox/delete/{{ .ChatInboxMessage.ID }}" style="display: inline;">
+                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                        <button class="mod-btn delete_msg_btn" title="delete"></button>
+                    </form>
+                    {{ if not .ChatInboxMessage.IsRead }}
+                        <span style="color: white;">*</span>
+                    {{ end }}
+                    Room: <a href="/chat/{{ .ChatInboxMessage.Room.Name }}">#{{ .Room.Name }}</a><br />
+                    <span style="color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 23px;">{{ .ChatInboxMessage.CreatedAt.Format "01-02 15:04:05" }}</span> -
+                    {{ if .IsPm }}
+                        [<span {{ .ChatInboxMessage.User.GenerateChatStyle | attr }}>{{ .ChatInboxMessage.User.Username }}</span> → <span {{ .ChatInboxMessage.ToUser.GenerateChatStyle | attr }}>{{ .ToUser.Username }}</span>]
+                    {{ else if .Moderators }}
+                        [M] <span {{ .ChatInboxMessage.User.GenerateChatStyle | attr }}>{{ .ChatInboxMessage.User.Username }}</span>
+                    {{ else }}
+                        <span {{ .ChatInboxMessage.User.GenerateChatStyle | attr }}>{{ .ChatInboxMessage.User.Username }}</span>
+                    {{ end }}
+                    -
+                    <span {{ .ChatInboxMessage.User.GenerateChatStyle | attr }}>{{ .ChatInboxMessage.Message | safe }}</span>
+                </div>
+            {{ end }}
+        {{ else }}
+            <div><em>No message to display</em></div>
+        {{ end }}
+    </div>
+</div>
+
+{{ end }}

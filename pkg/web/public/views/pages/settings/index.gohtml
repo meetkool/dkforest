@@ -1,0 +1,38 @@
+{{ define "extra-head" }}
+    {{ block "sub-extra-head" . }}{{ end }}
+{{ end }}
+
+{{ define "content" }}
+<div class="container-fluid mt-2">
+    <div class="row">
+        <div class="col-lg-2 col-3">
+            <div class="card">
+                <div class="list-group list-group-flush">
+                    <a href="/settings/account" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "account" }} active{{ end }}">{{ t "Account" . }}</a>
+                    <a href="/settings/public-notes" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "notes" }} active{{ end }}">{{ t "Notes" . }}</a>
+                    <a href="/settings/sessions" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "sessions" }} active{{ end }}">{{ t "Sessions" . }}</a>
+                    <a href="/settings/password" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "password" }} active{{ end }}">{{ t "Password" . }}</a>
+                    <a href="/settings/security" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "security" }} active{{ end }}">{{ t "Security" . }}</a>
+                    <a href="/settings/uploads" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "uploads" }} active{{ end }}">{{ t "Files uploaded" . }}</a>
+                    <a href="/settings/inbox" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "inbox" }} active{{ end }}">{{ t "Chat inbox" . }}</a>
+                    <a href="/settings/chat" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "chat" }} active{{ end }}">{{ t "Chat settings" . }}</a>
+                    <a href="/settings/pgp" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "pgp" }} active{{ end }}">{{ t "PGP" . }}</a>
+                    <a href="/settings/age" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "age" }} active{{ end }}">{{ t "Age" . }}</a>
+                </div>
+            </div>
+
+            {{ if .AuthUser.IsModerator }}
+                <div class="card mt-3">
+                    <div class="list-group list-group-flush">
+                        <a href="/settings/website" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "website" }} active{{ end }}">{{ t "Website settings" . }}</a>
+                        <a href="/settings/invitations" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "invitations" }} active{{ end }}">{{ t "Invitations" . }}</a>
+                    </div>
+                </div>
+            {{ end }}
+        </div>
+        <div class="col-lg-10 col-9">
+            {{ block "sub-content" . }}{{ end }}
+        </div>
+    </div>
+</div>
+{{ end }}

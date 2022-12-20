@@ -1,0 +1,85 @@
+{{ define "sub-content" }}
+    {{ if .Data.FlagFound }}
+        You found the flag
+    {{ else if .Data.Registered }}
+        You have been registered successfully.<br />
+        <a href="/vip/challenges/byte-road">Back to home page</a>
+    {{ else if not .Data.CaptchaSolved }}
+        <p>
+            This is an exploit that I encountered in the wild.<br />
+            Someone showed up on BHC (Black Hat Chat) and started advertising his new "marketplace website" he called "ByteRoad".<br />
+            The first thing I noticed while visiting the website was the captcha was using a question in cleartext ie: "What is 10 + 46 ?".<br />
+            So I told them the captcha was useless and would only slow down humans.<br />
+            To which they replied that I knew nothing and that it was obviously very secure.<br />
+            So 30min later, they realized how popular their website was getting, with tens of thousands of new users registration.<br />
+            They had to turn off the website for a little while, and then came back with a real captcha which was hard for the bots as well.<br />
+            Then again, challenged me to try to mess with their website.<br />
+            So after looking around their quickly put together new captcha system, I found an exploit and was able to, again, create tens of thousands of new users on their website.<br />
+            They then shutdown the website forever.<br />
+            <br />
+            In this CTF challenge, I reproduced the vulnerability that was on their website.<br />
+            Your goal is to find the exploit and use it to create 100 accounts within 5 minutes.<br />
+        </p>
+        <p>
+            The registration is a 2 steps process, you need to first solve a captcha, once the captcha is solved, you can register an account.
+        </p>
+        <p>
+            You have registered <b>{{ .Data.NbAccountsRegistered }}</b> in the last 5 minutes. ({{ if .Data.SessionExp }}Session time remaining: {{ .Data.SessionExp | shortDur }}{{ else }}no session{{ end }})
+        </p>
+        <form autocomplete="on" method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <input type="hidden" name="formName" value="captcha" />
+            <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
+            <fieldset>
+                <div class="row">
+                    <div class="center-block">
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        <div class="form-group">
+                            <div class="mb-2 text-center">
+                                <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" style="background-color: hsl(0, 0%, 90%);" />
+                            </div>
+                            <input class="form-control{{ if .Data.ErrCaptcha }} is-invalid{{ end }}" placeholder="{{ t "Captcha" . }}" name="captcha" type="text" value="{{ .Data.Captcha }}" maxlength="6" required autocomplete="off" />
+                            {{ if .Data.ErrCaptcha }}<div class="invalid-feedback d-block">{{ .Data.ErrCaptcha }}</div>{{ end }}
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" class="btn btn-lg btn-primary btn-block" value="Continue" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+    {{ else }}
+        <h1>Register an account</h1>
+        <form autocomplete="off" method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <input type="hidden" name="formName" value="register" />
+            <fieldset>
+                <div class="row">
+                    <div class="center-block">
+                        {{ if .Data.ErrRegistration }}
+                        <div class="alert alert-danger">
+                            {{ .Data.ErrRegistration }}
+                        </div>
+                        {{ end }}
+                    </div>
+                </div>
+                <div class="row">
+                    <div>
+                        <div class="form-group" style="width: 300px;">
+                            <input class="form-control" placeholder="{{ t "Username (3-10 charaters)" . }}" name="username" type="text" value="{{ .Data.Username }}" autofocus required />
+                        </div>
+                        <div class="form-group">
+                            <input class="form-control" placeholder="{{ t "Password (3-10 charaters)" . }}" name="password" type="password" value="{{ .Data.Password }}" required />
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" class="btn btn-lg btn-primary btn-block" value="Register" />
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+    {{ end }}
+{{ end }}

@@ -1,0 +1,32 @@
+{{ define "content" }}
+    <div class="container mt-3 mb-5">
+        <h3>{{ t "1- Recovery code" . }}</h3>
+        <p>{{ t "Recovery code is used to access your account in the event you cannot receive two-factor authentication codes." . }}</p>
+        <h1><span style="background-color: black; color: black;">{{ .Data.RecoveryCode }}</span></h1>
+        <p>
+            <b>{{ t "Treat your recovery codes with the same level of attention as you would your password!" . }}</b>
+            {{ t "We recommend saving them with a password manager such as Lastpass, 1Password, or Keeper." . }}
+        </p>
+        <h3>{{ t "2- Scan this barcode with your app." . }}</h3>
+        <p>{{ t "Scan the image above with the two-factor authentication app on your phone." . }}</p>
+        <p><img src="data:image/png;base64,{{ .Data.QRCode }}" class="img-thumbnail" /></p>
+        <p>If you cannot scan the code, enter the secret <span style="background-color: black; color: black;">{{ .Data.Secret }}</span> into your app.</p>
+        <h3>{{ t "3- Enter the six-digit code from the application" . }}</h3>
+        <p>{{ t "After scanning the barcode image, the app will display a six-digit code that you can enter below." . }}</p>
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <input type="text" name="code" class="form-control" placeholder="123456" style="{{ if .Data.Error }}is-invalid{{ end }}" autocomplete="off" maxlength="6" />
+                {{ if .Data.Error }}<div class="invalid-feedback d-block">{{ .Data.Error }}</div>{{ end }}
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" value="{{ .Data.Password }}" class="form-control" placeholder="Current password" style="{{ if .Data.ErrorPassword }}is-invalid{{ end }}" autocomplete="off" autocapitalize="none" />
+                {{ if .Data.ErrorPassword }}<div class="invalid-feedback d-block">{{ .Data.ErrorPassword }}</div>{{ end }}
+            </div>
+            <div class="form-group">
+                <button class="btn btn-success">{{ t "Enable" . }}</button>
+                <a href="/settings/account" class="btn btn-secondary">{{ t "Cancel" . }}</a>
+            </div>
+        </form>
+    </div>
+{{ end }}

@@ -1,0 +1,29 @@
+{{ define "content" }}
+<div class="container-fluid mt-2">
+    <div class="row">
+        <div class="col-4 col-sm-3 col-md-3 col-lg-2 mb-5">
+            <div class="card mb-4">
+                <div class="list-group list-group-flush">
+                    <a href="/admin" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "users" }} active{{ end }}">{{ t "Users" . }}</a>
+                    <a href="/admin/sessions" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "sessions" }} active{{ end }}">{{ t "Sessions" . }}</a>
+                    <a href="/admin/ignored" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "ignored" }} active{{ end }}">{{ t "Ignored users" . }}</a>
+                    <a href="/admin/audits" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "audits" }} active{{ end }}">{{ t "Audits" . }}</a>
+                    <a href="/admin/rooms" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "rooms" }} active{{ end }}">{{ t "Rooms" . }}</a>
+                    <a href="/admin/settings" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "settings" }} active{{ end }}">{{ t "Settings" . }}</a>
+                    <a href="/admin/captcha" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "captcha" }} active{{ end }}">{{ t "Captcha" . }}</a>
+                    <a href="/admin/uploads" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "uploads" }} active{{ end }}">{{ t "Uploads" . }}</a>
+                    <a href="/admin/filedrops" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "filedrops" }} active{{ end }}">{{ t "Filedrops" . }}</a>
+                    <a href="/admin/downloads" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "downloads" }} active{{ end }}">{{ t "Downloads" . }}</a>
+                    <a href="/admin/gists" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "gists" }} active{{ end }}">{{ t "Gists" . }}</a>
+                    <a href="/admin/backup" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "backup" }} active{{ end }}">{{ t "Backup" . }}</a>
+                    <a href="/admin/ddos" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "ddos" }} active{{ end }}">{{ t "DDoS" . }}</a>
+<!--                    <a href="/admin/update" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "update" }} active{{ end }}">{{ t "Update" . }}</a>-->
+                </div>
+            </div>
+        </div>
+        <div class="col-8 col-sm-9 col-md-9 col-lg-10">
+            {{ block "sub-content" . }}{{ end }}
+        </div>
+    </div>
+</div>
+{{ end}}

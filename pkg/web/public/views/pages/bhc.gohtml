@@ -1,0 +1,35 @@
+{{ define "extra-head" }}
+    <style>
+    </style>
+{{ end }}
+
+{{ define "title" }}dkf - BHC captcha helper{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+        {{ if .Data.Error }}
+            <div class="alert alert-danger">{{ .Data.Error }}</div>
+        {{ else if .Data.Success }}
+            <div class="alert alert-success">{{ .Data.Success }}</div>
+        {{ else }}
+            <div class="alert alert-secondary">Waiting for answer...</div>
+        {{ end }}
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
+            <div class="form-group">
+                <div class="mb-2 text-center">
+                    {{ template "captcha-tmpl" . }}
+                </div>
+                <input class="transparent-input form-control" placeholder="{{ t "Captcha" . }}" name="captcha" type="text" value="{{ .Data.Captcha }}" autocomplete="off" maxlength="6" required autofocus />
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary btn-lg btn-block">{{ t "Validate captcha" . }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{ end }}

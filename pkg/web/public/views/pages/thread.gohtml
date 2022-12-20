@@ -1,0 +1,97 @@
+{{ define "extra-head" }}
+<style>
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+    :target {
+        -webkit-animation: target-fade 3s 1;
+        -moz-animation: target-fade 3s 1;
+    }
+
+    @-webkit-keyframes target-fade {
+        0% { background-color: rgba(255,213,0,0.5); }
+        100% { background-color: rgba(0,0,0,0); }
+    }
+
+    @-moz-keyframes target-fade {
+        0% { background-color: rgba(255,213,0,0.5); }
+        100% { background-color: rgba(0,0,0,0); }
+    }
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+</style>
+{{ end }}
+
+{{ define "title" }}dkf - {{ .Data.Thread.Name }}{{ end }}
+
+{{ define "content" }}
+<div class="container-fluid mb-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/forum">Forum</a></li>
+            <li class="breadcrumb-item active">{{ .Data.Thread.Name }}</li>
+        </ol>
+    </nav>
+
+    {{ if .AuthUser }}
+        <div class="mb-3">
+            {{ if .Data.IsSubscribed }}
+                <form method="post" style="display: inline-block" action="/api/v1/threads/{{ .Data.Thread.UUID }}/unsubscribe">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button type="submit" class="btn btn-sm btn-secondary">{{ t "Unsubscribe" . }}</button>
+                </form>
+            {{ else }}
+                <form method="post" style="display: inline-block" action="/api/v1/threads/{{ .Data.Thread.UUID }}/subscribe">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button type="submit" class="btn btn-sm btn-secondary">{{ t "Subscribe" . }}</button>
+                </form>
+            {{ end }}
+            {{ if .AuthUser.IsAdmin }}
+                <a href="/t/{{ $.Data.Thread.UUID }}/edit" class="btn btn-sm btn-secondary">Edit thread</a>
+                <a href="/t/{{ $.Data.Thread.UUID }}/delete" class="btn btn-sm btn-secondary">Delete thread</a>
+            {{ end }}
+        </div>
+    {{ end }}
+
+    <div style="border-bottom: 1px solid #444;">
+        {{ range .Data.Messages }}
+            <div id="{{ .UUID }}" style="border-left: 1px solid #444; border-right: 1px solid #444;">
+                <div style="display: flex; flex-direction: row; background-color: #292929; padding: 5px 0 5px 10px; border-top: 1px solid #444; border-bottom: 1px solid #333;">
+                    <div class="img-thumbnail" style="width: 80px; height: 80px; margin-right: 10px;">
+                        {{ if .User.Avatar }}
+                            <img src="data:image;base64,{{ .User.Avatar | b64 }}" alt="avatar" width="70" height="70" />
+                        {{ else }}
+                            <img src="/public/img/avatar-placeholder.png" width="70" height="70" alt="avatar" />
+                        {{ end }}
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="flex: 1;"><a {{ .User.GenerateChatStyle | attr }} href="/u/{{ .User.Username }}">{{ .User.Username }}</a></div>
+                        <div style="flex: 1;"><a href="#{{ .UUID }}">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</a></div>
+                        <div>
+                            {{ if $.AuthUser }}
+                                {{ if or (and (eq $.AuthUser.ID .UserID) .CanEdit) $.AuthUser.IsAdmin }}
+                                    <a href="/t/{{ $.Data.Thread.UUID }}/messages/{{ .UUID }}/edit" class="btn btn-xs btn-secondary">Edit</a>
+                                    <a href="/t/{{ $.Data.Thread.UUID }}/messages/{{ .UUID }}/delete" class="btn btn-xs btn-secondary">Delete</a>
+                                {{ end }}
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 5px 5px 10px 10px;">
+                    {{ .Escape | safe }}
+                </div>
+            </div>
+        {{ end }}
+    </div>
+
+    {{ template "pagination" . }}
+
+    <a href="/t/{{ .Data.Thread.UUID }}/reply" class="btn btn-primary mt-3">Reply</a>
+</div>
+
+{{ end }}

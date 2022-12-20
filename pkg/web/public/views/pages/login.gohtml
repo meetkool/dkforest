@@ -1,0 +1,128 @@
+{{ define "base" }}<!DOCTYPE html><html lang="en"><head>
+    {{ .LogoASCII }}
+    {{ .VersionHTML }}
+    {{ .ShaHTML }}
+    <link href="/public/img/favicon.ico" rel="icon" type="image/x-icon" />
+    <meta charset="UTF-8" />
+    <meta name="author" content="n0tr1v">
+    <meta name="keywords" content="{{ block "keywords" . }}{{ .BaseKeywords }}{{ end }}"/>
+    <meta name="subject" content="">
+    <meta name="description" content="{{ block "meta-description" . }}{{ end }}" />
+    <meta name="classification" content="">
+    <meta name="distribution" content="">
+    <meta name="robots" content="all" />
+    <meta name="language" content="English">
+    <meta name="revisit-after" content="1 days">
+    <meta http-equiv="expires" content="0">
+    <meta http-equiv="pragma" content="no-cache">
+    <title>{{ block "title" . }}DarkForest{{ end }}</title>
+    {{ block "canonical-link" . }}{{ end }}
+    <link rel="stylesheet" type="text/css" href="/public/css/bootstrap.min.css?v={{ .VERSION }}" />
+    <link rel="stylesheet" type="text/css" href="/public/css/style.css?v={{ .VERSION }}" />
+
+    <style>
+        body, html {
+            height: 100%;
+            display:table;
+            width:100%;
+        }
+        body {
+            display:table-cell;
+            vertical-align:middle;
+        }
+        .bg {
+            /* The image used */
+            background-image: url({{ .WallpaperImg }});
+
+            /* Full height */
+            height: 100%;
+
+            /* Center and scale the image nicely */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+        #parent {
+            display: table;
+            width: 100%;
+        }
+        #form_login {
+            display:table;/* shrinks to fit content */
+            margin:auto;
+        }
+        .captcha-img {
+            transition: transform .2s; /* Animation */
+        }
+        .captcha-img:hover {
+            transform: scale(2.5);
+        }
+    </style>
+</head>
+<body class="bg">
+
+<div id="parent">
+    <div class="container" id="form_login">
+        <div class="row">
+            <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                <form autocomplete="on" method="post">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    {{ if .Data.CaptchaRequired }}
+                        <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
+                    {{ end }}
+                    <fieldset>
+                        <div class="row">
+                            <div class="center-block">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12 col-md-10 offset-md-1 ">
+                                {{ if .Data.Error }}
+                                    <div class="alert alert-danger">
+                                        {{ .Data.Error }}
+                                    </div>
+                                {{ end }}
+                                <div class="form-group">
+                                    <input class="transparent-input form-control{{ if .Data.Error }} is-invalid{{ end }}" placeholder="{{ t "Username" . }}" name="username" type="text" value="{{ .Data.Username }}" autocorrect="off" autocapitalize="none"{{ if eq .Data.Autofocus 0 }} autofocus{{ end }} required />
+                                </div>
+                                <div class="form-group">
+                                    <input class="transparent-input form-control{{ if .Data.Error }} is-invalid{{ end }}" placeholder="{{ t "Password" . }}" name="password" type="password" value="{{ .Data.Password }}"{{ if eq .Data.Autofocus 1 }} autofocus{{ end }} required />
+                                </div>
+                                {{ if .Data.CaptchaRequired }}
+                                    <div class="form-group">
+                                        <div class="mb-2 text-center">
+                                            <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" style="background-color: hsl(0, 0%, 90%);" class="captcha-img" />
+                                        </div>
+                                        <input class="transparent-input form-control{{ if .Data.ErrCaptcha }} is-invalid{{ end }}" placeholder="{{ t "Captcha" . }}" name="captcha" type="text" maxlength="6" required{{ if eq .Data.Autofocus 2 }} autofocus{{ end }} autocomplete="off" />
+                                        {{ if .Data.ErrCaptcha }}<div class="invalid-feedback d-block">{{ .Data.ErrCaptcha }}</div>{{ end }}
+                                    </div>
+                                {{ end }}
+                                <div class="form-group">
+                                    <input type="submit" class="transparent-input btn btn-lg btn-primary btn-block" value="{{ t "Sign in" . }}" />
+                                </div>
+                                <div class="form-group">
+                                    <a href="/signup" class="bg-label link">{{ t "Register" . }}</a>
+                                    <a href="/forgot-password" class="bg-label link ml-2">{{ t "I forgot my password" . }}</a>
+                                </div>
+                                {{ if .Data.HomeUsersList }}
+                                    <div class="form-group">
+                                        <div class="bg-label" style="color: white;" class="text-center">
+                                            Online:
+                                            {{ range .Data.Online }}
+                                                <span style="color: {{ .Color }};">{{ .Username }}</span>
+                                            {{ else }}
+                                                <em>none</em>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                {{ end }}
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>{{ end }}

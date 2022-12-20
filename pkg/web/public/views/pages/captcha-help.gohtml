@@ -1,0 +1,27 @@
+{{ define "title" }}dkf - captcha help{{ end }}
+
+{{ define "content" }}
+
+{{/* 1643905378254628000 */}}
+<div class="container">
+    <div>
+
+        <h3>Captcha help</h3>
+
+        <p>
+            To solve the captcha, you have to find the line which has no dashes and link 6 numbers together. <br />
+            The main line will always be drawn on top of all other lines.<br />
+            You can start by finding a long line that doesn't have dashes in it, follow that line until you find the edge.<br />
+            Then go back and follow the line to the other edge and note the 6 numbers that the line cross path with.<br />
+            The direction is not important, both combination will work.<br />
+        </p>
+        <img src="/public/img/captcha_example1.png" alt="" />
+        <img src="/public/img/captcha_example2.png" alt="" />
+        <p>
+            For example, in the above captcha, both: "355129" and "921553" would be valid solutions.
+        </p>
+
+    </div>
+</div>
+
+{{ end }}

@@ -1,0 +1,48 @@
+{{ define "extra-head" }}
+<style>
+    textarea {
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: scroll;
+    }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<div class="container">
+    <div class="row">
+        <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-6 offset-xl-3">
+            {{ if .Data.Error }}
+            <div class="alert alert-danger">{{ .Data.Error }}</div>
+            {{ end }}
+            <div class="card mb-3">
+                <div class="card-header">
+                    {{ t "PGP two factor" . }}
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                        <input type="hidden" name="formName" value="pgp_2fa" />
+                        <input type="hidden" name="token" value="{{ .Data.Token }}" />
+                        <div class="form-group">
+                            <label for="encrypted_message">{{ t "Please decrypt the following message with your private key and send the required code" . }}</label>
+                            <textarea name="encrypted_message" id="encrypted_message" rows="10" class="form-control" style="font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;" readonly>{{ .Data.EncryptedMessage }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="pgp_code">{{ t "Your decrypted code" . }}</label>
+                            <input name="pgp_code" id="pgp_code" value="{{ .Data.Code }}" type="text" class="form-control{{ if .Data.ErrorCode }} is-invalid{{ end }}" autocomplete="off" autocorrect="off" autocapitalize="none" autofocus />
+                            {{ if .Data.ErrorCode }}
+                                <div class="invalid-feedback">{{ .Data.ErrorCode }}</div>
+                            {{ end }}
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" value="{{ t "Continue login" . }}" class="btn btn-primary" />
+                            <a href="/settings/pgp" class="btn btn-secondary">{{ t "Cancel" . }}</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

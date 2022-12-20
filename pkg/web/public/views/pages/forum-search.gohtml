@@ -1,0 +1,87 @@
+{{ define "extra-head" }}
+<style>
+    .timestamp {
+        color: #aaa;
+        font-size: 11px;
+    }
+</style>
+{{ end }}
+
+{{ define "title" }}dkf - forum{{ end }}
+
+{{ define "content" }}
+
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/forum">Forum</a></li>
+            <li class="breadcrumb-item active">{{ t "Search" . }}</li>
+        </ol>
+    </nav>
+
+    <div class="pb-2 mb-4 border-bottom">
+        <form method="get" class="d-inline">
+            <div class="input-group" style="width: 250px;">
+                <input type="text" name="search" class="form-control form-control-sm d-inline" value="{{ .Data.Search }}" placeholder="Search" />
+                <div class="input-group-append">
+                    <button class="btn btn-secondary btn-sm">search</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <table class="table table-striped">
+        <tr>
+            <th>Thread name</th>
+            <th class="text-center">Messages</th>
+            <th>Author</th>
+            <th>Last Message</th>
+        </tr>
+        {{ range .Data.ForumThreads }}
+            <tr>
+                <td>
+                    <a href="/t/{{ .UUID }}">{{ .Name }}</a>
+                </td>
+                <td class="text-center" style="vertical-align: middle;">{{ .RepliesCount }}</td>
+                <td>
+                    <a style="color: {{ .AuthorChatColor }};" href="/u/{{ .Author }}">{{ .Author }}</a><br />
+                    <span class="timestamp">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+                </td>
+                <td>
+                    <a style="color: {{ .LastMsgChatColor }};" href="/u/{{ .LastMsgAuthor }}">{{ .LastMsgAuthor }}</a><br />
+                    <span class="timestamp">{{ .LastMsgCreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+                </td>
+            </tr>
+        {{ else }}
+            <tr>
+                <td colspan="4"><em>No thread to display</em></td>
+            </tr>
+        {{ end }}
+    </table>
+
+    <table class="table table-striped">
+        <tr>
+            <th>Thread name</th>
+            <th>Snippet</th>
+            <th>Author</th>
+        </tr>
+        {{ range .Data.ForumMessages }}
+            <tr>
+                <td><a href="/t/{{ .ThreadUUID }}#{{ .UUID }}">{{ .ThreadName }}</a></td>
+                <td>
+                    <a href="/t/{{ .ThreadUUID }}#{{ .UUID }}">{{ .Snippet }}</a>
+                </td>
+                <td>
+                    <a style="color: {{ .AuthorChatColor }};" href="/u/{{ .Author }}">{{ .Author }}</a><br />
+                    <span class="timestamp">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+                </td>
+            </tr>
+        {{ else }}
+            <tr>
+                <td colspan="3"><em>No messages to display</em></td>
+            </tr>
+        {{ end }}
+    </table>
+</div>
+
+{{ end }}

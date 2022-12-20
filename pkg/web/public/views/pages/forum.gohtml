@@ -1,0 +1,80 @@
+{{ define "extra-head" }}
+<style>
+    .timestamp {
+        color: #aaa;
+        font-size: 11px;
+    }
+</style>
+{{ end }}
+
+{{ define "title" }}dkf - forum{{ end }}
+
+{{ define "content" }}
+
+<div class="container-fluid">
+    <div class="pb-2 mb-4 border-bottom d-flex justify-content-between align-items-center">
+        <h2>Forum</h2>
+        <div>
+            <form method="get" action="/forum/search" class="d-inline-block">
+                <div class="input-group" style="width: 250px;">
+                    <input type="text" name="search" class="form-control form-control-sm d-inline" value="" placeholder="Search" />
+                    <div class="input-group-append">
+                        <button class="btn btn-secondary btn-sm">search</button>
+                    </div>
+                </div>
+            </form>
+            <a href="/new-thread" class="btn btn-success ml-4">
+                <i class="fa fa-plus fa-fw"></i> New thread
+            </a>
+        </div>
+    </div>
+
+    {{ if .Data.ForumCategories }}
+        <table class="table table-striped" style="border: 1px solid #444;">
+            <tr>
+                <th>Category name</th>
+            </tr>
+            {{ range .Data.ForumCategories }}
+                <tr>
+                    <td><a href="/forum/c/{{ .Slug }}">{{ .Name }}</a></td>
+                </tr>
+            {{ end }}
+        </table>
+    {{ end }}
+
+    <table class="table table-striped" style="border: 1px solid #444;">
+        <tr>
+            <th><div style="width: 30px; display: inline-block;">&nbsp;</div>Thread name</th>
+            <th class="text-center">Messages</th>
+            <th>Author</th>
+            <th>Last Message</th>
+        </tr>
+        {{ range .Data.ForumThreads }}
+        <tr>
+            <td style="vertical-align: middle;">
+                {{ if .IsUnread }}
+                    <div style="color: green; width: 30px; display: inline-block;">&#9679;</div>
+                {{ else }}
+                    <div style="color: #757575; width: 30px; display: inline-block;">&#9679;</div>
+                {{ end }}
+                <a href="/t/{{ .UUID }}">{{ .Name }}</a>
+            </td>
+            <td class="text-center" style="vertical-align: middle;">{{ .RepliesCount }}</td>
+            <td>
+                <a style="color: {{ .AuthorChatColor }};" href="/u/{{ .Author }}">{{ .Author }}</a><br />
+                <span class="timestamp">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+            </td>
+            <td>
+                <a style="color: {{ .LastMsgChatColor }};" href="/u/{{ .LastMsgAuthor }}">{{ .LastMsgAuthor }}</a><br />
+                <span class="timestamp">{{ .LastMsgCreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+            </td>
+        </tr>
+        {{ else }}
+        <tr>
+            <td colspan="4"><em>No thread to display</em></td>
+        </tr>
+        {{ end }}
+    </table>
+</div>
+
+{{ end }}

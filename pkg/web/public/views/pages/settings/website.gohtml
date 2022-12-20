@@ -1,0 +1,44 @@
+{{ define "sub-content" }}
+
+{{ if .Data.Error }}
+    <div class="alert alert-danger">{{ .Data.Error }}</div>
+{{ end }}
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "Website settings" . }}
+    </div>
+    <div class="card-body">
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="signupEnabled" id="signupEnabled" value="1"{{ if .Data.SignupEnabled }} checked{{ end }} />
+                        <label for="signupEnabled" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="signupEnabled">Registration enabled</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="forumEnabled" id="forumEnabled" value="1"{{ if .Data.ForumEnabled }} checked{{ end }} />
+                        <label for="forumEnabled" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="forumEnabled">Forum enabled</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="silentSelfKick" id="silentSelfKick" value="1"{{ if .Data.SilentSelfKick }} checked{{ end }} />
+                        <label for="silentSelfKick" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="silentSelfKick">Silent Self-Kick</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="{{ t "Save" . }}" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+{{ end }}

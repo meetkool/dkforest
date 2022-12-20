@@ -1,0 +1,110 @@
+{{ define "base" }}
+<html lang="en">
+    <head>
+        <title></title>
+        <style>
+            html, body {
+                margin: 0;
+                padding: 0;
+            }
+            body { font-family: Lato,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"; }
+            a { color: #00bc8c; text-decoration: none; font-size: 14px; }
+            a:hover { color: #007053; text-decoration: underline; }
+            .wrapper {
+                position: relative;
+                width: 500px;
+            }
+            .wrapper input, .wrapper textarea {
+                box-sizing: border-box;
+                border-radius: 10px 0px 0px 10px;
+                border: 1px solid rgba(10,10,10,255);
+                background: rgba(76, 76, 76, 255);
+                margin: 0;
+                float: left;
+                padding-right: 10px;
+                padding-left: 10px;
+                width: 421px;
+                height: 22px;
+                color: #fff;
+                box-shadow:0 0 0 black;
+                outline: none;
+            }
+            .wrapper input:focus {
+                outline: none;
+            }
+            .wrapper button {
+                border-radius: 0 10px 10px 0;
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 80px;
+                height: 22px;
+                color: white;
+                border: 1px solid rgba(10,10,10,255);
+                background: rgba(65, 65, 65, 255);
+            }
+            .wrapper button:hover {
+                background: rgba(57, 57, 57, 255);
+            }
+            {{ if .Data.Multiline }}
+                .wrapper textarea, .wrapper button {
+                    height: 122px;
+                }
+            {{ end }}
+            * {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+            [list]::-webkit-calendar-picker-indicator {
+                display: none !important;
+            }
+        </style>
+    </head>
+    <body>
+        <form method="post" style="margin: 0; padding: 5px 0 0 0;" enctype="multipart/form-data">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <table>
+                <tr>
+                    <td style="padding-right: 5px;"><span {{ .AuthUser.GenerateChatStyle | attr }}>{{ .AuthUser.Username }}</span></td>
+                    <td>
+                        <div class="wrapper">
+                            {{ if .Data.Multiline }}
+                                <textarea name="message" maxlength="10000" autocomplete="off" autofocus>{{ .Data.Message }}</textarea>
+                            {{ else }}
+                                <input value="{{ .Data.Message }}" type="text" name="message" maxlength="10000" autocomplete="off" autofocus{{ if .AuthUser.AutocompleteCommandsEnabled }} list="commands"{{ end }} />
+                                {{ if .AuthUser.AutocompleteCommandsEnabled }}
+                                    <datalist id="commands">
+                                        {{ range .Data.CommandsList }}<option value="{{ . }}">{{ end }}
+                                    </datalist>
+                                {{ end }}
+                            {{ end }}
+                            <button type="submit" value="send_message" name="btn_submit">{{ t "send" . }}</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        {{ if or .Data.Error .Data.Success }}
+                            <a href="/api/v1/chat/top-bar/{{ .Data.RoomName }}?{{ if .Data.Multiline }}{{ .Data.QueryParamsMl | safeURL }}{{ else }}{{ .Data.QueryParamsNml | safeURL }}{{ end }}" title="Refresh">&#8635;</a>
+                        {{ end }}
+                    </td>
+                    <td style="color: #aaa;">
+                        {{ if .Data.Error }}
+                            <span style="color: #e74c3c; font-size: 80%;">{{ .Data.Error }}</span>
+                        {{ else if .Data.Success }}
+                            <span style="color: #198754; font-size: 80%;">{{ .Data.Success }}</span>
+                        {{ else }}
+                            <a href="/settings/chat" target="_top">{{ t "Settings" . }}</a> |
+                            <a href="/chat/help" target="_top">{{ t "Available commands" . }}</a> |
+                            <a href="/chat/create-room" target="_top">{{ t "Create room" . }}</a>
+                            {{ if .AuthUser.CanUseMultiline }} | <a href="/chat/{{ .Data.RoomName }}?{{ if .Data.Multiline }}{{ .Data.QueryParamsNml | safeURL }}{{ else }}{{ .Data.QueryParamsMl | safeURL }}{{ end }}" target="_top">ml</a>{{ end }}
+                            {{ if .AuthUser.CanUpload }} | <input name="file" type="file" style="height: 16px; font-size: 9px; margin-top: 2px; margin-left: 5px; position: absolute;" />{{ end }}
+                        {{ end }}
+                    </td>
+                    <td></td>
+                </tr>
+            </table>
+        </form>
+    </body>
+</html>
+{{ end }}

@@ -1,0 +1,20 @@
+{{ define "content" }}
+
+<div class="container">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/chat/{{ .Data.Room.Name }}">{{ .Data.Room.Name }}</a></li>
+            <li class="breadcrumb-item active">{{ t "Delete" . }}</li>
+        </ol>
+    </nav>
+
+    <form method="post">
+        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+        <p>Are you sure you want to delete the room "{{ .Data.Room.Name }}" ?</p>
+        <button class="btn btn-danger" type="submit">Delete room</button>
+        <a href="/chat/{{ .Data.Room.Name }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+{{ end }}

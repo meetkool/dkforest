@@ -1,0 +1,15 @@
+{{ define "sub-content" }}
+    <p>
+        Challenge created by @Enterprise on May 6, 2022.
+    </p>
+    <p>
+        <a href="/public/img/Iceberg-of-Ignorance-1.jpg">Starting point</a>
+    </p>
+    <form method="post">
+        <div>{{ .Data.FlagMessage }}</div>
+        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+        <label for="flag">FLAG{</label>
+        <input type="text" name="flag" id="flag" maxlength="100" autocomplete="off" /> }
+        <button type="submit">Validate</button>
+    </form>
+{{ end }}

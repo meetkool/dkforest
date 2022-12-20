@@ -1,0 +1,36 @@
+{{ define "content" }}
+<div class="container" style="margin-top:40px">
+    <div class="row">
+        <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+            <div class="card">
+                <div class="card-header">
+                    <strong>{{ t "Secret phrase" . }}</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="center-block">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 col-md-10 offset-md-1 ">
+                            <div class="form-group">
+                                {{ if .Data.SecretPhrase }}
+                                    {{ .Data.SecretPhrase }}
+                                {{ else }}
+                                    You do not have a secret phrase yet.<br />
+                                    <a href="/settings/secret-phrase">Create one now</a>
+                                {{ end }}
+                            </div>
+                            <div class="form-group">
+                                <a type="submit" class="btn btn-lg btn-primary btn-block" href="{{ .Data.RedirectURL }}">Confirm</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer ">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

@@ -1,0 +1,79 @@
+{{ define "base" }}<!DOCTYPE html><html lang="en"><head>
+    {{ .LogoASCII }}
+    {{ .VersionHTML }}
+    {{ .ShaHTML }}
+    <link href="/public/img/favicon.ico" rel="icon" type="image/x-icon" />
+    <meta charset="UTF-8" />
+    <meta name="author" content="n0tr1v">
+    <meta name="keywords" content="{{ block "keywords" . }}{{ .BaseKeywords }}{{ end }}"/>
+    <meta name="subject" content="">
+    <meta name="description" content="{{ block "meta-description" . }}{{ end }}" />
+    <meta name="classification" content="">
+    <meta name="distribution" content="">
+    <meta name="robots" content="all" />
+    <meta name="language" content="English">
+    <meta name="revisit-after" content="1 days">
+    <meta http-equiv="expires" content="0">
+    <meta http-equiv="pragma" content="no-cache">
+    <title>{{ block "title" . }}DarkForest{{ end }}</title>
+    {{ block "canonical-link" . }}{{ end }}
+    <link rel="stylesheet" type="text/css" href="/public/css/bootstrap.min.css?v={{ .VERSION }}" />
+    <link rel="stylesheet" type="text/css" href="/public/css/style.css?v={{ .VERSION }}" />
+
+    <style>
+        body, html {
+            height: 100%;
+            display:table;
+            width:100%;
+        }
+        body {
+            display:table-cell;
+            vertical-align:middle;
+        }
+        .bg {
+            /* The image used */
+            background-image: url({{ .WallpaperImg }});
+
+            /* Full height */
+            height: 100%;
+
+            /* Center and scale the image nicely */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+        #parent {
+            display: table;
+            width: 100%;
+        }
+        #form_login {
+            display:table;/* shrinks to fit content */
+            margin:auto;
+        }
+    </style>
+</head>
+<body class="bg">
+
+<div id="parent">
+    <div class="container" id="form_login">
+        <div class="row">
+            <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                <div class="mb-3 bg-label">
+                    New signup are temporarily disabled.<br />
+                    However, you can get an invitation code if you ask the right person.<br />
+                </div>
+                <form autocomplete="on" method="get" action="/signup/invitation">
+                    <div class="form-group">
+                        <input class="transparent-input form-control" placeholder="{{ t "Invitation token" . }}" name="invitationToken" type="text" autocorrect="off" autocapitalize="none" autofocus required />
+                    </div>
+                    <div class="form-group">
+                        <input type="submit" class="transparent-input btn btn-lg btn-primary btn-block" value="{{ t "Validate" . }}" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>{{ end }}

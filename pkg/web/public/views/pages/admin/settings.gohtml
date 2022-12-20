@@ -1,0 +1,97 @@
+{{ define "extra-head" }}
+<link href="/public/css/bootstrap-toggle.min.css" rel="stylesheet">
+<script src="/public/js/bootstrap-toggle.min.js"></script>
+<script>
+    Mousetrap.bind('?', function() { document.location.href = "/doc/admin/settings"; });
+</script>
+{{ end }}
+
+{{ define "sub-content" }}
+<div class="pb-2 mt-4 mb-2 border-bottom">
+    <div class="pull-right">
+    </div>
+    <h2>{{ t "Settings" . }}</h2>
+</div>
+
+<form method="post" class="mb-3">
+    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+    <input type="hidden" name="formName" value="openProjectFolder" />
+    <button class="btn btn-secondary">{{ t "Open .dkf folder" . }}</button>
+</form>
+
+<hr />
+
+<form id="" method="post" class="mb-3">
+    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+    <input type="hidden" name="formName" value="saveSettings" />
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="protectHome" id="protectHome" value="1"{{ if .Data.ProtectHome }} checked{{ end }} />
+            <label for="protectHome" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="protectHome">Protect home</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="homeUsersList" id="homeUsersList" value="1"{{ if .Data.HomeUsersList }} checked{{ end }} />
+            <label for="homeUsersList" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="homeUsersList">Home users list</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="forceLoginCaptcha" id="forceLoginCaptcha" value="1"{{ if .Data.ForceLoginCaptcha }} checked{{ end }} />
+            <label for="forceLoginCaptcha" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="forceLoginCaptcha">Force login captcha</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="signupEnabled" id="signupEnabled" value="1"{{ if .Data.SignupEnabled }} checked{{ end }} />
+            <label for="signupEnabled" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="signupEnabled">Signup enabled</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="signupFakeEnabled" id="signupFakeEnabled" value="1"{{ if .Data.SignupFakeEnabled }} checked{{ end }} />
+            <label for="signupFakeEnabled" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="signupFakeEnabled">Signup fake enabled</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="downloadsEnabled" id="downloadsEnabled" value="1"{{ if .Data.DownloadsEnabled }} checked{{ end }} />
+            <label for="downloadsEnabled" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="downloadsEnabled">Downloads enabled</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="forumEnabled" id="forumEnabled" value="1"{{ if .Data.ForumEnabled }} checked{{ end }} />
+            <label for="forumEnabled" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="forumEnabled">Forum enabled</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="maybeAuthEnabled" id="maybeAuthEnabled" value="1"{{ if .Data.MaybeAuthEnabled }} checked{{ end }} />
+            <label for="maybeAuthEnabled" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="maybeAuthEnabled">Maybe auth enabled</label>
+    </div>
+    <div>
+        <label class="form-check-label" for="captchaDifficulty">Captcha difficulty</label>
+        <select name="captchaDifficulty" id="captchaDifficulty">
+            <option value="1"{{ if eq .Data.CaptchaDifficulty 1 }} selected{{ end }}>Easy</option>
+            <option value="2"{{ if eq .Data.CaptchaDifficulty 2 }} selected{{ end }}>Hard</option>
+        </select>
+    </div>
+    <div class="form-group mt-3">
+        <button class="btn btn-primary" type="submit"><i class="fa fa-save"></i> Save</button>
+    </div>
+</form>
+
+<div class="mb-5"></div>
+
+{{ end }}

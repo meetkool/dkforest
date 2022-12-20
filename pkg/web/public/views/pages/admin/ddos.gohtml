@@ -1,0 +1,21 @@
+{{ define "sub-content" }}
+<div>
+    <table class="table table-striped table-sm table-hover">
+        <tr>
+            <th>Label</th>
+            <th>Value</th>
+        </tr>
+        <tr><td>RPS</td><td>{{ .Data.RPS }}</td></tr>
+        <tr><td>Rejected</td><td>{{ .Data.RejectedReq }}</td></tr>
+        <tr><td>Signup page load</td><td>{{ .Data.SignupPageLoad }}</td></tr>
+        <tr><td>Signup failed</td><td>{{ .Data.SignupFailed }}</td></tr>
+        <tr><td>Signup succeed</td><td>{{ .Data.SignupSucceed }}</td></tr>
+        <tr><td>BHC captcha generated</td><td>{{ .Data.BHCCaptchaGenerated }}</td></tr>
+        <tr><td>BHC captcha success</td><td>{{ .Data.BHCCaptchaSuccess }}</td></tr>
+        <tr><td>BHC captcha failed</td><td>{{ .Data.BHCCaptchaFailed }}</td></tr>
+        <tr><td>Captcha required generated</td><td>{{ .Data.CaptchaRequiredGenerated }}</td></tr>
+        <tr><td>Captcha required success</td><td>{{ .Data.CaptchaRequiredSuccess }}</td></tr>
+        <tr><td>Captcha required failed</td><td>{{ .Data.CaptchaRequiredFailed }}</td></tr>
+    </table>
+</div>
+{{ end }}

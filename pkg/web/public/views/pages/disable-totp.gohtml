@@ -1,0 +1,16 @@
+{{ define "content" }}
+    <div class="container mt-3 mb-5">
+        <h3>Disable TOTP two-factor authentication</h3>
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <input type="password" name="password" value="{{ .Data.Password }}" class="form-control" placeholder="Current password" style="{{ if .Data.ErrorPassword }}is-invalid{{ end }}" autocomplete="off" autocapitalize="none" />
+                {{ if .Data.ErrorPassword }}<div class="invalid-feedback d-block">{{ .Data.ErrorPassword }}</div>{{ end }}
+            </div>
+            <div class="form-group">
+                <button class="btn btn-success">Disable</button>
+                <a href="/settings/account" class="btn btn-secondary">{{ t "Cancel" . }}</a>
+            </div>
+        </form>
+    </div>
+{{ end }}

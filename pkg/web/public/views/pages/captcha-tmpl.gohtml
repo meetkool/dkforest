@@ -1,0 +1,14 @@
+{{ define "captcha-tmpl" }}
+<style>
+    .captcha-img {
+        transition: transform .2s; /* Animation */
+    }
+    .captcha-img:hover {
+        transform: scale(2.5);
+    }
+</style>
+<div>
+    <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" class="captcha-img" />
+    <div><a href="/captcha-help">Need help to solve the captcha?</a></div>
+</div>
+{{ end }}

@@ -1,0 +1,31 @@
+{{ define "content" }}
+
+<div class="container">
+    <div>
+
+        <h3>
+            {{ .Data.Gist.Name }}
+            {{ if $.AuthUser }}
+                {{ if or (eq $.AuthUser.ID .Data.Gist.UserID) $.AuthUser.IsAdmin }}
+                    <a href="/admin/gists/{{ $.Data.Gist.UUID }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+                {{ end }}
+            {{ end }}
+            {{ if .Data.Gist.Password }}
+                <form method="post" style="display: inline-block">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button type="submit" value="logout" name="btn_submit" id="logout_btn" class="btn btn-sm btn-secondary">{{ t "Logout" . }}</button>
+                </form>
+            {{ end }}
+        </h3>
+
+        {{ if .Data.Highlighted }}
+            {{ .Data.Highlighted | safe }}
+        {{ else }}
+            <pre><code>{{ .Data.Gist.Content }}</code></pre>
+        {{ end }}
+
+        <div style="height: 100px;"></div>
+    </div>
+</div>
+
+{{ end }}

@@ -1,0 +1,63 @@
+{{ define "extra-head" }}
+    <style>
+        .captcha-img { transition: transform .2s; }
+        .captcha-img:hover { transform: scale(2.5); }
+    </style>
+{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/chat">Chat</a></li>
+            <li class="breadcrumb-item active">{{ t "Create room" . }}</li>
+        </ol>
+    </nav>
+
+    <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+        {{ if .Data.Error }}
+            <div class="alert alert-danger">{{ .Data.Error }}</div>
+        {{ end }}
+
+        <p class="mb-4">{{ t "If the room has a password, all messages are encrypted in the database." . }}</p>
+
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
+            <div class="form-group">
+                <label for="room_name">{{ t "Room name 3-50 characters [a-zA-Z0-9_]" . }}</label>
+                <input class="form-control{{ if .Data.ErrorRoomName }} is-invalid{{ end }}" type="text" name="room_name" id="room_name" placeholder="Room name" value="{{ .Data.RoomName }}" />
+                {{ if .Data.ErrorRoomName }}
+                    <div class="invalid-feedback">{{ .Data.ErrorRoomName }}</div>
+                {{ end }}
+            </div>
+            <div class="form-group">
+                <label for="password">{{ t "Optional password" . }}</label>
+                <input class="form-control" type="password" name="password" id="password" placeholder="Password (empty for no password)" value="{{ .Data.Password }}" />
+            </div>
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="is_listed" id="is_listed" value="1"{{ if .Data.IsListed }} checked{{ end }} />
+                    <label class="form-check-label" for="is_listed">{{ t "Publicly listed" . }}</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="is_ephemeral" id="is_ephemeral" value="1"{{ if .Data.IsEphemeral }} checked{{ end }} disabled />
+                    <label class="form-check-label" for="is_ephemeral">{{ t "Ephemeral room (auto delete after 24h of inactivity)" . }}</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="mb-2 text-center">
+                    <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" style="background-color: hsl(0, 0%, 90%);" class="captcha-img" />
+                </div>
+                <input class="transparent-input form-control{{ if .Data.ErrCaptcha }} is-invalid{{ end }}" placeholder="{{ t "Captcha" . }}" name="captcha" type="text" value="{{ .Data.Captcha }}" autocomplete="off" maxlength="6" required />
+                {{ if .Data.ErrCaptcha }}<div class="invalid-feedback d-block">{{ .Data.ErrCaptcha }}</div>{{ end }}
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary btn-block">{{ t "Create room" . }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{ end }}

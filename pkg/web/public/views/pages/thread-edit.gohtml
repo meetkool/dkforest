@@ -1,0 +1,25 @@
+{{ define "content" }}
+<div class="container mb-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/forum">Forum</a></li>
+            <li class="breadcrumb-item active">Edit thread {{ .Data.Thread.Name }}</li>
+        </ol>
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <select name="category_id" class="form-control">
+                    <option value="1"{{ if eq .Data.Thread.CategoryID 1 }} selected{{ end }}>General</option>
+                    <option value="2"{{ if eq .Data.Thread.CategoryID 2 }} selected{{ end }}>Random</option>
+                    <option value="3"{{ if eq .Data.Thread.CategoryID 3 }} selected{{ end }}>Retarded Area</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary">Confirm Edit Thread</button>
+                <a class="btn btn-secondary" href="/t/{{ .Data.Thread.UUID }}">Cancel</a>
+            </div>
+        </form>
+    </nav>
+</div>
+
+{{ end }}

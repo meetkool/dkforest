@@ -1,0 +1,31 @@
+{{ define "content" }}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/links">Links</a></li>
+            <li class="breadcrumb-item active">{{ t "Upload links" . }}</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            {{ t "Upload links" . }}
+        </div>
+        <div class="card-body">
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                {{ if .Data.Error }}
+                    <div class="alert alert-danger">{{ .Data.Error }}</div>
+                {{ end }}
+                <div class="form-group">
+                    <label for="csv">{{ t "CSV (URL,Title)" . }}</label>
+                    <textarea name="csv" id="csv" rows="15" placeholder="http://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.onion,Some title" value="{{ .Data.CsvStr }}" class="form-control" autofocus>{{ .Data.CsvStr }}</textarea>
+                </div>
+                <div class="form-group">
+                    <input type="submit" value="Upload" class="btn btn-primary" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{ end }}

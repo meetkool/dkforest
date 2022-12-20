@@ -1,0 +1,84 @@
+{{ define "extra-head" }}
+<style>
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat">General</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat/pm">PM</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat/ignore">Ignore</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/settings/chat/snippets">Snippets</a>
+    </li>
+</ul>
+
+{{ if .Data.Error }}
+    <div class="alert alert-danger">{{ .Data.Error }}</div>
+{{ end }}
+
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "Snippets" . }}
+        ({{ .Data.Snippets | len }}/20)
+    </div>
+    <div class="card-body">
+        <p>
+            Snippets are text replacements that are going to be applied to messages that you send.<br />
+            You can use them by prefixing a <code>!</code> to the name of your snippet.<br />
+            For example, if you define a snippet named <code>test</code> with value <code>this is a test</code><br />
+            Typing <code>Hi, !test, and it works!</code> is the same as typing <code>Hi, this is a test, and it works!</code>
+        </p>
+        <div>
+            <table class="table table-striped table-hover table-sm table-novpadding">
+                <tr>
+                    <th></th>
+                    <th style="width: 180px;">Name</th>
+                    <th>Text</th>
+                </tr>
+                {{ range .Data.Snippets }}
+                    <tr>
+                        <td style="width: 40px;">
+                            <form method="post" class="d-inline">
+                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                <input type="hidden" name="formName" value="rmSnippet" />
+                                <input type="hidden" name="snippetName" value="{{ .Name }}" />
+                                <button class="btn btn-xs btn-danger" title="delete">×</button>
+                            </form>
+                        </td>
+                        <td>{{ .Name }}</td>
+                        <td>{{ .Text }}</td>
+                    </tr>
+                {{ else }}
+                    <tr><td colspan="3"><em>No snippets</em></td></tr>
+                {{ end }}
+            </table>
+            <form method="post" autocomplete="off">
+                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                <input type="hidden" name="formName" value="addSnippet" />
+                <div class="input-group">
+                    <input type="text" name="name" value="{{ .Data.Name }}" class="form-control" placeholder="Name (1-20 chars)" style="max-width: 180px;" />
+                    <input type="text" name="text" value="{{ .Data.Text }}" class="form-control" placeholder="Text (1-255 chars)" style="width: 300px;" />
+                    <div class="input-group-append">
+                        <button class="btn btn-sm btn-primary">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ end }}

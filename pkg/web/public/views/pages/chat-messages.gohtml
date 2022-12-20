@@ -1,0 +1,413 @@
+{{ define "base" }}
+<html lang="en">
+    <head>
+        <title></title>
+        {{- if not .Data.PreventRefresh -}}<meta http-equiv="refresh" content="{{ .AuthUser.RefreshRate }}">{{- end -}}
+        {{- if .AuthUser.CollectMetadata -}}<link rel="stylesheet" type="text/css" href="/public/css/meta.css?v={{ .VERSION }}" />{{- end -}}
+        <style>
+            /* http://meyerweb.com/eric/tools/css/reset/
+               v2.0 | 20110126
+               License: none (public domain)
+            */
+            html, body, div, span, applet, object, iframe,
+            h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+            a, abbr, acronym, address, big, cite, code,
+            del, dfn, em, img, ins, kbd, q, s, samp,
+            small, strike, strong, sub, sup, tt, var,
+            b, u, i, center,
+            dl, dt, dd, ol, ul, li,
+            fieldset, form, label, legend,
+            table, caption, tbody, tfoot, thead, tr, th, td,
+            article, aside, canvas, details, embed,
+            figure, figcaption, footer, header, hgroup,
+            menu, nav, output, ruby, section, summary,
+            time, mark, audio, video {
+                margin: 0;
+                padding: 0;
+                border: 0;
+                font-size: 100%;
+                font: inherit;
+                vertical-align: baseline;
+            }
+            /* HTML5 display-role reset for older browsers */
+            article, aside, details, figcaption, figure,
+            footer, header, hgroup, menu, nav, section {
+                display: block;
+            }
+            body {
+                line-height: 1;
+            }
+            ol, ul {
+                list-style: none;
+            }
+            blockquote, q {
+                quotes: none;
+            }
+            blockquote:before, blockquote:after,
+            q:before, q:after {
+                content: '';
+                content: none;
+            }
+            table {
+                border-collapse: collapse;
+                border-spacing: 0;
+            }
+            /* --- end --- */
+
+
+            i { font-style: italic; }
+
+            /* Remove button padding in FF */
+            button::-moz-focus-inner {
+                border:0;
+                padding:0;
+            }
+
+            body { font-family: Lato,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"; }
+            a       { color: #00bc8c; text-decoration: none; }
+            a:hover { color: #007053; text-decoration: underline; }
+            .unread_room       { color: #2392da; text-decoration: none; }
+            .unread_room:hover { color: #004970; text-decoration: underline; }
+            .emoji {
+                background-image: url('/public/img/emojis_sm.png');
+                width: 18px;
+                height: 18px;
+                background-size: 486px 126px;
+                display: inline-block;
+                vertical-align: middle;
+            }
+            .mod-btn {
+                width: 16px; height: 16px;
+                margin: 0; padding: 0;
+                border: 1px solid gray;
+                display: inline;
+                text-align: center;
+                vertical-align: middle;
+                user-select: none;
+                background-color: #444;
+                color: #ea2a2a;
+                -webkit-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+                -moz-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+                -webkit-border-radius: 3px;
+                -moz-border-radius: 3px;
+            }
+            .mod-btn:hover {
+                background-color: #222;
+            }
+            .delete_msg_btn {
+                font-size: 15px;
+                line-height: 1;
+            }
+            .delete_msg_btn::after { content: "×"; }
+            .hb_btn {
+                font-size: 10px;
+                line-height: 1.4;
+            }
+            .hb_btn::after { content: "hb"; }
+            .k_btn {
+                font-size: 10px;
+                line-height: 1.4;
+            }
+            .k_btn::after { content: "k"; }
+            #manualrefresh {
+                color: #bf2718;
+                display: block;
+                position: fixed;
+                text-align: center;
+                left: calc(50% - 200px);
+                width: 400px;
+                top: -200%;
+                animation: timeout_messages {{ .Data.ManualRefreshTimeout }}s forwards;
+                z-index: 2;
+                background-color: #500000;
+                border: 2px solid #ff0000;
+            }
+            @keyframes timeout_messages {
+                0%   { top: -200%; }
+                99% { top: -200%; }
+                100% { top: 0; }
+            }
+            .date { color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+            .date-link:hover { color: #999; text-decoration: underline; }
+            .sysmsg { color: #fff; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+            small { font-size: 80%; font-weight: 400; }
+            .msg p:first-of-type { display: inline; }
+            strong { font-weight: bold; }
+            em { font-style: italic; }
+            pre { border: 1px solid #2b442b; padding: 2px; margin: 2px 0; max-height: 300px; overflow: auto; background-color: rgba(39,40,34,0.6) !important;
+                font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
+            code {  border: 1px solid #2b442b; color: #f92672; padding: 0 2px; margin: 0px 0; background-color: rgba(39,40,34,0.6) !important; }
+            .censored { background-color: black; color: black; padding: 0 3px; }
+            .censored:hover { background-color: black; color: white; }
+            ul { list-style-type: disc; margin: 0 0 0 15px; }
+            * {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+            .afk-indicator { color: #ff9a27; }
+        </style>
+    </head>
+    <body>
+
+        {{ if not .Data.PreventRefresh }}
+            <div id="manualrefresh">
+                <h4>Manual refresh required</h4>
+                <form method="get">
+                    <input type="submit" value="Reload" />
+                </form>
+            </div>
+        {{ end }}
+
+        <div style="{{ if not .AuthUser.HideRightColumn }}width: calc(100% - 170px); float: left; {{ end }}line-height: 1.2;">
+            {{ $tmp := false }}
+            {{ range $idx, $e := .Data.Messages }}
+                {{ if (.UserCanSee $.AuthUser) }}
+                    <div class="msg" style="
+                        padding: 3px 0 3px 8px; border-bottom: 1px solid #444; color: #888; position: relative;
+                        {{ if and (or .User.IsHellbanned .IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7);
+                        {{ else if and (eq $.AuthUser.ID .User.ID) $.AuthUser.HighlightOwnMessages }} background-color: rgba(255,241,176,0.05);{{ end }}
+
+                        {{ if and $.AuthUser.ChatReadMarkerEnabled (.CreatedAt.Before $.Data.ReadMarker.ReadAt) (not $tmp) }}
+                            {{ if gt $idx 0 }}
+                                border-top: {{ $.AuthUser.ChatReadMarkerSize }}px solid {{ $.AuthUser.ChatReadMarkerColor }};
+                            {{ end }}
+                            {{ $tmp = true }}
+                        {{ end }}
+                    ">
+                        {{ if (.UserCanDelete $.AuthUser) }}
+                            {{ if not .TooOldToDelete }}
+                                {{ if $.AuthUser.DisplayDeleteButton }}
+                                    <form method="post" action="/api/v1/chat/messages/delete/{{ .UUID }}" style="display: inline;">
+                                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                        <button class="mod-btn delete_msg_btn" title="delete"></button>
+                                    </form>
+                                {{ end }}
+                            {{ else if or (and $.AuthUser.IsModerator .TooOldToDelete (ne .UserID $.AuthUser.ID)) $.AuthUser.IsAdmin (and .Room.OwnerUserID (eq (derefUserID .Room.OwnerUserID) $.AuthUser.ID)) }}
+                                {{ if $.AuthUser.DisplayDeleteButton }}
+                                    <form method="post" action="/api/v1/chat/messages/delete/{{ .UUID }}" style="display: inline;">
+                                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                        <button class="mod-btn delete_msg_btn" style="color: orange;" title="delete"></button>
+                                    </form>
+                                {{ end }}
+                            {{ else if $.AuthUser.IsModerator }}
+                                {{ if $.AuthUser.DisplayDeleteButton }}
+                                    <div style="display: inline-block; width: 16px;"></div>
+                                {{ end }}
+                            {{ else }}
+                                {{ if $.AuthUser.DisplayDeleteButton }}
+                                    <div style="display: inline-block; width: 16px;"></div>
+                                {{ end }}
+                            {{ end }}
+                            {{ if $.AuthUser.IsModerator }}
+                                {{ if ne .UserID $.AuthUser.ID }}
+                                    {{- if $.AuthUser.DisplayHellbanButton -}}
+                                        {{- if eq .User.Username "0" -}}
+                                            <div style="display: inline-block; width: 16px;"></div>
+                                        {{- else -}}
+                                            <form method="post" action="/api/v1/users/{{ .UserID }}/toggle-hellban" style="display: inline;">
+                                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                                <button class="mod-btn hb_btn" style="color: orange; {{ if .User.IsHellbanned }}text-decoration: line-through;{{ end }}" title="hellban"></button>
+                                            </form>
+                                        {{- end -}}
+                                    {{- end -}}
+                                    {{ if $.AuthUser.DisplayKickButton }}
+                                        <form method="post" action="/api/v1/users/{{ .UserID }}/kick" style="display: inline;">
+                                            <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                            <button class="mod-btn k_btn" style="color: orange;" title="kick"></button>
+                                        </form>
+                                    {{ end }}
+                                {{ else }}
+                                    {{- if and $.AuthUser.DisplayKickButton $.AuthUser.DisplayHellbanButton -}}
+                                        <div style="display: inline-block; width: 36px;"></div>
+                                    {{- else if or $.AuthUser.DisplayKickButton $.AuthUser.DisplayHellbanButton -}}
+                                        <div style="display: inline-block; width: 16px;"></div>
+                                    {{- end -}}
+                                {{ end }}
+                            {{ end }}
+                        {{ else }}
+                            {{ if $.AuthUser.IsModerator }}
+                                {{- if eq $.Data.NbButtons 3 -}}
+                                    <div style="display: inline-block; width: 56px;"></div>
+                                {{- else if eq $.Data.NbButtons 2 -}}
+                                    <div style="display: inline-block; width: 36px;"></div>
+                                {{- else if eq $.Data.NbButtons 1 -}}
+                                    <div style="display: inline-block; width: 16px;"></div>
+                                {{- end -}}
+                            {{ else }}
+                                {{- if $.AuthUser.DisplayDeleteButton -}}
+                                    <div style="display: inline-block; width: 16px;"></div>
+                                {{- end -}}
+                            {{ end }}
+                        {{ end }}
+                        {{- if ne $.Data.DateFormat "" -}}
+                            <a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?quote={{ .UUID }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" class="date date-link" title="{{ .CreatedAt.Format "01-02 15:04:05" }}">{{ .CreatedAt.Format $.Data.DateFormat }}</a>&nbsp;
+                        {{- end -}}
+                        {{- if and $.AuthUser.CanSeeHB (or .IsHellbanned .User.IsHellbanned) (not .ToUserID) -}}
+                            <a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?hbm=1{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" style="color: #888;">-</a>&nbsp;
+                        {{- else if and .ToUserID (ne .ToUser.ID $.AuthUser.ID) -}}
+                            <a href="/u/{{ .ToUser.Username }}" target="_blank" style="color: #888;">-</a>&nbsp;
+                        {{- else -}}
+                            <a href="/u/{{ .User.Username }}" target="_blank" style="color: #888;">-</a>&nbsp;
+                        {{- end -}}
+                        {{- if .ToUserID -}}
+                            [
+                            {{- if eq .User.ID $.AuthUser.ID -}}
+                                {{- if .CanBeEdited -}}
+                                    <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?e={{ .CreatedAt.Format "15:04:05" }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a>
+                                {{- else -}}
+                                    <span {{ .User.GenerateChatStyle | attr }}>{{ .User.Username }}</span>
+                                {{- end -}}
+                            {{- else -}}
+                                <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?pm={{ .User.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a>
+                            {{- end }}
+                            →
+                            {{ if eq .ToUser.ID $.AuthUser.ID -}}
+                                <span {{ .ToUser.GenerateChatStyle | attr }}>{{ .ToUser.Username }}</span>
+                            {{- else -}}
+                                <a {{ .ToUser.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?pm={{ .ToUser.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .ToUser.Username }}</a>
+                            {{- end -}}
+                            ] -&nbsp;
+                        {{- else if .System -}}
+                        {{- else if .IsMe -}}
+                        {{- else -}}
+                            {{- if .Moderators -}}<span class="sysmsg">[<a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?m=1{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" class="sysmsg" style="color: white;">M</a>]</span>&nbsp;{{- end -}}
+                            {{- if .GroupID -}}<span class="sysmsg">[<a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?g={{ .Group.Name }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" class="sysmsg" style="color: white;">{{ .Group.Name }}</a>]</span>&nbsp;{{- end -}}
+                            {{- if eq .User.ID $.AuthUser.ID -}}
+                                {{- if .CanBeEdited -}}
+                                    <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?e={{ .CreatedAt.Format "15:04:05" }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a> -&nbsp;
+                                {{- else -}}
+                                    <span {{ .User.GenerateChatStyle | attr }}>{{ .User.Username }}</span> -&nbsp;
+                                {{- end -}}
+                            {{- else -}}
+                                {{- if and $.AuthUser.CanSeeHB (or .IsHellbanned .User.IsHellbanned) -}}
+                                    <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?htag={{ .User.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a> -&nbsp;
+                                {{- else if and $.AuthUser.IsModerator .Moderators -}}
+                                    <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?mtag={{ .User.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a> -&nbsp;
+                                {{- else -}}
+                                    <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?tag={{ .User.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a> -&nbsp;
+                                {{- end -}}
+                            {{- end -}}
+                        {{- end -}}
+                        {{- if .System -}}
+                            <span class="sysmsg">{{ .Message | safe }}</span>
+                        {{- else -}}
+                            {{- if .IsMe -}}
+                                {{- if .Moderators -}}<span class="sysmsg">[<a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?m=1{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" class="sysmsg" style="color: white;">M</a>]</span>&nbsp;{{- end -}}
+                                {{- if .GroupID -}}<span class="sysmsg">[<a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?g={{ .Group.Name }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" class="sysmsg" style="color: white;">{{ .Group.Name }}</a>]</span>&nbsp;{{- end -}}
+                                <span style="overflow-wrap: break-word;"><span {{ .User.GenerateChatStyle | attr }}>
+                                    {{- if eq .User.ID $.AuthUser.ID -}}
+                                        {{- if .CanBeEdited -}}
+                                            <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?e={{ .CreatedAt.Format "15:04:05" }}" target="iframe1">{{ .User.Username }}</a>
+                                        {{- else -}}
+                                            {{ .User.Username }}
+                                        {{- end -}}
+                                    {{- else -}}
+                                        {{- if and $.AuthUser.CanSeeHB (or .IsHellbanned .User.IsHellbanned) -}}
+                                            <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?htag={{ .User.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a>
+                                        {{- else if and $.AuthUser.IsModerator .Moderators -}}
+                                            <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?mtag={{ .User.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a>
+                                        {{- else -}}
+                                            <a {{ .User.GenerateChatStyle | attr }} href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?tag={{ .User.Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1">{{ .User.Username }}</a>
+                                        {{- end -}}
+                                    {{- end }}
+                                    {{ .TrimMe | safe }}
+                                </span></span>
+                            {{- else -}}
+                                <span {{ .User.GenerateChatStyle | attr }}><span style="overflow-wrap: break-word;">{{ .Message | safe }}</span></span>
+                            {{- end -}}
+                        {{- end -}}
+                    </div>
+                {{- end -}}
+            {{ else }}
+                <div style="color: #ddd;"><em>No message yet</em></div>
+            {{ end }}
+        </div>
+        {{ if not .AuthUser.HideRightColumn }}
+            <div style="width: 150px; height: 100%; float: left; margin-left: 20px; position: fixed; right: 0; overflow-y: auto; line-height: 1.15; ">
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: bolder; color: #ced4da;">Inbox (<a href="/settings/inbox" target="_top"{{ if gt .Data.InboxCount 0 }}style="color: #e74c3c;"{{ end }}>{{ .Data.InboxCount }}</a>)</div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: bolder; color: #ced4da;">Rooms:</div>
+                    {{ range .Data.OfficialRooms }}
+                        {{ if eq .Name "club" }}
+                            {{ if $.AuthUser.IsClubMember }}
+                                <div><a href="/chat/club" target="_top"{{ if .IsUnread }} class="unread_room"{{ end }}>#club</a></div>
+                            {{ end }}
+                        {{ else if eq .Name "moderators" }}
+                            {{ if $.AuthUser.IsModerator }}
+                                <div><a href="/chat/moderators" target="_top"{{ if .IsUnread }} class="unread_room"{{ end }}>#moderators</a></div>
+                            {{ end }}
+                        {{ else }}
+                            <div><a href="/chat/{{ .Name }}" target="_top"{{ if .IsUnread }} class="unread_room"{{ end }}>#{{ .Name }}</a></div>
+                        {{ end }}
+                    {{ end }}
+
+                    {{ if .Data.SubscribedRooms }}
+                        <div style="margin-top: 10px;"></div>
+                        {{ range .Data.SubscribedRooms }}
+                            <div><a href="/chat/{{ .Name }}" target="_top"{{ if .IsUnread }} class="unread_room"{{ end }}>#{{ .Name }}</a></div>
+                        {{ end }}
+                    {{ end }}
+
+                    <div style="margin-top: 5px;"><a href="/rooms" target="_top">[...]</a></div>
+                </div>
+                <div style="margin-bottom: 20px">
+                    <div style="font-weight: bolder; color: #ced4da;">In this room:</div>
+                    {{ range .Data.Members }}
+                        {{ if eq .Username $.AuthUser.Username }}
+                            <div>
+                                <span style="color: {{ .Color }};">{{ .Username }}</span>
+                                {{ if .AfkIndicatorEnabled }}
+                                    <small class="afk-indicator">afk</small>
+                                {{ end }}
+                            </div>
+                        {{ else }}
+                            {{ if or (not .IsHellbanned) (eq $.AuthUser.ID .UserID) (and .IsHellbanned $.AuthUser.IsHellbanned) $.AuthUser.DisplayHellbanned }}
+                                <div>
+                                    <a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?tag={{ .Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" style="color: {{ .Color }};{{ if and (.IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7);{{ end }}">{{ .Username | first }}</a><a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?pm={{ .Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" style="color: {{ .Color }};{{ if and (.IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7);{{ end }}">{{ .Username | rest }}</a>
+                                    {{ if .AfkIndicatorEnabled }}
+                                        <small class="afk-indicator">afk</small>
+                                    {{ end }}
+                                </div>
+                            {{ end }}
+                        {{ end }}
+                    {{ end }}
+                </div>
+                {{ if or .Data.VisibleMemberInChat $.AuthUser.DisplayHellbanned }}
+                    <div style="margin-bottom: 30px;">
+                        {{ if .Data.MembersInChat }}
+                            <div style="font-weight: bolder; color: #ced4da;">In other rooms:</div>
+                            {{ range .Data.MembersInChat }}
+                                {{ if eq .Username $.AuthUser.Username }}
+                                    <div>
+                                        <span style="color: {{ .Color }};">{{ .Username }}</span>
+                                        {{ if .AfkIndicatorEnabled }}
+                                            <small class="afk-indicator">afk</small>
+                                        {{ end }}
+                                    </div>
+                                {{ else }}
+                                    {{ if or (not .IsHellbanned) (eq $.AuthUser.ID .UserID) (and .IsHellbanned $.AuthUser.IsHellbanned) $.AuthUser.DisplayHellbanned }}
+                                        <div>
+                                            <a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?tag={{ .Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" style="color: {{ .Color }};{{ if and (.IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7);{{ end }}">{{ .Username | first }}</a><a href="/api/v1/chat/top-bar/{{ $.Data.RoomName }}?pm={{ .Username }}{{ $.Data.TopBarQueryParams | safeURL }}" target="iframe1" style="color: {{ .Color }};{{ if and (.IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7);{{ end }}">{{ .Username | rest }}</a>
+                                            {{ if .AfkIndicatorEnabled }}
+                                                <small class="afk-indicator">afk</small>
+                                            {{ end }}
+                                        </div>
+                                    {{ end }}
+                                {{ end }}
+                            {{ end }}
+                        {{ end }}
+                    </div>
+                {{ end }}
+            </div>
+        {{ end }}
+
+        {{- if .AuthUser.CollectMetadata -}}
+            <div class="div_1"></div>
+            <div class="div_2"></div>
+            <div class="div_f0">a</div>
+        {{- end -}}
+    </body>
+</html>
+{{ end }}

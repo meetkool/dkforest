@@ -1,0 +1,129 @@
+{{ define "extra-head" }}
+<style>
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+</style>
+{{ end }}
+
+{{ define "sub-content" }}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat">General</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/settings/chat/pm">PM</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat/ignore">Ignore</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/settings/chat/snippets">Snippets</a>
+    </li>
+</ul>
+
+{{ if .Data.Error }}
+    <div class="alert alert-danger">{{ .Data.Error }}</div>
+{{ end }}
+
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "PM settings" . }}
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <label for="pm_mode">{{ t "PM mode" . }}</label>
+                <select name="pm_mode" id="pm_mode" class="form-control">
+                    <option value="0" {{ if eq $.Data.PmMode 0 }} selected{{ end }}>Blacklist</option>
+                    <option value="1" {{ if eq $.Data.PmMode 1 }} selected{{ end }}>Whitelist</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="block_new_users_pm" id="block_new_users_pm" value="1"{{ if .Data.BlockNewUsersPm }} checked{{ end }} />
+                        <label for="block_new_users_pm" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="block_new_users_pm">{{ t "Block new users PM (unless whitelisted)" . }}</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="{{ t "Save" . }}" class="btn btn-primary" />
+            </div>
+        </form>
+
+        <hr />
+
+        <div>
+            Whitelist: ( <code>/pmw username</code> )
+            <table class="table table-striped table-hover table-sm table-novpadding">
+                {{ range .Data.WhitelistedUsers }}
+                    <tr>
+                        <td style="width: 40px;">
+                            <form method="post" class="d-inline">
+                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                <input type="hidden" name="formName" value="rmWhitelist" />
+                                <input type="hidden" name="userID" value="{{ .WhitelistedUser.ID }}" />
+                                <button class="btn btn-xs btn-danger">×</button>
+                            </form>
+                        </td>
+                        <td><span {{ .WhitelistedUser.GenerateChatStyle | attr }}>{{ .WhitelistedUser.Username }}</span></td>
+                    </tr>
+                {{ else }}
+                    <tr><td colspan="2"><em>No users in the whitelist</em></td></tr>
+                {{ end }}
+            </table>
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                <input type="hidden" name="formName" value="addWhitelist" />
+                <div class="input-group" style="width: 300px;">
+                    <input type="text" name="username" value="{{ .Data.AddWhitelist }}" class="form-control" placeholder="Username" />
+                    <div class="input-group-append">
+                        <button class="btn btn-sm btn-primary">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <hr />
+
+        <div>
+            Blacklist: ( <code>/pmb username</code> )
+            <table class="table table-striped table-hover table-sm table-novpadding">
+                {{ range .Data.BlacklistedUsers }}
+                    <tr>
+                        <td style="width: 40px;">
+                            <form method="post" class="d-inline">
+                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                <input type="hidden" name="formName" value="rmBlacklist" />
+                                <input type="hidden" name="userID" value="{{ .BlacklistedUser.ID }}" />
+                                <button class="btn btn-xs btn-danger">×</button>
+                            </form>
+                        </td>
+                        <td><span {{ .BlacklistedUser.GenerateChatStyle | attr }}>{{ .BlacklistedUser.Username }}</span></td>
+                    </tr>
+                {{ else }}
+                    <tr><td colspan="2"><em>No users in the blacklist</em></td></tr>
+                {{ end }}
+            </table>
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                <input type="hidden" name="formName" value="addBlacklist" />
+                <div class="input-group" style="width: 300px;">
+                    <input type="text" name="username" value="{{ .Data.AddBlacklist }}" class="form-control" placeholder="Username" />
+                    <div class="input-group-append">
+                        <button class="btn btn-sm btn-primary">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ end }}

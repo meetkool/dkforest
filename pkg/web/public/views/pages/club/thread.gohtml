@@ -1,0 +1,56 @@
+{{ define "extra-head" }}
+<style>
+    .btn-xs {
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+    }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/club">Club</a></li>
+            <li class="breadcrumb-item active">{{ t "Thread" . }} {{ .Data.Thread.Name }}</li>
+        </ol>
+    </nav>
+
+    {{ range .Data.Messages }}
+        <div>
+            <table>
+                <tr>
+                    <td valign="top">
+                        <div class="img-thumbnail" style="width: 130px; height: 130px; margin-right: 10px;">
+                            {{ if .User.Avatar }}
+                                <img src="data:image;base64,{{ .User.Avatar | b64 }}" alt="avatar" />
+                            {{ else }}
+                                <img src="/public/img/avatar-placeholder.png" alt="avatar" />
+                            {{ end }}
+                        </div>
+                        <span {{ .User.GenerateChatStyle | attr }}>{{ .User.Username }}</span>
+                    </td>
+                    <td valign="top">
+                        <div class="mb-3">
+                            {{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}
+                            {{ if or (and (eq $.AuthUser.ID .UserID) .CanEdit) $.AuthUser.IsAdmin }}
+                                <a href="/club/threads/{{ $.Data.Thread.ID }}/messages/{{ .ID }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+                                <form method="post" action="/api/v1/club/messages/{{ .ID }}/delete" style="display: inline;">
+                                    <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                    <button class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            {{ end }}
+                        </div>
+                        {{ .Escape | safe }}
+                    </td>
+                </tr>
+            </table>
+            <hr />
+        </div>
+    {{ end }}
+
+    <a href="/club/threads/{{ .Data.Thread.ID }}/reply" class="btn btn-primary">Reply</a>
+</div>
+
+{{ end }}

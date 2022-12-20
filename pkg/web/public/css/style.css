@@ -1,0 +1,147 @@
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.table-novpadding tbody tr>td {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.emoji {
+    background-image: url('/public/img/emojis_sm.png');
+    width: 18px;
+    height: 18px;
+    background-size: 486px 126px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    z-index: 999;
+    margin-top: -1px;
+}
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+input[type=text], input[type=password], input[type=number], input[type=email], input[type=url], textarea, select {
+    background-color: rgba(79,79,79,1) !important;
+    color: #fff !important;
+    border: 1px solid rgba(90,90,90,1) !important;
+}
+
+.censored { background-color: black; color: black; padding: 0 3px; }
+.censored:hover { background-color: black; color: white; }
+
+input.transparent-input.is-invalid, textarea.transparent-input.is-invalid {
+    border: 1px solid rgba(200, 0, 0, 0.8) !important;
+}
+input.transparent-input, textarea.transparent-input {
+    background-color: rgba(50, 50, 50, 0.8) !important;
+    border: 1px solid rgba(200, 255, 255, 0.8) !important;
+    color: #ccc !important;
+}
+input.transparent-input:hover, textarea.transparent-input:hover {
+    background-color: rgba(50, 50, 50, 0.8) !important;
+    border: 1px solid rgba(100, 200, 255, 0.8) !important;
+}
+input.transparent-input::placeholder, textarea.transparent-input::placeholder {
+    color: #aaa !important;
+}
+
+textarea.transparent-input {
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: scroll;
+}
+
+.bg-label {
+    border-radius: 3px;
+    background-color: rgba(50, 50, 50, 0.7) !important;
+    padding: 3px 5px;
+}
+.bg-label.link {
+    color: #7abaff;
+}
+
+.form-check-1 {
+    padding-left: 2.80rem;
+}
+.checkbox-wrapper.form-check-input {
+    margin-top: 0.1rem;
+    margin-left: -2.80rem;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    visibility: hidden;
+    display: none;
+}
+
+.checkbox-wrapper .toggle {
+    position: relative;
+    display: block;
+    width: 40px;
+    height: 20px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transform: translate3d(0, 0, 0);
+}
+.checkbox-wrapper .toggle:before {
+    content: "";
+    position: relative;
+    top: 3px;
+    left: 3px;
+    width: 34px;
+    height: 14px;
+    display: block;
+    background: #9A9999;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+.checkbox-wrapper .toggle span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    display: block;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(154, 153, 153, 0.5);
+    transition: all 0.2s ease;
+}
+.checkbox-wrapper .toggle span:before {
+    content: "";
+    position: absolute;
+    display: block;
+    margin: -18px;
+    width: 56px;
+    height: 56px;
+    background: rgba(79, 46, 220, 0.5);
+    border-radius: 50%;
+    transform: scale(0);
+    opacity: 1;
+    pointer-events: none;
+}
+
+.checkbox-wrapper .my-cbx:checked + .toggle:before {
+    background: #947ADA;
+}
+.checkbox-wrapper .my-cbx:checked + .toggle span {
+    background: #4F2EDC;
+    transform: translateX(20px);
+    transition: all 0.2s cubic-bezier(0.8, 0.4, 0.3, 1.25), background 0.15s ease;
+    box-shadow: 0 3px 8px rgba(79, 46, 220, 0.2);
+}
+.checkbox-wrapper .my-cbx:checked + .toggle span:before {
+    transform: scale(1);
+    opacity: 0;
+    transition: all 0.4s ease;
+}

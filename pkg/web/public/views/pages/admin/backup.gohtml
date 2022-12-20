@@ -1,0 +1,20 @@
+{{ define "extra-head" }}
+{{ end }}
+
+{{ define "sub-content" }}
+    <div class="pb-2 mt-4 mb-4 border-bottom">
+        <h2>Backup</h2>
+    </div>
+
+    <form id="backup" method="post" class="mb-2">
+        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+        <input type="hidden" name="formName" value="backup" />
+        <button class="btn btn-primary">Backup database</button>
+    </form>
+
+    <form id="toggleMaintenance" method="post" class="mb-3">
+        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+        <input type="hidden" name="formName" value="toggleMaintenance" />
+        <button class="btn btn-primary">Toggle maintenance mode</button>
+    </form>
+{{ end }}

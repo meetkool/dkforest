@@ -1,0 +1,38 @@
+{{ define "title" }}dkf - chess{{ end }}
+
+{{ define "content" }}
+    <div class="container">
+        <h3>Games</h3>
+        <p>You can create a chess game with someone by using the <code>/chess username</code> command.</p>
+        <form method="post" style="width: 400px;">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="input-group">
+                <input type="text" name="username" value="{{ .Data.Username }}" placeholder="opponent username" class="form-control form-control-sm{{ if .Data.Error }} is-invalid{{ end }}" />
+                <div class="input-group-append">
+                    <button class="btn btn-sm btn-primary">Create chess game</button>
+                </div>
+                {{ if .Data.Error }}
+                    <div class="invalid-feedback">{{ .Data.Error }}</div>
+                {{ end }}
+            </div>
+        </form>
+        <div class="mt-4">
+            <table class="table table-novpadding table-sm table-hover table-striped">
+                <tr>
+                    <th style="width: 180px;">Created at</th>
+                    <th>Game</th>
+                    <th>Outcome</th>
+                </tr>
+                {{ range .Data.Games }}
+                    <tr>
+                        <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
+                        <td><a href="/chess/{{ .Key }}">{{ .Player1.Username }} VS {{ .Player2.Username }}</a></td>
+                        <td>{{ .Game.Outcome }}</td>
+                    </tr>
+                {{ else }}
+                    <tr><td colspan="3"><em>No game to show</em></td></tr>
+                {{ end }}
+            </table>
+        </div>
+    </div>
+{{ end }}

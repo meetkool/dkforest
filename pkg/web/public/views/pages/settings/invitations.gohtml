@@ -1,0 +1,35 @@
+{{ define "sub-content" }}
+
+{{ if .Data.Error }}
+    <div class="alert alert-danger">{{ .Data.Error }}</div>
+{{ end }}
+
+<div class="card mb-3">
+    <div class="card-header">
+        {{ t "Invitations" . }}
+    </div>
+    <div class="card-body">
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <input type="submit" value="{{ t "Create invitation" . }}" class="btn btn-primary" />
+            </div>
+        </form>
+
+        <table class="table table-hover table-novpadding table-sm table-striped">
+            <tr>
+                <th></th>
+            </tr>
+                {{ range .Data.Invitations }}
+                    <tr>
+                        <td><input class="form-control" type="text" value="{{ $.Data.DkfOnion }}/signup/invitation/{{ .Token }}" readonly /></td>
+                    </tr>
+                {{ else }}
+                    <tr><td><em>No invitations to display</em></td></tr>
+                {{ end }}
+            </tr>
+        </table>
+    </div>
+</div>
+
+{{ end }}

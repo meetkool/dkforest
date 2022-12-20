@@ -1,0 +1,34 @@
+{{ define "title" }}dkf - vip{{ end }}
+
+{{ define "sub-content" }}
+
+<h3>VIP section</h3>
+<p>Welcome to the VIP section</p>
+
+<p>
+    <a href="/vip/challenges/byte-road">ByteRoad captcha challenge</a><br />
+    <a href="/vip/challenges/re-1">Reverse Engineering Challenge #1</a><br />
+    <a href="/vip/challenges/stego1">Stego #1</a><br />
+</p>
+
+<hr />
+
+<div>
+    <h4>Challenges Leaderboard</h4>
+    <table class="table table-hover table-sm table-novpadding table-striped">
+        <tr>
+            <th>Challenge</th>
+            <th>User</th>
+            <th>Date</th>
+        </tr>
+        {{ range .Data.UsersBadges }}
+            <tr>
+                <td>{{ .Badge.Name }}</td>
+                <td><a {{ .User.GenerateChatStyle | attr }} href="/u/{{ .User.Username }}">{{ .User.Username }}</a></td>
+                <td>{{ .CreatedAt.Format "Jan 02, 2006 - 15:04:05" }}</td>
+            </tr>
+        {{ end }}
+    </table>
+</div>
+
+{{ end }}
