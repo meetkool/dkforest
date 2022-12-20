@@ -1,4 +1,7 @@
+# DarkForest
+Welcome traveler, the goal of this website is to provide a decent chat experience for the good folks using tor without javascript.
 
+Enjoy your stay and spread the word :)
 demo :- http://dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion
  
 # How to run
