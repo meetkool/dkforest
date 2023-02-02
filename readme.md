@@ -32,3 +32,10 @@ make serve
 ```
 go run --tags "fts5" cmd/dkf/main.go --no-browser
 ```
+----
+![Screenshot from 2023-02-02 19-57-53](https://user-images.githubusercontent.com/96396841/216351824-5ed97806-9419-4144-a9ad-87385c27aee5.png)
+
+
+
+
+
