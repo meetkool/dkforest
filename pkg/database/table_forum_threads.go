@@ -1,18 +1,17 @@
 package database
 
 import (
+	"dkforest/pkg/utils"
+	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
+	"github.com/google/uuid"
 	html2 "html"
-	"io"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Depado/bfchroma"
-	"github.com/alecthomas/chroma/formatters/html"
-
-	bf "github.com/russross/blackfriday/v2"
+	bf "dkforest/pkg/blackfriday/v2"
 )
 
 type ForumCategoryID int64
@@ -38,19 +37,23 @@ type ForumThread struct {
 	Category   ForumCategory
 }
 
-func (u *ForumThread) DoSave() {
-	if err := DB.Save(u).Error; err != nil {
+func MakeForumThread(threadName string, userID UserID, categoryID ForumCategoryID) ForumThread {
+	return ForumThread{UUID: ForumThreadUUID(uuid.New().String()), Name: threadName, UserID: userID, CategoryID: categoryID}
+}
+
+func (u *ForumThread) DoSave(db *DkfDB) {
+	if err := db.db.Save(u).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func GetForumCategories() (out []ForumCategory, err error) {
-	err = DB.Find(&out).Order("idx ASC, name ASC").Error
+func (d *DkfDB) GetForumCategories() (out []ForumCategory, err error) {
+	err = d.db.Find(&out).Order("idx ASC, name ASC").Error
 	return
 }
 
-func GetForumCategoryBySlug(slug string) (out ForumCategory, err error) {
-	err = DB.First(&out, "slug = ?", slug).Error
+func (d *DkfDB) GetForumCategoryBySlug(slug string) (out ForumCategory, err error) {
+	err = d.db.First(&out, "slug = ?", slug).Error
 	return
 }
 
@@ -64,8 +67,13 @@ type ForumMessage struct {
 	Message   string
 	UserID    UserID
 	ThreadID  ForumThreadID
+	IsSigned  bool
 	CreatedAt time.Time
 	User      User
+}
+
+func MakeForumMessage(message string, userID UserID, threadID ForumThreadID) ForumMessage {
+	return ForumMessage{UUID: ForumMessageUUID(uuid.New().String()), Message: message, UserID: userID, ThreadID: threadID}
 }
 
 type ForumReadRecord struct {
@@ -74,78 +82,45 @@ type ForumReadRecord struct {
 	ReadAt   time.Time
 }
 
+func (d *DkfDB) UpdateForumReadRecord(userID UserID, threadID ForumThreadID) {
+	now := time.Now()
+	res := d.db.Table("forum_read_records").Where("user_id = ? AND thread_id = ?", userID, threadID).Update("read_at", now)
+	if res.RowsAffected == 0 {
+		d.db.Create(ForumReadRecord{UserID: userID, ThreadID: threadID, ReadAt: now})
+	}
+}
+
 // DoSave user in the database, ignore error
-func (u *ForumReadRecord) DoSave() {
-	if err := DB.Save(u).Error; err != nil {
+func (u *ForumReadRecord) DoSave(db *DkfDB) {
+	if err := db.db.Save(u).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
 // DoSave user in the database, ignore error
-func (u *ForumMessage) DoSave() {
-	if err := DB.Save(u).Error; err != nil {
+func (u *ForumMessage) DoSave(db *DkfDB) {
+	if err := db.db.Save(u).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func MyRenderer() *Renderer {
-	// Defines the HTML rendering flags that are used
-	var flags = bf.UseXHTML
-
-	r := &Renderer{
-		Base: bfchroma.NewRenderer(
-			bfchroma.WithoutAutodetect(),
-			bfchroma.ChromaOptions(
-				html.WithLineNumbers(true),
-				html.LineNumbersInTable(true),
-			),
-			bfchroma.Extend(
-				bf.NewHTMLRenderer(bf.HTMLRendererParameters{
-					Flags: flags,
-				}),
-			),
-		),
-	}
-	return r
-}
-
-type Renderer struct {
-	Base *bfchroma.Renderer
-}
-
-func (r Renderer) RenderNode(w io.Writer, node *bf.Node, entering bool) bf.WalkStatus {
-	switch node.Type {
-	case bf.Text:
-		if node.Parent.Type != bf.Link {
-			node.Literal = []byte(html2.UnescapeString(string(node.Literal)))
+func (m *ForumMessage) Escape(db *DkfDB) string {
+	msg := m.Message
+	if m.IsSigned {
+		if b, _ := clearsign.Decode([]byte(msg)); b != nil {
+			msg = string(b.Plaintext)
 		}
-	case bf.Code:
-		node.Literal = []byte(html2.UnescapeString(string(node.Literal)))
-	case bf.CodeBlock:
-		node.Literal = []byte(html2.UnescapeString(string(node.Literal)))
 	}
-	return r.Base.RenderNode(w, node, entering)
-}
-
-func (r Renderer) RenderHeader(w io.Writer, ast *bf.Node) {
-	r.Base.RenderHeader(w, ast)
-}
-
-func (r Renderer) RenderFooter(w io.Writer, ast *bf.Node) {
-	r.Base.RenderFooter(w, ast)
-}
-
-func (m *ForumMessage) Escape() string {
-	res := strings.Replace(m.Message, "\r", "", -1)
+	res := strings.Replace(msg, "\r", "", -1)
 	res = html2.EscapeString(res)
-	resBytes := bf.Run([]byte(res), bf.WithRenderer(MyRenderer()), bf.WithExtensions(bf.CommonExtensions|bf.HardLineBreak))
+	resBytes := bf.Run([]byte(res), bf.WithRenderer(MyRendererForum(db, true, true)), bf.WithExtensions(bf.CommonExtensions|bf.HardLineBreak))
 	res = string(resBytes)
 
 	// Tags
 	var tagRgx = regexp.MustCompile(`@(\w{3,20})`)
 	if tagRgx.MatchString(res) {
 		res = tagRgx.ReplaceAllStringFunc(res, func(s string) string {
-			if user, err := GetUserByUsername(strings.TrimPrefix(s, "@")); err == nil {
+			if user, err := db.GetUserByUsername(Username(strings.TrimPrefix(s, "@"))); err == nil {
 				return `<span style="color: ` + user.ChatColor + `;">` + s + `</span>`
 			}
 			return s
@@ -154,22 +129,22 @@ func (m *ForumMessage) Escape() string {
 	return res
 }
 
-func GetForumMessage(messageID ForumMessageID) (out ForumMessage, err error) {
-	err = DB.First(&out, "id = ?", messageID).Error
+func (d *DkfDB) GetForumMessage(messageID ForumMessageID) (out ForumMessage, err error) {
+	err = d.db.First(&out, "id = ?", messageID).Error
 	return
 }
 
-func GetForumMessageByUUID(messageUUID ForumMessageUUID) (out ForumMessage, err error) {
-	err = DB.First(&out, "uuid = ?", messageUUID).Error
+func (d *DkfDB) GetForumMessageByUUID(messageUUID ForumMessageUUID) (out ForumMessage, err error) {
+	err = d.db.First(&out, "uuid = ?", messageUUID).Error
 	return
 }
 
-func DeleteForumMessageByID(messageID ForumMessageID) error {
-	return DB.Where("id = ?", messageID).Delete(&ForumMessage{}).Error
+func (d *DkfDB) DeleteForumMessageByID(messageID ForumMessageID) error {
+	return d.db.Where("id = ?", messageID).Delete(&ForumMessage{}).Error
 }
 
-func DeleteForumThreadByID(threadID ForumThreadID) error {
-	return DB.Where("id = ?", threadID).Delete(&ForumThread{}).Error
+func (d *DkfDB) DeleteForumThreadByID(threadID ForumThreadID) error {
+	return d.db.Where("id = ?", threadID).Delete(&ForumThread{}).Error
 }
 
 func (m *ForumMessage) CanEdit() bool {
@@ -177,24 +152,37 @@ func (m *ForumMessage) CanEdit() bool {
 	return true
 }
 
-func GetForumThread(threadID ForumThreadID) (out ForumThread, err error) {
-	err = DB.First(&out, "id = ? AND is_club = 1", threadID).Error
+func (m *ForumMessage) ValidateSignature(pkey string) bool {
+	if pkey == "" {
+		return false
+	}
+	return utils.PgpCheckClearSignMessage(pkey, m.Message)
+}
+
+func (d *DkfDB) GetForumThread(threadID ForumThreadID) (out ForumThread, err error) {
+	err = d.db.First(&out, "id = ? AND is_club = 1", threadID).Error
 	return
 }
 
-func GetForumThreadByID(threadID ForumThreadID) (out ForumThread, err error) {
-	err = DB.First(&out, "id = ? AND is_club = 0", threadID).Error
+func (d *DkfDB) GetForumThreadByID(threadID ForumThreadID) (out ForumThread, err error) {
+	err = d.db.First(&out, "id = ? AND is_club = 0", threadID).Error
 	return
 }
 
-func GetForumThreadByUUID(threadUUID ForumThreadUUID) (out ForumThread, err error) {
-	err = DB.First(&out, "uuid = ? AND is_club = 0", threadUUID).Error
+func (d *DkfDB) GetForumThreadByUUID(threadUUID ForumThreadUUID) (out ForumThread, err error) {
+	err = d.db.First(&out, "uuid = ? AND is_club = 0", threadUUID).Error
 	return
 }
 
-func GetForumThreads() (out []ForumThread, err error) {
-	err = DB.Order("id DESC").Find(&out).Error
+func (d *DkfDB) GetForumThreads() (out []ForumThread, err error) {
+	err = d.db.Order("id DESC").Find(&out).Error
 	return
+}
+
+type ForumNews struct {
+	ForumThread
+	ForumMessage
+	User
 }
 
 type ForumThreadAug struct {
@@ -209,8 +197,8 @@ type ForumThreadAug struct {
 	RepliesCount     int64
 }
 
-func GetClubForumThreads(userID UserID) (out []ForumThreadAug, err error) {
-	err = DB.Raw(`SELECT t.*,
+func (d *DkfDB) GetClubForumThreads(userID UserID) (out []ForumThreadAug, err error) {
+	err = d.db.Raw(`SELECT t.*,
 u.username as author,
 u.chat_color as author_chat_color,
 lu.username as last_msg_author,
@@ -228,8 +216,8 @@ ORDER BY t.id DESC`, userID).Scan(&out).Error
 	return
 }
 
-func GetPublicForumCategoryThreads(userID UserID, categoryID ForumCategoryID) (out []ForumThreadAug, err error) {
-	err = DB.Raw(`SELECT t.*,
+func (d *DkfDB) GetPublicForumCategoryThreads(userID UserID, categoryID ForumCategoryID) (out []ForumThreadAug, err error) {
+	err = d.db.Raw(`SELECT t.*,
 u.username as author,
 u.chat_color as author_chat_color,
 lu.username as last_msg_author,
@@ -254,8 +242,22 @@ ORDER BY m.created_at DESC, t.id DESC`, userID, categoryID).Scan(&out).Error
 	return
 }
 
-func GetPublicForumThreadsSearch(userID UserID) (out []ForumThreadAug, err error) {
-	err = DB.Raw(`SELECT t.*,
+func (d *DkfDB) GetForumNews(categoryID ForumCategoryID) (out []ForumNews, err error) {
+	err = d.db.Raw(`SELECT t.*,
+       m.*,
+       mu.*
+FROM forum_threads t
+-- Find first message for thread
+INNER JOIN forum_messages m ON m.thread_id = t.id AND m.id = (SELECT min(id) FROM forum_messages WHERE thread_id = t.id)
+-- Join last message user
+INNER JOIN users mu ON mu.id = m.user_id
+WHERE t.category_id = ?
+ORDER BY m.created_at DESC, t.id DESC`, categoryID).Scan(&out).Error
+	return
+}
+
+func (d *DkfDB) GetPublicForumThreadsSearch(userID UserID) (out []ForumThreadAug, err error) {
+	err = d.db.Raw(`SELECT t.*,
 u.username as author,
 u.chat_color as author_chat_color,
 lu.username as last_msg_author,
@@ -280,7 +282,7 @@ ORDER BY m.created_at DESC, t.id DESC`, userID).Scan(&out).Error
 	return
 }
 
-func GetThreadMessages(threadID ForumThreadID) (out []ForumMessage, err error) {
-	err = DB.Preload("User").Find(&out, "thread_id = ?", threadID).Error
+func (d *DkfDB) GetThreadMessages(threadID ForumThreadID) (out []ForumMessage, err error) {
+	err = d.db.Preload("User").Find(&out, "thread_id = ?", threadID).Error
 	return
 }

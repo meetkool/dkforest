@@ -33,7 +33,7 @@
             {{ range .Data.Filedrops }}
                 <tr>
                     <td>
-                        {{ if .FileName }}
+                        {{ if .FileSize }}
                             {{ .UUID }}
                         {{ else }}
                             <a href="/file-drop/{{ .UUID }}">{{ .UUID }}</a>

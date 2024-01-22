@@ -3,6 +3,12 @@
 {{ define "content" }}
 
 <div class="container-fluid mb-5">
+
+    <div class="mb-2">
+        We try with our utmost diligence and effort to ensure that the archive is free from abuse content,
+        but sometimes sites change retroactively, if anything degen is found, please notify the staff.
+    </div>
+
     <div class="d-flex justify-content-between align-items-center">
         <form method="get" action="/links" class="d-inline-block">
             <div class="input-group" style="width: 600px;">
@@ -45,7 +51,7 @@
                         </form>
                     {{ end }}
                     <a href="/links/{{ .UUID }}">{{ .Title }}</a> - {{ .Description | trunc 100 }}<br />
-                    <a style="color: gray; font-size: 10px; font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;" href="{{ .URL }}" rel="noopener noreferrer" target="_blank">{{ .URL }}</a>
+                    <a class="mono" style="color: gray; font-size: 10px;" href="{{ .URL }}" rel="noopener noreferrer" target="_blank">{{ .URL }}</a>
                     {{ range $idx, $el := .Mirrors }}
                         [<a href="{{ .MirrorURL }}" rel="noopener noreferrer" target="_blank">mirror {{ addInt $idx 1 }}</a>]
                     {{ end }}

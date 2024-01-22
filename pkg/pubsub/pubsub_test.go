@@ -11,11 +11,13 @@ func TestPublish(t *testing.T) {
 	topic := "topic1"
 	msg := "msg1"
 
-	s1 := Subscribe([]string{topic})
-	s2 := Subscribe([]string{topic})
-	s3 := Subscribe([]string{topic})
+	ps := NewPubSub[string]()
 
-	PublishString(topic, msg)
+	s1 := ps.Subscribe([]string{topic})
+	s2 := ps.Subscribe([]string{topic})
+	s3 := ps.Subscribe([]string{topic})
+
+	ps.Pub(topic, msg)
 
 	s1Topic, s1Msg, s1Err := s1.ReceiveTimeout(time.Second)
 	s2Topic, s2Msg, s2Err := s2.ReceiveTimeout(time.Second)
@@ -38,9 +40,11 @@ func TestSubscribe_manyTopics(t *testing.T) {
 	msg1 := "msg1"
 	msg2 := "msg2"
 
-	s := Subscribe([]string{topic1, topic2})
-	PublishString(topic1, msg1)
-	PublishString(topic2, msg2)
+	ps := NewPubSub[string]()
+
+	s := ps.Subscribe([]string{topic1, topic2})
+	ps.Pub(topic1, msg1)
+	ps.Pub(topic2, msg2)
 
 	s1Topic1, s1Msg1, s1Err1 := s.ReceiveTimeout(time.Second)
 	s1Topic2, s1Msg2, s1Err2 := s.ReceiveTimeout(time.Second)
@@ -56,29 +60,35 @@ func TestSubscribe_manyTopics(t *testing.T) {
 
 func TestPublishMarshal(t *testing.T) {
 	topic := "topic"
-	var msg struct {
+	type Msg struct {
 		ID      int64
 		Msg     string
 		private string
 	}
+	var msg Msg
 	msg.ID = 1
 	msg.Msg = "will be sent"
 	msg.private = "will not"
 
-	s1 := Subscribe([]string{topic})
-	pubErr := Publish(topic, msg)
+	ps := NewPubSub[Msg]()
+
+	s1 := ps.Subscribe([]string{topic})
+	ps.Pub(topic, msg)
 	s1Topic, s1Msg, s1Err := s1.ReceiveTimeout(time.Second)
 
-	assert.Nil(t, pubErr)
 	assert.Nil(t, s1Err)
-	assert.Equal(t, `{"ID":1,"Msg":"will be sent"}`, s1Msg)
+	assert.Equal(t, int64(1), s1Msg.ID)
+	assert.Equal(t, "will be sent", s1Msg.Msg)
+	assert.Equal(t, "will not", s1Msg.private)
 	assert.Equal(t, topic, s1Topic)
 }
 
 func TestSub_Close(t *testing.T) {
 	topic := "topic1"
 
-	s1 := Subscribe([]string{topic})
+	ps := NewPubSub[string]()
+
+	s1 := ps.Subscribe([]string{topic})
 	s1.Close()
 	_, _, s1Err := s1.ReceiveTimeout(time.Second)
 

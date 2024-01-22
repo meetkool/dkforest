@@ -1,0 +1,20 @@
+{{ define "title" }}dkf - Link claim instructions{{ end }}
+
+{{ define "content" }}
+
+<div class="container mb-5">
+    <ul>
+        <li>Download the certificate file you want to sign</li>
+        <li>Use the following Golang script to sign the file <code>./torsign -s /path/to/hs_ed25519_secret_key -c certificate.txt</code></li>
+        <li>Alternatively, you can use python <code>python3 torsign.py -s /path/to/hs_ed25519_secret_key certificate.txt</code></li>
+    </ul>
+    <div>
+        Golang script:<br />
+        <a href="http://git.dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion/n0tr1v/dkforest/src/master/cmd/torsign/main.go">http://git.dkf.onion/n0tr1v/dkforest/src/master/cmd/torsign/main.go</a>
+    </div>
+    <div>
+        Python script:<br />
+        <a href="http://git.dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion/n0tr1v/dkforest/src/master/cmd/torsign/torsign.py">http://git.dkf.onion/n0tr1v/dkforest/src/master/cmd/torsign/torsign.py</a>
+    </div>
+</div>
+{{ end }}

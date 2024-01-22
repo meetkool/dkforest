@@ -18,11 +18,11 @@ import (
 // method after the certain amount of captchas has been stored.)
 type Store interface {
 	// Set sets the digits for the captcha id.
-	Set(id string, digits []byte)
+	Set(id string, answer string)
 
 	// Get returns stored digits for the captcha id. Clear indicates
 	// whether the captcha must be deleted from the store.
-	Get(id string, clear bool) (digits []byte, err error)
+	Get(id string, clear bool) (answer string, err error)
 }
 
 // expValue stores timestamp and id of captchas. It is used in the list inside
@@ -31,7 +31,7 @@ type Store interface {
 type idByTimeValue struct {
 	timestamp time.Time
 	id        string
-	digits    []byte
+	answer    string
 }
 
 // memoryStore is an internal store for captcha ids and their values.
@@ -57,9 +57,9 @@ func NewMemoryStore(collectNum int, expiration time.Duration) Store {
 	return s
 }
 
-func (s *memoryStore) Set(id string, digits []byte) {
+func (s *memoryStore) Set(id string, answer string) {
 	s.Lock()
-	s.digitsById[id] = idByTimeValue{time.Now(), id, digits}
+	s.digitsById[id] = idByTimeValue{time.Now(), id, answer}
 	s.numStored++
 	if s.numStored <= s.collectNum {
 		s.Unlock()
@@ -69,7 +69,7 @@ func (s *memoryStore) Set(id string, digits []byte) {
 	go s.collect()
 }
 
-func (s *memoryStore) Get(id string, clear bool) ([]byte, error) {
+func (s *memoryStore) Get(id string, clear bool) (string, error) {
 	if !clear {
 		// When we don't need to clear captcha, acquire read lock.
 		s.RLock()
@@ -80,15 +80,15 @@ func (s *memoryStore) Get(id string, clear bool) ([]byte, error) {
 	}
 	el, ok := s.digitsById[id]
 	if el.timestamp.Add(s.expiration).Before(time.Now()) {
-		return nil, ErrCaptchaExpired
+		return "", ErrCaptchaExpired
 	}
 	if !ok {
-		return nil, ErrNotFound
+		return "", ErrNotFound
 	}
 	if clear {
 		delete(s.digitsById, id)
 	}
-	return el.digits, nil
+	return el.answer, nil
 }
 
 func (s *memoryStore) collect() {

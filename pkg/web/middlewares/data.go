@@ -5,7 +5,9 @@ type unauthorizedData struct {
 }
 
 type captchaMiddlewareData struct {
-	CaptchaID  string
-	CaptchaImg string
-	ErrCaptcha string
+	CaptchaDescription string
+	CaptchaID          string
+	CaptchaImg         string
+	CaptchaAnswerImg   string
+	ErrCaptcha         string
 }

@@ -1,0 +1,21 @@
+{{ define "title" }}dkf - chat code{{ end }}
+
+{{ define "navbar" }}&nbsp;{{ end }}}
+
+{{ define "content" }}
+
+<style>
+    pre {
+        border: 1px solid #2b442b;
+        padding: 2px;
+        margin: 2px 0;
+        overflow: auto;
+        font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    }
+</style>
+
+<div class="container-fluid">
+    <pre style="color:#f8f8f2;background-color:#272822">{{ .Data.Code | safe }}</pre>
+</div>
+
+{{ end }}

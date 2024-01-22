@@ -20,15 +20,15 @@ type Session struct {
 }
 
 // GetActiveUserSessions gets all user sessions
-func GetActiveUserSessions(userID UserID) (out []Session) {
-	DB.Order("created_at DESC").Find(&out, "user_id = ? AND expires_at > DATETIME('now') AND deleted_at IS NULL", userID)
+func (d *DkfDB) GetActiveUserSessions(userID UserID) (out []Session) {
+	d.db.Order("created_at DESC").Find(&out, "user_id = ? AND expires_at > DATETIME('now', 'localtime') AND deleted_at IS NULL", userID)
 	return
 }
 
 // CreateSession creates a session for a user
-func CreateSession(userID UserID, userAgent string) (Session, error) {
+func (d *DkfDB) CreateSession(userID UserID, userAgent string, sessionDuration time.Duration) (Session, error) {
 	// Delete all sessions except the last 4
-	if err := DB.Exec(`DELETE FROM sessions WHERE user_id = ? AND token NOT IN (SELECT s2.token FROM sessions s2 WHERE s2.user_id = ? ORDER BY s2.created_at DESC LIMIT 4)`, userID, userID).Error; err != nil {
+	if err := d.db.Exec(`DELETE FROM sessions WHERE user_id = ? AND token NOT IN (SELECT s2.token FROM sessions s2 WHERE s2.user_id = ? ORDER BY s2.created_at DESC LIMIT 4)`, userID, userID).Error; err != nil {
 		logrus.Error(err)
 	}
 	session := Session{
@@ -36,32 +36,41 @@ func CreateSession(userID UserID, userAgent string) (Session, error) {
 		UserID:    userID,
 		ClientIP:  "",
 		UserAgent: userAgent,
-		ExpiresAt: time.Now().Add(time.Duration(utils.OneMonthSecs) * time.Second),
+		ExpiresAt: time.Now().Add(sessionDuration),
 	}
-	err := DB.Create(&session).Error
+	err := d.db.Create(&session).Error
 	return session, err
 }
 
+// DoCreateSession same as CreateSession but log the error instead of returning it
+func (d *DkfDB) DoCreateSession(userID UserID, userAgent string, sessionDuration time.Duration) Session {
+	session, err := d.CreateSession(userID, userAgent, sessionDuration)
+	if err != nil {
+		logrus.Error("Failed to create session : ", err)
+	}
+	return session
+}
+
 // DeleteUserSessions all sessions of the user.
-func DeleteUserSessions(userID UserID) error {
-	return DB.Unscoped().Where("user_id = ?", userID).Delete(&Session{}).Error
+func (d *DkfDB) DeleteUserSessions(userID UserID) error {
+	return d.db.Unscoped().Where("user_id = ?", userID).Delete(&Session{}).Error
 }
 
 // DeleteSessionByToken a session by its token
-func DeleteSessionByToken(token string) error {
-	return DB.Unscoped().Where("token = ?", token).Delete(&Session{}).Error
+func (d *DkfDB) DeleteSessionByToken(token string) error {
+	return d.db.Unscoped().Where("token = ?", token).Delete(&Session{}).Error
 }
 
-func DeleteUserSessionByToken(userID UserID, token string) error {
-	return DB.Unscoped().Where("user_id = ? AND token = ?", userID, token).Delete(&Session{}).Error
+func (d *DkfDB) DeleteUserSessionByToken(userID UserID, token string) error {
+	return d.db.Unscoped().Where("user_id = ? AND token = ?", userID, token).Delete(&Session{}).Error
 }
 
-func DeleteUserOtherSessions(userID UserID, currentToken string) error {
-	return DB.Unscoped().Where("user_id = ? AND token != ?", userID, currentToken).Delete(&Session{}).Error
+func (d *DkfDB) DeleteUserOtherSessions(userID UserID, currentToken string) error {
+	return d.db.Unscoped().Where("user_id = ? AND token != ?", userID, currentToken).Delete(&Session{}).Error
 }
 
-func DeleteOldSessions() {
-	if err := DB.Unscoped().Delete(Session{}, "expires_at < date('now', '-32 Day') OR (expires_at < date('now', '-32 Day') AND deleted_at IS NOT NULL)").Error; err != nil {
+func (d *DkfDB) DeleteOldSessions() {
+	if err := d.db.Unscoped().Delete(Session{}, "expires_at < date('now', '-32 Day') OR (expires_at < date('now', '-32 Day') AND deleted_at IS NOT NULL)").Error; err != nil {
 		logrus.Error(err)
 	}
 }

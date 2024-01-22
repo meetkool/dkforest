@@ -1,0 +1,28 @@
+{{ define "extra-head" }}
+<link rel="stylesheet" type="text/css" href="/public/css/{{ .Data.WaitToken }}/signup.css?v={{ .VERSION }}" />
+<meta http-equiv="refresh" content="{{ .Data.WaitTime }}">
+<style>
+    #timer_countdown:before {
+        content: "{{ .Data.WaitTime }}";
+        animation: {{ .Data.WaitTime }}s 1s forwards timer_countdown_frames;
+    }
+    @keyframes timer_countdown_frames {
+        {{ range .Data.Frames -}}{{ . | css }}{{ end -}}
+    }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<div id="parent">
+    <div class="container" id="form_login">
+        <div class="row">
+            <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                <div class="bg-label">Please wait <span id="timer_countdown"></span> seconds to be automatically redirected</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="div_1"></div>
+<div class="div_2"></div>
+<div class="div_f0">a</div>
+{{ end }}

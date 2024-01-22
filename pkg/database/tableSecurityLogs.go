@@ -56,24 +56,24 @@ func getMessageForType(typ int64) string {
 	return ""
 }
 
-func CreateSecurityLog(userID UserID, typ int64) {
+func (d *DkfDB) CreateSecurityLog(userID UserID, typ int64) {
 	log := SecurityLog{
 		Message: getMessageForType(typ),
 		UserID:  userID,
 		Typ:     typ,
 	}
-	if err := DB.Create(&log).Error; err != nil {
+	if err := d.db.Create(&log).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func GetSecurityLogs(userID UserID) (out []SecurityLog, err error) {
-	err = DB.Order("id DESC").Find(&out, "user_id  = ?", userID).Error
+func (d *DkfDB) GetSecurityLogs(userID UserID) (out []SecurityLog, err error) {
+	err = d.db.Order("id DESC").Find(&out, "user_id  = ?", userID).Error
 	return
 }
 
-func DeleteOldSecurityLogs() {
-	if err := DB.Delete(SecurityLog{}, "created_at < date('now', '-7 Day')").Error; err != nil {
+func (d *DkfDB) DeleteOldSecurityLogs() {
+	if err := d.db.Delete(SecurityLog{}, "created_at < date('now', '-7 Day')").Error; err != nil {
 		logrus.Error(err)
 	}
 }

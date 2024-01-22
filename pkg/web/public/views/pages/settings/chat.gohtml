@@ -42,15 +42,22 @@
                 <label for="refresh_rate">{{ t "Refresh rate" . }}</label>
                 <input type="number" min="5" max="60" id="refresh_rate" name="refresh_rate" value="{{ .Data.RefreshRate }}" class="form-control" />
             </div>
-            {{ if .AuthUser.CanChangeColor }}
-                <div class="form-group">
-                    <label for="chat_color">{{ t "Chat color" . }}</label>
-                    <div class="input-group" style="width: 120px;">
+            <div>
+                <div class="form-group d-inline-block mr-3">
+                    <label for="chat_color">{{ t "Text color" . }}</label>
+                    <div class="input-group color-pkr">
                         <div class="input-group-prepend"><span style="background-color: {{ .Data.ChatColor }};" class="input-group-text"></span></div>
-                        <input type="color" id="chat_color" name="chat_color" value="{{ .Data.ChatColor }}" class="form-control" />
+                        <input type="color" id="chat_color" name="chat_color" value="{{ .Data.ChatColor }}" class="form-control"{{ if not .AuthUser.CanChangeColor }} disabled{{ end }} />
                     </div>
                 </div>
-            {{ end }}
+                <div class="form-group d-inline-block mr-3">
+                    <label for="chat_background_color">{{ t "Background color" . }}</label>
+                    <div class="input-group color-pkr">
+                        <div class="input-group-prepend"><span style="background-color: {{ .Data.ChatBackgroundColor }};" class="input-group-text"></span></div>
+                        <input type="color" id="chat_background_color" name="chat_background_color" value="{{ .Data.ChatBackgroundColor }}" class="form-control" />
+                    </div>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="chat_font">{{ t "Font" . }}</label>
                 <select name="chat_font" id="chat_font" class="form-control">
@@ -93,7 +100,7 @@
             </div>
             <div class="form-group">
                 <label for="chat_read_marker_color">{{ t "Marker color" . }}</label>
-                <div class="input-group" style="width: 120px;">
+                <div class="input-group color-pkr">
                     <div class="input-group-prepend"><span style="background-color: {{ .Data.ChatReadMarkerColor }};" class="input-group-text"></span></div>
                     <input type="color" id="chat_read_marker_color" name="chat_read_marker_color" value="{{ .Data.ChatReadMarkerColor }}" class="form-control" />
                 </div>
@@ -104,6 +111,17 @@
             </div>
 
             <hr />
+
+            <div>
+                <label for="code_block_height" class="toggle"><span>Code block height (15-300px)</span></label>
+                <input name="code_block_height" id="code_block_height" type="number" min="15" max="300" step="1" value="{{ .Data.CodeBlockHeight }}" />
+            </div>
+            {{ if $.AuthUser.CanSeeHB }}
+                <div>
+                    <label for="hellban_opacity" class="toggle"><span>Hellban opacity</span></label>
+                    <input name="hellban_opacity" id="hellban_opacity" type="number" min="0.1" max="1.0" step="0.1" value="{{ .Data.HellbanOpacity }}" />
+                </div>
+            {{ end }}
 
             <div class="form-group">
                 <div class="form-check form-check-1">
@@ -136,6 +154,13 @@
                 </div>
                 <div class="form-check form-check-1">
                     <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="spellcheck_enabled" id="spellcheck_enabled" value="1"{{ if .Data.SpellcheckEnabled }} checked{{ end }} />
+                        <label for="spellcheck_enabled" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="spellcheck_enabled">{{ t "Enable spellcheck in chat input" . }}</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
                         <input class="my-cbx" type="checkbox" name="afk_indicator_enabled" id="afk_indicator_enabled" value="1"{{ if .Data.AfkIndicatorEnabled }} checked{{ end }} />
                         <label for="afk_indicator_enabled" class="toggle"><span></span></label>
                     </div>
@@ -148,6 +173,15 @@
                     </div>
                     <label class="form-check-label" for="display_delete_button">{{ t "Display delete button" . }}</label>
                 </div>
+                {{ if $.AuthUser.CanUseMultiline }}
+                    <div class="form-check form-check-1">
+                        <div class="checkbox-wrapper form-check-input">
+                            <input class="my-cbx" type="checkbox" name="manual_multiline" id="manual_multiline" value="1"{{ if .Data.ManualMultiline }} checked{{ end }} />
+                            <label for="manual_multiline" class="toggle"><span></span></label>
+                        </div>
+                        <label class="form-check-label" for="manual_multiline">{{ t "Enable manual multiline" . }}</label>
+                    </div>
+                {{ end }}
                 <div class="form-check form-check-1">
                     <div class="checkbox-wrapper form-check-input">
                         <input class="my-cbx" type="checkbox" name="notify_chess_games" id="notify_chess_games" value="1"{{ if .Data.NotifyChessGames }} checked{{ end }} />
@@ -161,6 +195,41 @@
                         <label for="notify_chess_move" class="toggle"><span></span></label>
                     </div>
                     <label class="form-check-label" for="notify_chess_move">{{ t "Notify chess move" . }}</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="use_stream" id="use_stream" value="1"{{ if .Data.UseStream }} checked{{ end }} />
+                        <label for="use_stream" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="use_stream">{{ t "Use chat stream version" . }}</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="use_stream_menu" id="use_stream_menu" value="1"{{ if .Data.UseStreamMenu }} checked{{ end }} />
+                        <label for="use_stream_menu" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="use_stream_menu">{{ t "Use chat menu stream version" . }}</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="confirm_external_links" id="confirm_external_links" value="1"{{ if .AuthUser.ConfirmExternalLinks }} checked{{ end }} />
+                        <label for="confirm_external_links" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="confirm_external_links">Confirm before opening external links</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="chess_sounds_enabled" id="chess_sounds_enabled" value="1"{{ if .AuthUser.ChessSoundsEnabled }} checked{{ end }} />
+                        <label for="chess_sounds_enabled" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="chess_sounds_enabled">Enabled chess sounds</label>
+                </div>
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="poker_sounds_enabled" id="poker_sounds_enabled" value="1"{{ if .AuthUser.PokerSoundsEnabled }} checked{{ end }} />
+                        <label for="poker_sounds_enabled" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="poker_sounds_enabled">Enabled poker sounds</label>
                 </div>
                 {{ if $.AuthUser.IsModerator }}
                     <div class="form-check form-check-1">
@@ -198,17 +267,21 @@
                 <select id="theme" name="theme" class="form-control">
                     <option value="0"{{ if eq .Data.Theme 0 }} selected{{ end }}>Default</option>
                     <option value="1"{{ if eq .Data.Theme 1 }} selected{{ end }}>Christmas</option>
+                    <option value="2"{{ if eq .Data.Theme 2 }} selected{{ end }}>Plain</option>
                 </select>
             </div>
-<!--            <div class="form-group">-->
-<!--                <table>-->
-<!--                    <tr>-->
-<!--                        <td>-->
-<!--                            <div class="form-check">-->
-<!--                                <input type="checkbox" class="form-check-input" name="notify_new_message" id="notify_new_message" value="1"{{ if .Data.NotifyNewMessage }} checked{{ end }} />-->
-<!--                                <label class="form-check-label" for="notify_new_message">{{ t "Notify on new message" . }}</label>-->
-<!--                            </div>-->
-<!--                        </td>-->
+            <div class="form-group">
+                <table>
+                    <tr>
+                        <td>
+                            <div class="form-check form-check-1">
+                                <div class="checkbox-wrapper form-check-input">
+                                    <input class="my-cbx" type="checkbox" name="notify_new_message" id="notify_new_message" value="1"{{ if .Data.NotifyNewMessage }} checked{{ end }} />
+                                    <label for="notify_new_message" class="toggle"><span></span></label>
+                                </div>
+                                <label class="form-check-label" for="notify_new_message">{{ t "Notify on new message" . }}</label>
+                            </div>
+                        </td>
 <!--                        <td>-->
 <!--                            <select name="notify_new_message_sound">-->
 <!--                                <option value="1"{{ if eq .Data.NotifyNewMessageSound 1 }} selected{{ end }}>Sound 1</option>-->
@@ -217,14 +290,17 @@
 <!--                                <option value="4"{{ if eq .Data.NotifyNewMessageSound 4 }} selected{{ end }}>Sound 4</option>-->
 <!--                            </select>-->
 <!--                        </td>-->
-<!--                    </tr>-->
-<!--                    <tr>-->
-<!--                        <td>-->
-<!--                            <div class="form-check">-->
-<!--                                <input type="checkbox" class="form-check-input" name="notify_tagged" id="notify_tagged" value="1"{{ if .Data.NotifyTagged }} checked{{ end }} />-->
-<!--                                <label class="form-check-label" for="notify_tagged">{{ t "Notify when tagged" . }}</label>-->
-<!--                            </div>-->
-<!--                        </td>-->
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="form-check form-check-1">
+                                <div class="checkbox-wrapper form-check-input">
+                                    <input class="my-cbx" type="checkbox" name="notify_tagged" id="notify_tagged" value="1"{{ if .Data.NotifyTagged }} checked{{ end }} />
+                                    <label for="notify_tagged" class="toggle"><span></span></label>
+                                </div>
+                                <label class="form-check-label" for="notify_tagged">{{ t "Notify when tagged" . }}</label>
+                            </div>
+                        </td>
 <!--                        <td>-->
 <!--                            <select name="notify_tagged_sound">-->
 <!--                                <option value="1"{{ if eq .Data.NotifyTaggedSound 1 }} selected{{ end }}>Sound 1</option>-->
@@ -233,14 +309,17 @@
 <!--                                <option value="4"{{ if eq .Data.NotifyTaggedSound 4 }} selected{{ end }}>Sound 4</option>-->
 <!--                            </select>-->
 <!--                        </td>-->
-<!--                    </tr>-->
-<!--                    <tr>-->
-<!--                        <td>-->
-<!--                            <div class="form-check">-->
-<!--                                <input type="checkbox" class="form-check-input" name="notify_pmmed" id="notify_pmmed" value="1"{{ if .Data.NotifyPmmed }} checked{{ end }} />-->
-<!--                                <label class="form-check-label" for="notify_pmmed">{{ t "Notify when receiving private message" . }}</label>-->
-<!--                            </div>-->
-<!--                        </td>-->
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="form-check form-check-1">
+                                <div class="checkbox-wrapper form-check-input">
+                                    <input class="my-cbx" type="checkbox" name="notify_pmmed" id="notify_pmmed" value="1"{{ if .Data.NotifyPmmed }} checked{{ end }} />
+                                    <label for="notify_pmmed" class="toggle"><span></span></label>
+                                </div>
+                                <label class="form-check-label" for="notify_pmmed">{{ t "Notify when receiving private message" . }}</label>
+                            </div>
+                        </td>
 <!--                        <td>-->
 <!--                            <select name="notify_pmmed_sound">-->
 <!--                                <option value="1"{{ if eq .Data.NotifyPmmedSound 1 }} selected{{ end }}>Sound 1</option>-->
@@ -249,9 +328,9 @@
 <!--                                <option value="4"{{ if eq .Data.NotifyPmmedSound 4 }} selected{{ end }}>Sound 4</option>-->
 <!--                            </select>-->
 <!--                        </td>-->
-<!--                    </tr>-->
-<!--                </table>-->
-<!--            </div>-->
+                    </tr>
+                </table>
+            </div>
             <div class="form-group">
                 <input type="submit" value="{{ t "Save" . }}" class="btn btn-primary" />
             </div>

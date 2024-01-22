@@ -4,11 +4,16 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"dkforest/pkg/config"
+	"dkforest/pkg/pubsub"
 	"dkforest/pkg/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gorm.io/gorm"
 	"io"
+	"math"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,6 +22,15 @@ import (
 )
 
 type ChatMessages []ChatMessage
+
+func (m *ChatMessage) Decrypt(key string) error {
+	aesgcm, _, err := utils.GetGCM(key)
+	if err != nil {
+		return err
+	}
+	m.Message = decrypt(m.Message, aesgcm)
+	return nil
+}
 
 func (m ChatMessages) DecryptAll(key string) error {
 	aesgcm, _, err := utils.GetGCM(key)
@@ -75,6 +89,15 @@ type ChatMessage struct {
 	System       bool
 	Moderators   bool
 	IsHellbanned bool
+	Rev          int64 // Revision, is incr every time a message is edited
+	SkipNotify   bool  `gorm:"-"`
+}
+
+func (m *ChatMessage) GetProfile(authUserID UserID) Username {
+	if m.ToUserID != nil && *m.ToUserID != authUserID {
+		return m.ToUser.Username
+	}
+	return m.User.Username
 }
 
 // GetRawMessage get RawMessage value, decrypt it if needed
@@ -111,82 +134,96 @@ func decryptMessageWithKey(key, msg string) (string, error) {
 }
 
 func (m *ChatMessage) MarshalJSON() ([]byte, error) {
-	var tmp struct {
-		UUID       string
-		Message    string
-		RawMessage string
-		Username   string
-		ToUsername *string `json:"ToUsername,omitempty"`
-		CreatedAt  string
+	var out struct {
+		UUID         string
+		Message      string
+		RawMessage   string
+		Username     Username
+		ToUsername   *Username `json:"ToUsername,omitempty"`
+		CreatedAt    string
+		IsHellbanned bool
 	}
-	tmp.UUID = m.UUID
-	tmp.Message = m.Message
-	tmp.RawMessage = m.RawMessage
-	tmp.Username = m.User.Username
+	out.UUID = m.UUID
+	out.Message = m.Message
+	out.RawMessage = m.RawMessage
+	out.Username = m.User.Username
+	out.IsHellbanned = m.IsHellbanned
 	if m.ToUser != nil {
-		tmp.ToUsername = &m.ToUser.Username
+		out.ToUsername = &m.ToUser.Username
 	}
-	tmp.CreatedAt = m.CreatedAt.Format("2006-01-02T15:04:05")
-	return json.Marshal(tmp)
+	out.CreatedAt = m.CreatedAt.Format("2006-01-02T15:04:05")
+	return json.Marshal(out)
 }
 
-func (m *ChatMessage) UserCanSee(user User) bool {
+func (m *ChatMessage) UserCanSee(user IUserRenderMessage) bool {
 	// If user is not moderator, cannot see "moderators only" messages
 	if m.Moderators && !user.IsModerator() {
 		return false
 	}
 	// msg is HB and user is not hb
-	if m.IsHellbanned && !user.IsHellbanned {
+	if m.IsHellbanned && !user.GetIsHellbanned() {
 		// Cannot see hb if you're not a mod or CanSeeHellbanned is disabled
-		cannotSeeHB := !(user.IsModerator() || user.CanSeeHellbanned)
+		cannotSeeHB := !(user.IsModerator() || user.GetCanSeeHellbanned())
 		// user cannot see hb OR user disabled hb display
-		if cannotSeeHB || !user.DisplayHellbanned {
+		if cannotSeeHB || !user.GetDisplayHellbanned() {
 			return false
 		}
 	}
 	// msg user is not hb || own msg || msg user is hb & user is also hb || user can see and wish to see hb
-	return !m.User.IsHellbanned || user.ID == m.UserID || (m.User.IsHellbanned && user.IsHellbanned) || (user.CanSeeHB() && user.DisplayHellbanned)
+	return !m.User.IsHellbanned || m.OwnMessage(user.GetID()) || (m.User.IsHellbanned && user.GetIsHellbanned()) || (user.CanSeeHB() && user.GetDisplayHellbanned())
+}
+
+func (m *ChatMessage) DeleteSecondsRemaining() int64 {
+	return int64(math.Max((config.EditMessageTimeLimit - time.Since(m.CreatedAt)).Seconds(), 0))
 }
 
 func (m *ChatMessage) CanBeEdited() bool {
 	return time.Since(m.CreatedAt) <= config.EditMessageTimeLimit
 }
 
-// UserCanDelete returns either or not "user" can delete the messages "m"
-func (m *ChatMessage) UserCanDelete(user User) bool {
+func (m *ChatMessage) UserCanDelete(user IUserRenderMessage) bool {
+	return m.UserCanDeleteErr(user) == nil
+}
+
+// UserCanDeleteErr returns either or not "user" can delete the messages "m"
+func (m *ChatMessage) UserCanDeleteErr(user IUserRenderMessage) error {
 	// Admin can delete everything
-	if user.IsAdmin {
-		return true
+	if user.GetIsAdmin() {
+		return nil
+	}
+	// room owner can delete any messages in their room
+	if m.IsRoomOwner(user.GetID()) {
+		return nil
+	}
+	// User can delete PMs from user 0
+	if m.IsPmRecipient(user.GetID()) && m.User.Username == config.NullUsername {
+		return nil
+	}
+	// Own messages can be deleted if not too old
+	if m.UserID == user.GetID() {
+		if m.TooOldToDelete() {
+			return errors.New("message is too old to be deleted")
+		}
+		return nil
 	}
 	// Moderators cannot delete vetted user messages
-	if m.UserID != user.ID && m.User.Vetted {
-		return false
+	if user.IsModerator() && m.User.Vetted {
+		return errors.New("cannot delete message of vetted user")
 	}
 	// Mod cannot delete admin
 	if user.IsModerator() && m.User.IsAdmin {
-		return false
-	}
-	// if room owner, you can delete messages
-	if m.Room.OwnerUserID != nil && user.ID == *m.Room.OwnerUserID {
-		return true
-	}
-	// Mod can delete own messages
-	if user.IsModerator() && m.User.IsModerator() && user.ID == m.UserID {
-		return true
+		return errors.New("cannot delete message of admin user")
 	}
 	// Mod cannot delete mod
 	if user.IsModerator() && m.User.IsModerator() {
-		return false
+		return errors.New("cannot delete message of moderator user")
 	}
-	// User can delete PMs from user 0
-	if m.ToUserID != nil && *m.ToUserID == user.ID && m.User.Username == config.NullUsername {
-		return true
+	// Mod can delete messages they don't own
+	if user.IsModerator() {
+		return nil
 	}
-	// If not a mod, you can only delete your own message
-	if !user.IsModerator() && user.ID != m.UserID {
-		return false
-	}
-	return true
+	// Cannot delete message you don't own
+	return errors.New("cannot delete this message")
 }
 
 func (m *ChatMessage) TooOldToDelete() bool {
@@ -197,6 +234,22 @@ func (m *ChatMessage) TooOldToDelete() bool {
 	return time.Since(m.CreatedAt) > config.EditMessageTimeLimit
 }
 
+func (m *ChatMessage) OwnMessage(userID UserID) bool {
+	return m.UserID == userID
+}
+
+func (m *ChatMessage) IsPm() bool {
+	return m.ToUserID != nil
+}
+
+func (m *ChatMessage) IsPmRecipient(userID UserID) bool {
+	return m.ToUserID != nil && *m.ToUserID == userID
+}
+
+func (m *ChatMessage) IsRoomOwner(userID UserID) bool {
+	return m.Room.IsRoomOwner(userID)
+}
+
 func (m *ChatMessage) IsMe() bool {
 	return strings.HasPrefix(m.Message, "<p>/me ")
 }
@@ -205,14 +258,43 @@ func (m *ChatMessage) TrimMe() string {
 	return "<p>" + strings.TrimPrefix(m.Message, "<p>/me ")
 }
 
-func (m *ChatMessage) DoSave() {
-	if err := DB.Save(m).Error; err != nil {
+var externalLinkRgx = regexp.MustCompile(`<a href="([^"]+)" rel="noopener noreferrer" target="_blank">`)
+
+func (m *ChatMessage) MsgToDisplay(authUser IUserRenderMessage) string {
+	var msg string
+	if m.IsMe() {
+		msg = m.TrimMe()
+	} else {
+		msg = m.Message
+	}
+	if authUser.GetConfirmExternalLinks() {
+		msg = externalLinkRgx.ReplaceAllStringFunc(msg, func(s string) string {
+			original := externalLinkRgx.FindStringSubmatch(s)[1]
+			if strings.HasPrefix(original, "/") || strings.HasPrefix(original, "?") {
+				return s
+			}
+			return `<a href="/external-link/` + url.PathEscape(original) + `" rel="noopener noreferrer" target="_blank">`
+		})
+	}
+	return msg
+}
+
+func (m *ChatMessage) Delete(db *DkfDB) error {
+	// If we delete message manually, also delete linked inbox if any
+	_ = db.DeleteChatInboxMessageByChatMessageID(m.ID)
+	err := db.DeleteChatMessageByUUID(m.UUID)
+	MsgPubSub.Pub("room_"+m.RoomID.String(), ChatMessageType{Typ: DeleteMsg, Msg: *m})
+	return err
+}
+
+func (m *ChatMessage) DoSave(db *DkfDB) {
+	if err := db.db.Save(m).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func GetUserLastChatMessageInRoom(userID UserID, roomID RoomID) (out ChatMessage, err error) {
-	err = DB.
+func (d *DkfDB) GetUserLastChatMessageInRoom(userID UserID, roomID RoomID) (out ChatMessage, err error) {
+	err = d.db.
 		Where("user_id = ? AND room_id = ?", userID, roomID).
 		Order("id DESC").
 		Preload("User").
@@ -223,8 +305,16 @@ func GetUserLastChatMessageInRoom(userID UserID, roomID RoomID) (out ChatMessage
 	return
 }
 
-func GetRoomChatMessages(roomID RoomID) (out ChatMessages, err error) {
-	err = DB.
+// RoomChatMessagesGeIncrRev increments revision counter of all messages newer than chatMessageID
+func (d *DkfDB) RoomChatMessagesGeIncrRev(roomID RoomID, chatMessageID int64) (err error) {
+	err = d.db.
+		Exec(`UPDATE chat_messages SET rev = rev + 1  WHERE room_id = ? AND id > ?`, roomID, chatMessageID).
+		Error
+	return
+}
+
+func (d *DkfDB) GetRoomChatMessages(roomID RoomID) (out ChatMessages, err error) {
+	err = d.db.
 		Where("room_id = ?", roomID).
 		Preload("User").
 		Preload("ToUser").
@@ -234,8 +324,19 @@ func GetRoomChatMessages(roomID RoomID) (out ChatMessages, err error) {
 	return
 }
 
-func GetRoomChatMessageByUUID(roomID RoomID, msgUUID string) (out ChatMessage, err error) {
-	err = DB.
+func (d *DkfDB) GetChatMessageByUUID(msgUUID string) (out ChatMessage, err error) {
+	err = d.db.
+		Where("uuid = ?", msgUUID).
+		Preload("User").
+		Preload("ToUser").
+		Preload("Room").
+		Preload("Group").
+		First(&out).Error
+	return
+}
+
+func (d *DkfDB) GetRoomChatMessageByUUID(roomID RoomID, msgUUID string) (out ChatMessage, err error) {
+	err = d.db.
 		Where("room_id = ? AND uuid = ?", roomID, msgUUID).
 		Preload("User").
 		Preload("ToUser").
@@ -245,8 +346,8 @@ func GetRoomChatMessageByUUID(roomID RoomID, msgUUID string) (out ChatMessage, e
 	return
 }
 
-func GetRoomChatMessageByDate(roomID RoomID, userID UserID, dt time.Time) (out ChatMessage, err error) {
-	err = DB.
+func (d *DkfDB) GetRoomChatMessageByDate(roomID RoomID, userID UserID, dt time.Time) (out ChatMessage, err error) {
+	err = d.db.
 		Select("*, strftime('%Y-%m-%d %H:%M:%S', created_at) as created_at1").
 		Where("room_id = ? AND user_id = ? AND created_at1 = ?", roomID, userID, dt.Format("2006-01-02 15:04:05")).
 		Preload("User").
@@ -256,8 +357,8 @@ func GetRoomChatMessageByDate(roomID RoomID, userID UserID, dt time.Time) (out C
 	return
 }
 
-func GetRoomChatMessagesByDate(roomID RoomID, dt time.Time) (out []ChatMessage, err error) {
-	err = DB.
+func (d *DkfDB) GetRoomChatMessagesByDate(roomID RoomID, dt time.Time) (out []ChatMessage, err error) {
+	err = d.db.
 		Select("*, strftime('%m-%d %H:%M:%S', created_at) as created_at1").
 		Where("room_id = ? AND created_at1 = ?", roomID, dt.Format("01-02 15:04:05")).
 		Preload("User").
@@ -268,15 +369,37 @@ func GetRoomChatMessagesByDate(roomID RoomID, dt time.Time) (out []ChatMessage, 
 	return
 }
 
-func GetChatMessages(roomID RoomID, username string, userID UserID, displayPms int64, mentionsOnly, DisplayHellbanned, displayIgnored, displayModerators bool) (out ChatMessages, err error) {
-	q := DB.
+type PmDisplayMode int64
+
+const (
+	PmNoFilter PmDisplayMode = iota
+	PmOnly
+	PmNone
+)
+
+func (d *DkfDB) GetChatMessages(roomID RoomID, roomKey string, username Username, userID UserID,
+	pmUserID *UserID, displayPms PmDisplayMode, mentionsOnly, displayHellbanned, displayIgnored, displayModerators,
+	displayIgnoredMessages bool, msgsLimit, minID1 int64) (out ChatMessages, err error) {
+
+	cmp := func(t, t2 ChatMessage) bool { return t.ID > t2.ID }
+
+	q := d.db.
 		Preload("User").
 		Preload("ToUser").
 		Preload("Room").
 		Preload("Group").
-		Limit(150).
-		Where(`room_id = ? AND group_id IS NULL`, roomID).
-		Order("id DESC")
+		Limit(int(msgsLimit)).
+		Where(`room_id = ?`, roomID)
+	if minID1 > 0 {
+		q = q.Where("id >= ?", minID1)
+		q = q.Order("id ASC")
+	} else {
+		q = q.Order("id DESC")
+	}
+	q = q.Where(`group_id IS NULL OR group_id IN (SELECT group_id FROM chat_room_user_groups g WHERE g.room_id = ? AND g.user_id = ?)`, roomID, userID)
+	if !displayIgnoredMessages {
+		q = q.Where(`id NOT IN (SELECT message_id FROM ignored_messages WHERE user_id = ?)`, userID)
+	}
 	if !displayIgnored {
 		q = q.Where(`user_id NOT IN (SELECT ignored_user_id FROM ignored_users WHERE user_id = ?)`, userID)
 	}
@@ -286,19 +409,26 @@ func GetChatMessages(roomID RoomID, username string, userID UserID, displayPms i
 	if mentionsOnly {
 		q = q.Where(`raw_message LIKE ?`, "%@"+username+"%")
 	}
-	if displayPms == 0 { // Display all messages
+	if pmUserID != nil {
+		q = q.Where(`(to_user_id = ? AND user_id = ?) OR (user_id = ? AND to_user_id = ?)`, userID, pmUserID, userID, pmUserID)
+	}
+	switch displayPms {
+	case PmNoFilter: // Display all messages
 		q = q.Where(`to_user_id is null OR to_user_id = ? OR user_id = ?`, userID, userID)
-	} else if displayPms == 1 { // Display PMs only
+	case PmOnly: // Display PMs only
 		q = q.Where(`to_user_id = ? OR (user_id = ? AND to_user_id IS NOT NULL)`, userID, userID)
-	} else { // No PMs displayed
+	case PmNone: // No PMs displayed
 		q = q.Where(`to_user_id is null`)
 	}
 
 	//-----------
 
-	q1 := q.Where("is_hellbanned = 0")
+	q1 := q.Session(&gorm.Session{})
+	q1 = q1.Where("is_hellbanned = 0")
 	var out1 []ChatMessage
-	err = q1.Find(&out1).Error
+	if err = q1.Find(&out1).Error; err != nil {
+		return out, err
+	}
 
 	var minID int64
 	if len(out1) > 0 {
@@ -307,42 +437,43 @@ func GetChatMessages(roomID RoomID, username string, userID UserID, displayPms i
 
 	//-----------
 
+	// Get all the HB messages that are more recent than the oldest non-HB message.
+	// We do this in case someone in HB keep spamming the room.
+	// So we still have 150 non-HB messages for normal folks and we get all the spam for the people in HB.
+
 	var out2 []ChatMessage
-	if DisplayHellbanned {
-		q2 := q.Where("is_hellbanned = 1 AND id > ?", minID)
-		err = q2.Find(&out2).Error
+	if displayHellbanned {
+		q2 := q.Session(&gorm.Session{})
+		q2 = q2.Where("is_hellbanned = 1 AND id > ?", minID)
+		if minID1 > 0 {
+			q2 = q2.Where("is_hellbanned = 1")
+		}
+		if err = q2.Find(&out2).Error; err != nil {
+			return out, err
+		}
 	}
 
-	mergedTmp := sortedMerge(out1, out2)
+	out = sortedMerge(out1, out2, cmp)
 
-	//-----------
+	if roomKey != "" {
+		if err := out.DecryptAll(roomKey); err != nil {
+			return out, err
+		}
+	}
 
-	qg := DB.
-		Preload("User").
-		Preload("ToUser").
-		Preload("Room").
-		Preload("Group").
-		Limit(150).
-		Where(`room_id = ? AND group_id IN (SELECT group_id FROM chat_room_user_groups g WHERE g.room_id = ? AND g.user_id = ?)`, roomID, roomID, userID).
-		Order("id DESC")
-	var out3 []ChatMessage
-	err = qg.Find(&out3).Error
-
-	out = sortedMerge(mergedTmp, out3)
-
-	return
+	return out, nil
 }
 
 // merge two sorted slices. The output will also be sorted.
-func sortedMerge(a, b []ChatMessage) []ChatMessage {
-	out := make([]ChatMessage, len(a)+len(b))
+func sortedMerge[T any](a, b []T, less func(T, T) bool) []T {
+	out := make([]T, len(a)+len(b))
 	// "i" is a pointer for slice "a"
 	// "j" is a pointer for slice "b"
 	// "k" is a pointer for the output slice
 	var i, j, k int
 	// Loop until we reach the end of either "a" or "b"
 	for i < len(a) && j < len(b) {
-		if a[i].ID > b[j].ID {
+		if less(a[i], b[j]) {
 			out[k] = a[i]
 			i++
 		} else {
@@ -367,22 +498,39 @@ func sortedMerge(a, b []ChatMessage) []ChatMessage {
 	return out
 }
 
-func DeleteChatRoomMessages(roomID RoomID) error {
-	return DB.Delete(&ChatMessage{}, "room_id = ?", roomID).Error
+func (d *DkfDB) DeleteChatRoomMessages(roomID RoomID) error {
+	return d.db.Delete(&ChatMessage{}, "room_id = ?", roomID).Error
 }
 
-func DeleteChatMessageByUUID(messageUUID string) error {
-	return DB.Where("uuid = ?", messageUUID).Delete(&ChatMessage{}).Error
+func (d *DkfDB) DeleteChatMessageByUUID(messageUUID string) error {
+	return d.db.Where("uuid = ?", messageUUID).Delete(&ChatMessage{}).Error
 }
 
-func DeleteUserChatMessages(userID UserID) error {
-	return DB.Where("user_id = ?", userID).Delete(&ChatMessage{}).Error
+func (d *DkfDB) DeleteUserChatMessages(userID UserID) error {
+	return d.db.Where("user_id = ?", userID).Delete(&ChatMessage{}).Error
 }
 
-func DeleteOldChatMessages() {
-	rooms, _ := GetOfficialChatRooms()
+func (d *DkfDB) DeleteUserHbChatMessages(userID UserID) error {
+	return d.db.Where("user_id = ? AND is_hellbanned = 1", userID).Delete(&ChatMessage{}).Error
+}
+
+func (d *DkfDB) DeleteUserChatMessagesOpt(userID UserID, hbOnly bool, secs int64) error {
+	q := d.db.Where("user_id = ?", userID)
+	if secs > 0 {
+		secsStr := "-" + utils.FormatInt64(secs) + " Second"
+		q = q.Where("created_at > datetime('now', ?, 'localtime')", secsStr)
+	}
+	if hbOnly {
+		q = q.Where("is_hellbanned = 1")
+	}
+	err := q.Delete(&ChatMessage{}).Error
+	return err
+}
+
+func (d *DkfDB) DeleteOldChatMessages() {
+	rooms, _ := d.GetOfficialChatRooms()
 	for _, room := range rooms {
-		DB.Exec(`
+		d.db.Exec(`
 DELETE FROM chat_messages
 -- Don't delete the last 500 "non PM" and "not hellbanned" messages
 WHERE id NOT IN (
@@ -421,7 +569,41 @@ func makeMsg(raw, txt string, roomID RoomID, userID UserID) ChatMessage {
 	return msg
 }
 
-func CreateMsg(raw, txt, roomKey string, roomID RoomID, userID UserID, toUserID *UserID) (out ChatMessage, err error) {
+func (d *DkfDB) CreateMsg(raw, txt, roomKey string, roomID RoomID, userID UserID, toUserID *UserID) (out ChatMessage, err error) {
+	return d.createMsg(raw, txt, roomKey, roomID, userID, toUserID, false, false)
+}
+
+func (d *DkfDB) CreateSysMsg(raw, txt, roomKey string, roomID RoomID, userID UserID) error {
+	_, err := d.createMsg(raw, txt, roomKey, roomID, userID, nil, true, false)
+	return err
+}
+
+func (d *DkfDB) CreateSysMsgPM(raw, txt, roomKey string, roomID RoomID, userID UserID, toUserID *UserID, skipNotify bool) error {
+	_, err := d.createMsg(raw, txt, roomKey, roomID, userID, toUserID, true, skipNotify)
+	return err
+}
+
+func (d *DkfDB) CreateKickMsg(kickedUser, kickedByUser User) {
+	// Display kick message
+	styledUsername := fmt.Sprintf(`<span %s>%s</span>`, kickedUser.GenerateChatStyle(), kickedUser.Username)
+	rawTxt := fmt.Sprintf("%s has been kicked. (%s)", kickedUser.Username, kickedByUser.Username)
+	txt := fmt.Sprintf("%s has been kicked. (%s)", styledUsername, kickedByUser.Username)
+	if err := d.CreateSysMsg(rawTxt, txt, "", config.GeneralRoomID, kickedByUser.ID); err != nil {
+		logrus.Error(err)
+	}
+}
+
+func (d *DkfDB) CreateUnkickMsg(kickedUser, kickedByUser User) {
+	// Display unkick message
+	styledUsername := fmt.Sprintf(`<span %s>%s</span>`, kickedUser.GenerateChatStyle(), kickedUser.Username)
+	rawTxt := fmt.Sprintf("%s has been unkicked. (%s)", kickedUser.Username, kickedByUser.Username)
+	txt := fmt.Sprintf("%s has been unkicked. (%s)", styledUsername, kickedByUser.Username)
+	if err := d.CreateSysMsg(rawTxt, txt, "", config.GeneralRoomID, kickedByUser.ID); err != nil {
+		logrus.Error(err)
+	}
+}
+
+func (d *DkfDB) createMsg(raw, txt, roomKey string, roomID RoomID, userID UserID, toUserID *UserID, system, skipNotify bool) (out ChatMessage, err error) {
 	if roomKey != "" {
 		var err error
 		txt, raw, err = encryptMessages(txt, raw, roomKey)
@@ -431,37 +613,17 @@ func CreateMsg(raw, txt, roomKey string, roomID RoomID, userID UserID, toUserID 
 	}
 
 	out = makeMsg(raw, txt, roomID, userID)
+	out.SkipNotify = skipNotify
 	if toUserID != nil {
 		out.ToUserID = toUserID
 	}
-	err = DB.Create(&out).Error
+	out.System = system
+	err = d.db.Create(&out).Error
+	MsgPubSub.Pub("room_"+roomID.String(), ChatMessageType{Typ: CreateMsg, Msg: out})
 	return
 }
 
-func CreateSysMsg(raw, txt, roomKey string, roomID RoomID, userID UserID) error {
-	if roomKey != "" {
-		var err error
-		txt, raw, err = encryptMessages(txt, raw, roomKey)
-		if err != nil {
-			return err
-		}
-	}
-	msg := makeMsg(raw, txt, roomID, userID)
-	msg.System = true
-	return DB.Create(&msg).Error
-}
-
-func CreateKickMsg(kickedUser, kickedByUser User) {
-	// Display kick message
-	styledUsername := fmt.Sprintf(`<span %s>%s</span>`, kickedUser.GenerateChatStyle(), kickedUser.Username)
-	rawTxt := fmt.Sprintf("%s has been kicked. (%s)", kickedUser.Username, kickedByUser.Username)
-	txt := fmt.Sprintf("%s has been kicked. (%s)", styledUsername, kickedByUser.Username)
-	if err := CreateSysMsg(rawTxt, txt, "", config.GeneralRoomID, kickedByUser.ID); err != nil {
-		logrus.Error(err)
-	}
-}
-
-func CreateOrEditMessage(
+func (d *DkfDB) CreateOrEditMessage(
 	editMsg *ChatMessage,
 	message, raw, roomKey string,
 	roomID RoomID,
@@ -479,11 +641,15 @@ func CreateOrEditMessage(
 		}
 	}
 
+	typ := CreateMsg
 	if editMsg != nil {
+		typ = EditMsg
+		_ = d.RoomChatMessagesGeIncrRev(roomID, editMsg.ID)
 		editMsg.Message = message
 		editMsg.RawMessage = raw
+		editMsg.Rev++
 		// Delete inboxes, we'll create new ones bellow
-		_ = DeleteChatInboxMessageByChatMessageID(editMsg.ID)
+		_ = d.DeleteChatInboxMessageByChatMessageID(editMsg.ID)
 	} else {
 		msg := makeMsg(raw, message, roomID, fromUserID)
 		editMsg = &msg
@@ -496,9 +662,47 @@ func CreateOrEditMessage(
 			editMsg.UploadID = &upload.ID
 		}
 	}
-	editMsg.DoSave()
+	editMsg.DoSave(d)
+
+	i := 0
+	rgx := regexp.MustCompile(`</pre>`)
+	editMsg.Message = rgx.ReplaceAllStringFunc(editMsg.Message, func(s string) string {
+		i++
+		return fmt.Sprintf(`</pre><a href="/chat-code/%s/%d" title="Open in fullscreen" rel="noopener noreferrer" target="_blank" class=fullscreen>&#9974;</a>`,
+			editMsg.UUID, i-1)
+	})
+	if i > 0 {
+		editMsg.DoSave(d)
+	}
+
+	MsgPubSub.Pub("room_"+roomID.String(), ChatMessageType{Typ: typ, Msg: *editMsg})
 	return editMsg.ID, nil
 }
+
+type PubSubMessageType int
+
+const (
+	CreateMsg PubSubMessageType = iota
+	EditMsg
+	ForceRefresh
+	DeleteMsg
+	Wizz
+	Redirect
+	Close
+	CloseMenu
+
+	RefreshTopic string = "refresh"
+)
+
+type ChatMessageType struct {
+	Typ            PubSubMessageType
+	Msg            ChatMessage
+	IsMod          bool
+	ToUserUsername *Username
+	NewURL         string
+}
+
+var MsgPubSub = pubsub.NewPubSub[ChatMessageType]()
 
 func encryptMessages(html, origMessage, roomKey string) (string, string, error) {
 	var err error

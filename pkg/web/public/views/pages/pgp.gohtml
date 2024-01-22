@@ -1,13 +1,3 @@
-{{ define "extra-head" }}
-<style>
-    textarea {
-        white-space: pre;
-        overflow-wrap: normal;
-        overflow-x: scroll;
-    }
-</style>
-{{ end }}
-
 {{ define "navbar" }}&nbsp;{{ end }}
 
 {{ define "content" }}
@@ -28,7 +18,7 @@
                         <input type="hidden" name="formName" value="pgp_step1" />
                         <div class="form-group">
             <!--                <label for="pgp_public_key">{{ t "PGP public key" . }}</label>-->
-                            <textarea name="pgp_public_key" id="pgp_public_key" rows="10" class="form-control{{ if .Data.ErrorPGPPublicKey }} is-invalid{{ end }}" style="font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;"{{ if .Data.ErrorPGPPublicKey }} autofocus{{ end }}>{{ .Data.PGPPublicKey }}</textarea>
+                            <textarea name="pgp_public_key" id="pgp_public_key" rows="10" class="form-control mono{{ if .Data.ErrorPGPPublicKey }} is-invalid{{ end }}"{{ if .Data.ErrorPGPPublicKey }} autofocus{{ end }}>{{ .Data.PGPPublicKey }}</textarea>
                             {{ if .Data.ErrorPGPPublicKey }}
                                 <div class="invalid-feedback">{{ .Data.ErrorPGPPublicKey }}</div>
                             {{ end }}

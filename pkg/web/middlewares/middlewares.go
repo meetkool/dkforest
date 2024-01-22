@@ -2,24 +2,23 @@ package middlewares
 
 import (
 	"dkforest/bindata"
-	hutils "dkforest/pkg/web/handlers/utils"
-	"net"
-	"net/http"
-	"strings"
-	"time"
-
-	"dkforest/pkg/web/handlers"
-
-	"github.com/labstack/echo/middleware"
-
+	"dkforest/pkg/cache"
 	"dkforest/pkg/captcha"
 	"dkforest/pkg/config"
 	"dkforest/pkg/database"
 	"dkforest/pkg/utils"
+	"dkforest/pkg/web/clientFrontends"
+	"dkforest/pkg/web/handlers"
+	hutils "dkforest/pkg/web/handlers/utils"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/ulule/limiter"
 	"github.com/ulule/limiter/drivers/store/memory"
+	"net"
+	"net/http"
+	"strings"
+	"time"
 )
 
 // GzipMiddleware ...
@@ -31,6 +30,12 @@ var GzipMiddleware = middleware.GzipWithConfig(
 				c.Path() == "/vip/downloads/:filename" ||
 				c.Path() == "/vip/challenges/re-1/:filename" ||
 				c.Path() == "/chess/:key" ||
+				c.Path() == "/chess/:key/analyze" ||
+				c.Path() == "/poker/:roomID/stream" ||
+				c.Path() == "/poker/:roomID/logs" ||
+				c.Path() == "/poker/:roomID/bet" ||
+				c.Path() == "/api/v1/chat/messages/:roomName/stream" ||
+				c.Path() == "/api/v1/chat/messages/:roomName/stream/menu" ||
 				c.Path() == "/uploads/:filename" ||
 				c.Path() == "/" {
 				return true
@@ -56,17 +61,19 @@ func CaptchaMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			var data captchaMiddlewareData
+			data.CaptchaDescription = "Captcha required"
 			data.CaptchaID, data.CaptchaImg = captcha.New()
+			const captchaRequiredTmpl = "captcha-required"
 			if c.Request().Method == http.MethodPost {
 				captchaID := c.Request().PostFormValue("captcha_id")
 				captchaInput := c.Request().PostFormValue("captcha")
 				if err := hutils.CaptchaVerifyString(c, captchaID, captchaInput); err != nil {
 					data.ErrCaptcha = err.Error()
-					return c.Render(http.StatusOK, "captcha-required", data)
+					return c.Render(http.StatusOK, captchaRequiredTmpl, data)
 				}
 				return next(c)
 			}
-			return c.Render(http.StatusOK, "captcha-required", data)
+			return c.Render(http.StatusOK, captchaRequiredTmpl, data)
 		}
 	}
 }
@@ -163,30 +170,23 @@ func AuthRateLimitMiddleware(period time.Duration, limit int64) echo.MiddlewareF
 func CSRFMiddleware() echo.MiddlewareFunc {
 	csrfConfig := CSRFConfig{
 		TokenLookup:    "form:csrf",
-		CookieDomain:   config.Global.CookieDomain(),
+		CookieDomain:   config.Global.CookieDomain.Get(),
 		CookiePath:     "/",
 		CookieHTTPOnly: true,
-		CookieSecure:   config.Global.CookieSecure(),
+		CookieSecure:   config.Global.CookieSecure.Get(),
 		CookieMaxAge:   utils.OneMonthSecs,
 		SameSite:       http.SameSiteLaxMode,
 		Skipper: func(c echo.Context) bool {
 			apiKey := c.Request().Header.Get("DKF_API_KEY")
-			if apiKey != "" && strings.HasPrefix(c.Path(), "/api/v1/") {
-				return true
-			}
-			if c.Path() == "/chess/:key" {
-				return true
-			}
-			if strings.HasPrefix(c.Path(), "/api/v1/chat/top-bar/:roomName") && c.Param("roomName") == "werewolf" {
-				return true
-			}
-			if strings.HasPrefix(c.Path(), "/api/v1/chat/top-bar/:roomName") && c.Param("roomName") == "battleship" {
-				return true
-			}
-			if strings.HasPrefix(c.Path(), "/api/v1/chat/top-bar/:roomName") && c.Param("roomName") == "chess" {
-				return true
-			}
-			return false
+			return (apiKey != "" && strings.HasPrefix(c.Path(), "/api/v1/")) ||
+				c.Path() == "/api/v1/battleship" ||
+				c.Path() == "/api/v1/werewolf" ||
+				c.Path() == "/chess/:key" ||
+				c.Path() == "/poker/:roomID/sit/:pos" ||
+				c.Path() == "/poker/:roomID/unsit" ||
+				c.Path() == "/poker/:roomID/bet" ||
+				c.Path() == "/poker/:roomID/logs" ||
+				c.Path() == "/poker/:roomID/deal"
 		},
 	}
 	return CSRFWithConfig(csrfConfig)
@@ -208,7 +208,7 @@ func I18nMiddleware(bundle *i18n.Bundle, defaultLang string) echo.MiddlewareFunc
 			// - Default en
 
 			lang := ""
-			user := c.Get("authUser").(*database.User)
+			user, _ := c.Get("authUser").(*database.User)
 			if user != nil && user.Lang != "" {
 				lang = user.Lang
 			} else if defaultLang != "" {
@@ -222,6 +222,24 @@ func I18nMiddleware(bundle *i18n.Bundle, defaultLang string) echo.MiddlewareFunc
 	}
 }
 
+func SetDatabaseMiddleware(db *database.DkfDB) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			ctx.Set("database", db)
+			return next(ctx)
+		}
+	}
+}
+
+func SetClientFEMiddleware(clientFE clientFrontends.ClientFrontend) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			ctx.Set("clientFE", clientFE)
+			return next(ctx)
+		}
+	}
+}
+
 // SetUserMiddleware Get user and put it into echo context.
 // - Get auth-token from cookie
 // - If exists, get user from database
@@ -229,20 +247,22 @@ func I18nMiddleware(bundle *i18n.Bundle, defaultLang string) echo.MiddlewareFunc
 // - Otherwise, empty user will be put in context
 func SetUserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
+		db := ctx.Get("database").(*database.DkfDB)
 		var nilUser *database.User
 		var user database.User
 
 		if apiKey := ctx.Request().Header.Get("DKF_API_KEY"); apiKey != "" {
 			// Login using DKF_API_KEY
-			if err := database.GetUserByApiKey(&user, apiKey); err == nil {
+			if err := db.GetUserByApiKey(&user, apiKey); err == nil {
 				ctx.Set("authUser", &user)
 				return next(ctx)
 			}
 		} else if authCookie, err := ctx.Cookie(hutils.AuthCookieName); err == nil {
 			// Login using auth cookie
-			if err := database.GetUserBySessionKey(&user, authCookie.Value); err == nil {
+			if err := db.GetUserBySessionKey(&user, authCookie.Value); err == nil {
 				ctx.Set("authUser", &user)
 				return next(ctx)
+			} else {
 			}
 		}
 
@@ -251,27 +271,81 @@ func SetUserMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+type RateLimit[K comparable, V any] struct {
+	cache *cache.Cache[K, V]
+	value V
+}
+
+func NewRateLimit[K comparable](defaultExpiration time.Duration) *RateLimit[K, struct{}] {
+	return NewRateLimitV[K, struct{}](defaultExpiration)
+}
+
+func NewRateLimitV[K comparable, V any](defaultExpiration time.Duration) *RateLimit[K, V] {
+	return &RateLimit[K, V]{
+		cache: cache.NewWithKey[K, V](defaultExpiration, time.Minute),
+	}
+}
+
+func (l *RateLimit[K, V]) RateLimit(k K, clb func()) {
+	if !l.cache.Has(k) {
+		clb()
+		l.cache.SetD(k, l.value)
+	}
+}
+
+func (l *RateLimit[K, V]) RateLimitV(k K, clb func() (V, error)) (V, bool, error) {
+	var err error
+	if !l.cache.Has(k) {
+		l.value, err = clb()
+		l.cache.SetD(k, l.value)
+		return l.value, true, err
+	}
+	return l.value, false, err
+}
+
+var lastSeenRL = NewRateLimit[database.UserID](time.Second)
+
 // IsAuthMiddleware will ensure user is authenticated.
 // - Find user from context
 // - If user is empty, redirect to home
 func IsAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		user := c.Get("authUser").(*database.User)
+		db := c.Get("database").(*database.DkfDB)
 		if user == nil {
 			if strings.HasPrefix(c.Path(), "/api/") {
 				return c.String(http.StatusUnauthorized, "unauthorized")
 			}
-			return c.Redirect(http.StatusFound, "/")
+			referralToken := c.QueryParam("r")
+			if strings.HasPrefix(c.Path(), "/poker") && referralToken != "" {
+				if len(referralToken) == 9 {
+					hutils.CreatePokerReferralCookie(c, referralToken)
+				}
+			}
+			return c.Redirect(http.StatusFound, "/?redirect="+c.Request().URL.String())
 		}
 
 		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
-		user.LastSeenAt = time.Now()
-		user.DoSave()
+		lastSeenRL.RateLimit(user.ID, func() {
+			now := time.Now()
+			db.DB().Exec("UPDATE users SET last_seen_at = ?, updated_at = ? WHERE id = ?", now, now, int64(user.ID))
+		})
 
 		// Prevent clickjacking by setting the header on every logged in page
-		if !strings.Contains(c.Path(), "/api/v1/chat/messages") &&
-			!strings.Contains(c.Path(), "/api/v1/chat/top-bar") {
+		if !strings.Contains(c.Path(), "/chess/:key/form") &&
+			!strings.Contains(c.Path(), "/chess/:key/stats") &&
+			!strings.Contains(c.Path(), "/api/v1/chat/messages") &&
+			!strings.Contains(c.Path(), "/api/v1/chat/messages/:roomName/stream") &&
+			!strings.Contains(c.Path(), "/api/v1/chat/messages/:roomName/stream/menu") &&
+			!strings.Contains(c.Path(), "/api/v1/chat/top-bar") &&
+			!strings.Contains(c.Path(), "/api/v1/chat/controls") &&
+			!strings.Contains(c.Path(), "/poker/:roomID/stream") &&
+			!strings.Contains(c.Path(), "/poker/:roomID/sit/:pos") &&
+			!strings.Contains(c.Path(), "/poker/:roomID/unsit") &&
+			!strings.Contains(c.Path(), "/poker/:roomID/bet") &&
+			!strings.Contains(c.Path(), "/poker/:roomID/logs") &&
+			!strings.Contains(c.Path(), "/poker/:roomID/deal") {
 			c.Response().Header().Set("X-Frame-Options", "DENY")
 		}
 
@@ -339,7 +413,7 @@ func IsModeratorMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			if strings.HasPrefix(c.Path(), "/api") {
 				if user == nil {
 					return c.NoContent(http.StatusUnauthorized)
-				} else if !user.IsAdmin {
+				} else if !user.IsModerator() {
 					return c.NoContent(http.StatusForbidden)
 				}
 				return c.NoContent(http.StatusInternalServerError)
@@ -376,8 +450,8 @@ func AprilFoolMiddleware() echo.MiddlewareFunc {
 				return next(c)
 			}
 
-			_, month, day := time.Now().UTC().Date()
-			if month == time.April && day == 1 {
+			year, month, day := time.Now().UTC().Date()
+			if year == 2022 && month == time.April && day == 1 {
 				vv := hutils.GetAprilFoolCookie(c)
 				if vv < 3 {
 					hutils.CreateAprilFoolCookie(c, vv+1)
@@ -426,7 +500,7 @@ func MaintenanceMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			strings.HasPrefix(c.Path(), "/api/v1/master-admin") {
 			return next(c)
 		}
-		asset := bindata.MustAsset("views/pages/maintenance.html")
+		asset := bindata.MustAsset("views/pages/maintenance.gohtml")
 		return c.HTML(http.StatusOK, string(asset))
 	}
 }
@@ -457,7 +531,7 @@ func NoAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // FirstUseMiddleware if first use, redirect to /
 func FirstUseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if config.IsFirstUse.IsTrue() {
+		if config.IsFirstUse.IsTrue() && c.Path() != "/" {
 			return c.Redirect(http.StatusFound, "/")
 		}
 		return next(c)
@@ -472,3 +546,10 @@ var SecureMiddleware = middleware.SecureWithConfig(middleware.SecureConfig{
 	//HSTSMaxAge:         3600,
 	//ContentSecurityPolicy: "default-src 'self'",
 })
+
+func SetUselessHeadersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Response().Header().Set("X-Powered-By", "the almighty n0tr1v")
+		return next(c)
+	}
+}

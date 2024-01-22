@@ -11,9 +11,9 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-12 col-md-10 offset-md-1 ">
+                        <div class="col-sm-12 col-md-10 offset-md-1">
                             <div class="form-group">
-                                <label for="captcha">Captcha required</label>
+                                <label for="captcha">{{ .Data.CaptchaDescription }}</label>
                                 <div class="mb-2 text-center">
                                     {{ template "captcha-tmpl" . }}
                                 </div>

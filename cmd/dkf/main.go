@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	b64 "encoding/base64"
 	"fmt"
+	versionPkg "github.com/hashicorp/go-version"
 	_ "github.com/mattn/go-sqlite3"
 	cli "github.com/urfave/cli/v2"
 	"log"
@@ -58,12 +59,12 @@ func main() {
 	void(versionVoid)
 	versionDecodedBytes, _ := b64.StdEncoding.DecodeString(version)
 	versionDecoded := strings.TrimSpace(string(versionDecodedBytes))
-	config.Global.SetVersion(versionDecoded)
+	config.Global.AppVersion.Set(versionPkg.Must(versionPkg.NewVersion(versionDecoded)))
 	developmentFlag := utils.DoParseBool(development)
 	config.Development.Store(developmentFlag)
 	config.NullUserPrivateKey = string(nullPrivateKey)
 	config.NullUserPublicKey = string(nullPublicKey)
-	config.Global.SetMasterKey(string(masterKey))
+	config.Global.MasterKey.Set(string(masterKey))
 	config.GistPasswordSalt = string(gistPasswordSalt)
 	config.RoomPasswordSalt = string(roomPasswordSalt)
 	config.MigrationsFs = migrationsFs
@@ -99,6 +100,12 @@ func main() {
 		&cli.BoolFlag{
 			Name:    "cookie-secure",
 			EnvVars: []string{"DKF_COOKIE_SECURE"},
+		},
+	}
+	app.Commands = []*cli.Command{
+		{
+			Name:   "build-prohibited-passwords",
+			Action: actions.BuildProhibitedPasswords,
 		},
 	}
 	app.Action = actions.Start

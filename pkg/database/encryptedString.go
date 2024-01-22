@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql/driver"
-	"dkforest/pkg/config"
 	"dkforest/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -12,7 +11,7 @@ type EncryptedString string
 
 // Scan EncryptedString implements scanner interface
 func (s *EncryptedString) Scan(val any) error {
-	v, err := utils.DecryptAES(val.([]byte), []byte(config.Global.MasterKey()))
+	v, err := utils.DecryptAESMaster(val.([]byte))
 	*s = EncryptedString(v)
 	if err != nil {
 		logrus.Error("Failed to Scan EncryptedString : ", err)
@@ -22,7 +21,7 @@ func (s *EncryptedString) Scan(val any) error {
 
 // Value EncryptedString implements Valuer interface
 func (s EncryptedString) Value() (driver.Value, error) {
-	v, err := utils.EncryptAES([]byte(s), []byte(config.Global.MasterKey()))
+	v, err := utils.EncryptAESMaster([]byte(s))
 	if err != nil {
 		logrus.Error("Failed to Value EncryptedString : ", err)
 	}

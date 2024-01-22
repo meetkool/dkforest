@@ -12,6 +12,10 @@ func New[V comparable]() *HashSet[V] {
 	return h
 }
 
+func (h *HashSet[V]) Set(v V) {
+	h.items[v] = struct{}{}
+}
+
 // Insert adds a value to the set.
 // If the set did not have this value present, true is returned.
 // If the set did have this value present, false is returned.
@@ -32,6 +36,10 @@ func (h *HashSet[V]) Contains(v V) bool {
 // Len returns the number of elements in the set.
 func (h *HashSet[V]) Len() int {
 	return len(h.items)
+}
+
+func (h *HashSet[V]) Empty() bool {
+	return len(h.items) == 0
 }
 
 // Clear clears the set, removing all values.
@@ -134,6 +142,10 @@ func (h *HashSet[V]) Remove(v V) bool {
 	}
 	delete(h.items, v)
 	return true
+}
+
+func (h *HashSet[V]) Delete(v V) {
+	delete(h.items, v)
 }
 
 // Take removes and returns the value in the set, if any, that is equal to the given one.

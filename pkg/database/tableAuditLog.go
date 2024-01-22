@@ -14,14 +14,14 @@ type AuditLog struct {
 	User      User
 }
 
-func NewAudit(authUser User, log string) {
-	if err := DB.Create(&AuditLog{UserID: authUser.ID, Log: log}).Error; err != nil {
+func (d *DkfDB) NewAudit(authUser User, log string) {
+	if err := d.db.Create(&AuditLog{UserID: authUser.ID, Log: log}).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func DeleteOldAuditLogs() {
-	if err := DB.Delete(AuditLog{}, "created_at < date('now', '-90 Day')").Error; err != nil {
+func (d *DkfDB) DeleteOldAuditLogs() {
+	if err := d.db.Delete(AuditLog{}, "created_at < date('now', '-90 Day')").Error; err != nil {
 		logrus.Error(err)
 	}
 }

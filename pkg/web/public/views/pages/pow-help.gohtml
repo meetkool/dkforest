@@ -1,0 +1,57 @@
+{{ define "title" }}dkf - pow help{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <div>
+
+        <h3>Proof of work help</h3>
+
+        <p>
+            To calculate the POW, you have to compute a suffix such that
+            the sha256 of <code>username:suffix</code> starts with seven zeros.
+        </p>
+        <p>
+            For example, the sha256 of <code>my_username:69395289</code> is<br />
+            <code><strong>0000000</strong>688a8637a52bd0f295e505cd85156ea2c403aa633e200cf73b4915cf1</code><br />
+            which starts with seven zeros, so your proof of work would be <code>69395289</code>
+        </p>
+
+        <p>
+            You can use the following script to calculate the proof of work:
+        </p>
+
+        <pre style="border: 1px solid #5d5d5d; padding: 5px;"><code>package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+)
+
+// Build with `go build -o pow main.go`
+// Use `./pow my_username`
+func main() {
+	username := os.Args[1]
+	difficulty := {{ .Data.Difficulty }}
+	prefix := strings.Repeat("0", difficulty)
+	var nonce int
+	for {
+		h := sha256.Sum256([]byte(username + ":" + strconv.Itoa(nonce)))
+		hashed := hex.EncodeToString(h[:])
+		if strings.HasPrefix(hashed, prefix) {
+			fmt.Printf("%s:%d -> %s\n", username, nonce, hashed)
+			return
+		}
+		nonce++
+	}
+}
+</code></pre>
+
+    </div>
+</div>
+
+{{ end }}

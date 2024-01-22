@@ -18,6 +18,10 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+func getKeyFingerprint(pkey string) string {
+	return utils.GetKeyFingerprint(pkey)
+}
+
 func shortNum(n int64) string {
 	if n < 1000 {
 		return utils.FormatInt64(n)
@@ -108,6 +112,15 @@ func divide100(val int64) float64 {
 
 func divide1000(val int64) float64 {
 	return float64(val) / 1000
+}
+func divide100M(val int64) float64 {
+	return float64(val) / 100_000_000
+}
+func divide1T(val database.Piconero) float64 {
+	return float64(val) / 1_000_000_000_000
+}
+func fmtPiconero(val database.Piconero) string {
+	return val.XmrStr()
 }
 
 func int64bytes(val int64) string {
@@ -218,8 +231,16 @@ func first(in string) string {
 	return string(in[0])
 }
 
+func last(in string) string {
+	return string(in[len(in)-1])
+}
+
 func rest(in string) string {
 	return in[1:]
+}
+
+func middle(in string) string {
+	return in[1 : len(in)-1]
 }
 
 func translate(varName string, vals templateDataStruct) string {
@@ -334,4 +355,8 @@ func isStrEmpty(v string) bool {
 
 func ms2s(v int64) int64 {
 	return v / 1000
+}
+
+func since(v time.Time) string {
+	return humanize.Time(v)
 }

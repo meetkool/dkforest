@@ -17,5 +17,9 @@
         <tr><td>Captcha required success</td><td>{{ .Data.CaptchaRequiredSuccess }}</td></tr>
         <tr><td>Captcha required failed</td><td>{{ .Data.CaptchaRequiredFailed }}</td></tr>
     </table>
+    <form method="post">
+        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+        <button type="submit" class="btn btn-primary btn-sm">Reset counters</button>
+    </form>
 </div>
 {{ end }}

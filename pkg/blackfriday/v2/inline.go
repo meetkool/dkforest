@@ -680,6 +680,9 @@ func escape(p *Markdown, data []byte, offset int) (int, *Node) {
 	data = data[offset:]
 
 	if len(data) > 1 {
+		if p.extensions&ManualLineBreak != 0 && data[1] == 'n' {
+			return 2, NewNode(Hardbreak)
+		}
 		if p.extensions&BackslashLineBreak != 0 && data[1] == '\n' {
 			return 2, NewNode(Hardbreak)
 		}

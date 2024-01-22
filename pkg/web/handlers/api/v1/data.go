@@ -18,25 +18,44 @@ type chatTopBarData struct {
 	CommandsList   []string
 }
 
-type chatMessagesData struct {
-	IsModerator          bool
-	NbButtons            int64
-	Messages             []database.ChatMessage
-	Members              []managers.UserInfo
-	MembersInChat        []managers.UserInfo
-	VisibleMemberInChat  bool // either or not at least 1 user is "visibile" (not hellbanned)
-	PreventRefresh       bool
-	TopBarQueryParams    string
-	DateFormat           string
-	RoomName             string
-	InboxCount           int64
-	ManualRefreshTimeout int64
-	ReadMarker           database.ChatReadMarker
-	OfficialRooms        []database.ChatRoomAug
-	SubscribedRooms      []database.ChatRoomAug
+type chatControlsData struct {
+	RoomName        string
+	IsStream        bool
+	ToggleMentions  bool
+	TogglePms       int64
+	ChatQueryParams string
 }
 
-func (c chatMessagesData) MarshalJSON() ([]byte, error) {
+type ChatMenuData struct {
+	InboxCount          int64
+	OfficialRooms       []database.ChatRoomAug1
+	SubscribedRooms     []database.ChatRoomAug1
+	Members             []managers.UserInfo
+	MembersInChat       []managers.UserInfo
+	VisibleMemberInChat bool // either or not at least 1 user is "visible" (not hellbanned)
+	RoomName            string
+	TopBarQueryParams   string
+	PreventRefresh      bool
+}
+
+type ChatMessagesData struct {
+	ChatMenuData
+	NbButtons            int64
+	Messages             []database.ChatMessage
+	RoomName             string
+	ManualRefreshTimeout int64
+	ReadMarker           database.ChatReadMarker
+	ForceManualRefresh   bool
+	NewMessageSound      bool
+	TaggedSound          bool
+	PmSound              bool
+	Error                string
+	ErrorTs              int64
+	HideRightColumn      bool
+	HideTimestamps       bool
+}
+
+func (c ChatMessagesData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Members  []managers.UserInfo
 		Messages []database.ChatMessage

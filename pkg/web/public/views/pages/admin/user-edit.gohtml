@@ -19,65 +19,36 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-sm-12">
-
+            <div class="col-sm-6">
                 <div class="form-group{{ if .Data.Errors.Username }} has-error{{ end }}">
-                    <div class="input-group">
-                        <span class="input-group-prepend">
-                            <span class="input-group-text"><i class="fa fa-user fa-lg fa-fw"></i></span>
-                        </span>
-                        <input name="username" value="{{ .Data.Username }}" class="form-control {{ if .Data.Errors.Username }} is-invalid{{ end }}" placeholder="{{ t "Username" . }}" type="text" autofocus required />
-                    </div>
+                    <input name="username" value="{{ .Data.Username }}" class="form-control {{ if .Data.Errors.Username }} is-invalid{{ end }}" placeholder="{{ t "Username" . }}" type="text" autofocus required />
                     {{ if .Data.Errors.Username }}<div class="invalid-feedback d-block">{{ .Data.Errors.Username }}</div>{{ end }}
                 </div>
 
                 <div class="form-group{{ if .Data.Errors.Password }} has-error{{ end }}">
-                    <div class="input-group">
-                        <span class="input-group-prepend">
-                            <span class="input-group-text"><i class="fa fa-lock fa-lg fa-fw"></i></span>
-                        </span>
-                        <input name="password" value="{{ .Data.Password }}" class="form-control {{ if .Data.Errors.Password }} is-invalid{{ end }}" placeholder="{{ t "Password" . }}" type="password" required />
-                    </div>
+                    <input name="password" value="{{ .Data.Password }}" class="form-control {{ if .Data.Errors.Password }} is-invalid{{ end }}" placeholder="{{ t "Password" . }}" type="password" required />
                     {{ if .Data.Errors.Password }}<div class="invalid-feedback d-block">{{ .Data.Errors.Password }}</div>{{ end }}
                 </div>
 
                 <div class="form-group">
-                    <div class="input-group">
-                        <span class="input-group-prepend">
-                            <span class="input-group-text"><i class="fa fa-lock fa-lg fa-fw"></i></span>
-                        </span>
-                        <input name="repassword" value="{{ .Data.RePassword }}" class="form-control" placeholder="{{ t "Retype password" . }}" type="password" />
-                    </div>
+                    <input name="repassword" value="{{ .Data.RePassword }}" class="form-control" placeholder="{{ t "Retype password" . }}" type="password" />
                 </div>
 
                 <div class="form-group">
-                    <div class="input-group">
-                        <span class="input-group-prepend">
-                            <span class="input-group-text"><i class="fa fa-lock fa-lg fa-fw"></i></span>
-                        </span>
-                        <input name="api_key" value="{{ .Data.ApiKey }}" class="form-control" placeholder="{{ t "API key" . }}" type="text" />
-                    </div>
+                    <input name="api_key" value="{{ .Data.ApiKey }}" class="form-control" placeholder="{{ t "API key" . }}" type="text" />
+                </div>
+
+            </div>
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <select name="role" class="form-control">
+                        <option value="member"{{ if eq .Data.Role "member" }} selected{{ end }}>member</option>
+                        <option value="moderator"{{ if eq .Data.Role "moderator" }} selected{{ end }}>moderator</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
-                    <div class="input-group">
-                        <span class="input-group-prepend">
-                            <span class="input-group-text"><i class="fa fa-user fa-lg fa-fw"></i></span>
-                        </span>
-                        <select name="role" class="form-control">
-                            <option value="member"{{ if eq .Data.Role "member" }} selected{{ end }}>member</option>
-                            <option value="moderator"{{ if eq .Data.Role "moderator" }} selected{{ end }}>moderator</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <div class="input-group">
-                        <span class="input-group-prepend">
-                            <span class="input-group-text"><i class="fa fa-user fa-lg fa-fw"></i></span>
-                        </span>
-                        <input name="chat_color" value="{{ .Data.ChatColor }}" class="form-control" placeholder="{{ t "Chat color" . }}" type="text" required />
-                    </div>
+                    <input name="chat_color" value="{{ .Data.ChatColor }}" class="form-control" placeholder="{{ t "Chat color" . }}" type="text" required />
                 </div>
 
                 <div class="form-group">
@@ -88,7 +59,11 @@
                         {{ end }}
                     </select>
                 </div>
+            </div>
+        </div>
 
+        <div class="row">
+            <div class="col-sm-6">
                 <div class="form-check form-check-1">
                     <div class="checkbox-wrapper form-check-input">
                         <input class="my-cbx" type="checkbox" name="verified" id="verified" value="1"{{ if .Data.Verified }} checked{{ end }} />
@@ -145,6 +120,17 @@
                     <label class="form-check-label" for="can_change_username">{{ t "Can change username" . }}</label>
                 </div>
 
+            </div>
+            <div class="col-sm-6">
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_use_uppercase" id="can_use_uppercase" value="1"{{ if .Data.CanUseUppercase }} checked{{ end }} />
+                        <label for="can_use_uppercase" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_use_uppercase">{{ t "Can use uppercase" . }}</label>
+                </div>
+
                 <div class="form-check form-check-1">
                     <div class="checkbox-wrapper form-check-input">
                         <input class="my-cbx" type="checkbox" name="can_change_color" id="can_change_color" value="1"{{ if .Data.CanChangeColor }} checked{{ end }} />
@@ -159,6 +145,14 @@
                         <label for="can_use_multiline" class="toggle"><span></span></label>
                     </div>
                     <label class="form-check-label" for="can_use_multiline">{{ t "Can use multiline" . }}</label>
+                </div>
+
+                <div class="form-check form-check-1">
+                    <div class="checkbox-wrapper form-check-input">
+                        <input class="my-cbx" type="checkbox" name="can_use_chess_analyze" id="can_use_chess_analyze" value="1"{{ if .Data.CanUseChessAnalyze }} checked{{ end }} />
+                        <label for="can_use_chess_analyze" class="toggle"><span></span></label>
+                    </div>
+                    <label class="form-check-label" for="can_use_chess_analyze">{{ t "Can use chess analyze" . }}</label>
                 </div>
 
                 <div class="form-check form-check-1">
@@ -192,7 +186,11 @@
                     </div>
                     <label class="form-check-label" for="collect_metadata">{{ t "Collect metadata" . }}</label>
                 </div>
+            </div>
+        </div>
 
+        <div class="row">
+            <div class="col-sm-12">
                 <div class="form-group">
                     {{ if .Data.IsEdit }}
                         <input type="submit" class="btn btn-primary" value="{{ t "Update user" . }}" />
@@ -200,9 +198,9 @@
                         <input type="submit" class="btn btn-primary" value="{{ t "Create user" . }}" />
                     {{ end }}
                 </div>
-
             </div>
         </div>
+
     </fieldset>
 </form>
 
@@ -220,6 +218,13 @@
 </div>
 <div>
     Public msgs: {{ .Data.User.GeneralMessagesCount }}
+</div>
+<div>
+    Login attempts: {{ .Data.User.LoginAttempts }}
+</div>
+
+<div>
+    Xmr balance: {{ .Data.User.XmrBalance }} | {{ .Data.User.XmrBalance.XmrStr }} <small>XMR</small> | {{ .Data.User.XmrBalance.UsdStr }}
 </div>
 
 {{ end }}

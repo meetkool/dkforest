@@ -3,6 +3,10 @@ package database
 import (
 	"dkforest/pkg/config"
 	"errors"
+	"fmt"
+	"github.com/boombuler/barcode"
+	"github.com/boombuler/barcode/qr"
+	"image"
 	"strings"
 	"time"
 
@@ -19,11 +23,52 @@ func (u UserID) String() string {
 	return utils.FormatInt64(int64(u))
 }
 
+type Username string
+
+func (u Username) String() string {
+	return string(u)
+}
+
+func (u Username) AtStr() string {
+	return "@" + string(u)
+}
+
+// IUserRenderMessage is the smallest interface needed to render the chat messages
+type IUserRenderMessage interface {
+	GetID() UserID
+	GetUsername() Username
+	GetRefreshRate() int64
+	GetChatColor() string
+	GetIsIncognito() bool
+	GetIsHellbanned() bool
+	GetAFK() bool
+	GetAfkIndicatorEnabled() bool
+	GetDisplayIgnored() bool
+	GetDisplayModerators() bool
+	GetNotifyNewMessage() bool
+	GetNotifyTagged() bool
+	GetNotifyPmmed() bool
+	GetChatReadMarkerEnabled() bool
+	GetHighlightOwnMessages() bool
+	GetDisplayDeleteButton() bool
+	GetIsAdmin() bool
+	GetDisplayHellbanButton() bool
+	GetDisplayKickButton() bool
+	GetDisplayHellbanned() bool
+	GetSyntaxHighlightCode() string
+	GetDateFormat() string
+	CanSeeHB() bool
+	GetConfirmExternalLinks() bool
+	GetCanSeeHellbanned() bool
+	IsModerator() bool
+	CountUIButtons() int64
+}
+
 // User struct an internal representation of a user for our app
 type User struct {
 	ID                           UserID
 	Avatar                       []byte
-	Username                     string
+	Username                     Username
 	GPGPublicKey                 string
 	AgePublicKey                 string
 	Password                     string          `json:"-"`
@@ -50,6 +95,8 @@ type User struct {
 	DisplayDeleteButton          bool
 	PmMode                       int64 // Normal: 0, Whitelist 1
 	DisplayPms                   int64 // deprecated
+	HellbanOpacity               int64
+	CodeBlockHeight              int64
 	DisplayIgnored               bool
 	HideIgnoredUsersFromList     bool
 	Verified                     bool
@@ -59,6 +106,7 @@ type User struct {
 	ApiKey                       string
 	Lang                         string
 	ChatColor                    string
+	ChatBackgroundColor          string
 	ChatFont                     int64
 	ChatBold                     bool
 	ChatItalic                   bool
@@ -83,8 +131,11 @@ type User struct {
 	CanUploadFile                bool
 	CanUseForum                  bool
 	CanChangeUsername            bool
+	CanUseUppercase              bool
 	CanChangeColor               bool
 	CanUseMultiline              bool
+	ManualMultiline              bool
+	CanUseChessAnalyze           bool
 	Vetted                       bool
 	RegistrationDuration         int64
 	LastSeenPublic               bool
@@ -94,15 +145,52 @@ type User struct {
 	HideRightColumn              bool
 	ChatBarAtBottom              bool
 	AutocompleteCommandsEnabled  bool
+	SpellcheckEnabled            bool
 	AfkIndicatorEnabled          bool
 	SignupMetadata               string
 	CollectMetadata              bool
 	CaptchaRequired              bool
 	Theme                        int64
 	GeneralMessagesCount         int64
+	ChipsTest                    PokerChip
+	XmrBalance                   Piconero
 	AFK                          bool
+	UseStream                    bool
+	UseStreamMenu                bool
+	SyntaxHighlightCode          string
+	ConfirmExternalLinks         bool
+	ChessSoundsEnabled           bool
+	PokerSoundsEnabled           bool
+	PokerXmrSubAddress           string
+	PokerReferredBy              *UserID
+	PokerReferralToken           *string
+	PokerRakeBack                PokerChip
 	HighlightOwnMessages         bool `gorm:"-"`
 }
+
+func (u *User) GetID() UserID                  { return u.ID }
+func (u *User) GetUsername() Username          { return u.Username }
+func (u *User) GetRefreshRate() int64          { return u.RefreshRate }
+func (u *User) GetChatColor() string           { return u.ChatColor }
+func (u *User) GetIsIncognito() bool           { return u.IsIncognito }
+func (u *User) GetIsHellbanned() bool          { return u.IsHellbanned }
+func (u *User) GetAFK() bool                   { return u.AFK }
+func (u *User) GetAfkIndicatorEnabled() bool   { return u.AfkIndicatorEnabled }
+func (u *User) GetDisplayIgnored() bool        { return u.DisplayIgnored }
+func (u *User) GetDisplayModerators() bool     { return u.DisplayModerators }
+func (u *User) GetNotifyNewMessage() bool      { return u.NotifyNewMessage }
+func (u *User) GetNotifyTagged() bool          { return u.NotifyTagged }
+func (u *User) GetNotifyPmmed() bool           { return u.NotifyPmmed }
+func (u *User) GetChatReadMarkerEnabled() bool { return u.ChatReadMarkerEnabled }
+func (u *User) GetHighlightOwnMessages() bool  { return u.HighlightOwnMessages }
+func (u *User) GetDisplayDeleteButton() bool   { return u.DisplayDeleteButton }
+func (u *User) GetIsAdmin() bool               { return u.IsAdmin }
+func (u *User) GetDisplayHellbanButton() bool  { return u.DisplayHellbanButton }
+func (u *User) GetDisplayKickButton() bool     { return u.DisplayKickButton }
+func (u *User) GetDisplayHellbanned() bool     { return u.DisplayHellbanned }
+func (u *User) GetSyntaxHighlightCode() string { return u.SyntaxHighlightCode }
+func (u *User) GetConfirmExternalLinks() bool  { return u.ConfirmExternalLinks }
+func (u *User) GetCanSeeHellbanned() bool      { return u.CanSeeHellbanned }
 
 const (
 	ThemeDefault   = 0
@@ -122,8 +210,13 @@ func UserPtrID(user *User) *UserID {
 	return nil
 }
 
-func GetChessSubscribers() (out []User, err error) {
-	err = DB.Find(&out, "notify_chess_games == 1").Error
+func (d *DkfDB) GetOnlineChessSubscribers(userIDs []UserID) (out []User, err error) {
+	err = d.db.Find(&out, "notify_chess_games == 1 AND id IN (?)", userIDs).Error
+	return
+}
+
+func (d *DkfDB) GetChessSubscribers() (out []User, err error) {
+	err = d.db.Find(&out, "notify_chess_games == 1").Error
 	return
 }
 
@@ -163,16 +256,18 @@ func (u *User) GetFont() string {
 }
 
 func (u *User) GetDateFormat() string {
-	if u.DateFormat == 1 {
+	switch u.DateFormat {
+	case 1:
 		return "15:04:05"
-	} else if u.DateFormat == 2 {
+	case 2:
 		return "01-02 03:04:05"
-	} else if u.DateFormat == 3 {
+	case 3:
 		return "03:04:05"
-	} else if u.DateFormat == 4 {
+	case 4:
 		return ""
+	default:
+		return "01-02 15:04:05"
 	}
-	return "01-02 15:04:05"
 }
 
 func (u *User) AccountOldEnough() bool {
@@ -185,6 +280,14 @@ func (u *User) CanUseForumFn() bool {
 
 func (u *User) CanUpload() bool {
 	return u.CanUploadFile && (u.AccountOldEnough() || u.Vetted)
+}
+
+func (u *User) CountUIButtons() int64 {
+	bools := []bool{u.DisplayDeleteButton}
+	if u.IsModerator() {
+		bools = append(bools, u.DisplayHellbanButton, u.DisplayKickButton)
+	}
+	return utils.CountBools(bools...)
 }
 
 func (u *User) generateBaseStyle() string {
@@ -232,6 +335,10 @@ func (u *User) GenerateChatStyle1() string {
 	return sb.String()
 }
 
+func (u *User) HasTotpEnabled() bool {
+	return string(u.TwoFactorSecret) != ""
+}
+
 func (u *User) IsModerator() bool {
 	return u.IsAdmin || u.Role == "moderator"
 }
@@ -240,75 +347,235 @@ func (u *User) CanSeeHB() bool {
 	return u.CanSeeHellbanned || u.IsModerator()
 }
 
+func (u *User) GetHellbanOpacityF64() float64 {
+	return float64(u.HellbanOpacity) / 100
+}
+
 // Save user in the database
-func (u *User) Save() error {
-	return DB.Save(u).Error
+func (u *User) Save(db *DkfDB) error {
+	return db.db.Save(u).Error
 }
 
 // DoSave user in the database, ignore error
-func (u *User) DoSave() {
-	if err := DB.Save(u).Error; err != nil {
+func (u *User) DoSave(db *DkfDB) {
+	if err := u.Save(db); err != nil {
 		logrus.Error(err)
 	}
 }
 
-func (u *User) HellBan() {
-	u.IsHellbanned = true
-	u.DoSave()
-	if err := DB.Model(&ChatMessage{}).Where("user_id = ?", u.ID).Update("is_hellbanned", true).Error; err != nil {
-		logrus.Error(err)
-	}
+func (u *User) SetAgePublicKey(db *DkfDB, agePublicKey string) {
+	db.db.Model(u).Select("AgePublicKey").Updates(User{AgePublicKey: agePublicKey})
 }
 
-func (u *User) UnHellBan() {
-	u.IsHellbanned = false
-	u.DoSave()
-	if err := DB.Model(&ChatMessage{}).Where("user_id = ?", u.ID).Update("is_hellbanned", false).Error; err != nil {
+func (u *User) SetApiKey(db *DkfDB, apiKey string) {
+	db.db.Model(u).Select("ApiKey").Updates(User{ApiKey: apiKey})
+}
+
+func (u *User) SetPokerReferralToken(db *DkfDB, pokerReferralToken *string) {
+	db.db.Model(u).Select("PokerReferralToken").Updates(User{PokerReferralToken: pokerReferralToken})
+}
+
+func (u *User) SetPokerReferredBy(db *DkfDB, pokerReferredBy *UserID) {
+	db.db.Model(u).Select("PokerReferredBy").Updates(User{PokerReferredBy: pokerReferredBy})
+}
+
+func (u *User) SetSignupMetadata(db *DkfDB, signupMetadata string) {
+	db.db.Model(u).Select("SignupMetadata").Updates(User{SignupMetadata: signupMetadata})
+}
+
+func (u *User) ToggleAutocompleteCommandsEnabled(db *DkfDB) {
+	db.db.Model(u).Select("AutocompleteCommandsEnabled").Updates(User{AutocompleteCommandsEnabled: !u.AutocompleteCommandsEnabled})
+}
+
+func (u *User) SetIsUnderDuress(db *DkfDB, isUnderDuress bool) {
+	db.db.Model(u).Select("IsUnderDuress").Updates(User{IsUnderDuress: isUnderDuress})
+}
+
+func (u *User) SetCaptchaRequired(db *DkfDB, captchaRequired bool) {
+	db.db.Model(u).Select("CaptchaRequired").Updates(User{CaptchaRequired: captchaRequired})
+}
+
+func (u *User) SetSyntaxHighlightCode(db *DkfDB, syntaxHighlightCode string) {
+	db.db.Model(u).Select("SyntaxHighlightCode").Updates(User{SyntaxHighlightCode: syntaxHighlightCode})
+}
+
+func (u *User) DecrGeneralMessagesCount(db *DkfDB) {
+	db.db.Model(u).Select("GeneralMessagesCount").Updates(User{GeneralMessagesCount: u.GeneralMessagesCount - 1})
+}
+
+func (u *User) SetVerified(db *DkfDB, verified bool) {
+	db.db.Model(u).Select("Verified").Updates(User{Verified: verified})
+}
+
+func (u *User) IncrChatTutorial(db *DkfDB) {
+	db.db.Model(u).Select("ChatTutorial").Updates(User{ChatTutorial: u.ChatTutorial + 1})
+}
+
+func (u *User) SetChatTutorialTime(db *DkfDB, chatTutorialTime time.Time) {
+	db.db.Model(u).Select("ChatTutorialTime").Updates(User{ChatTutorialTime: chatTutorialTime})
+}
+
+func (u *User) SetCanUseForum(db *DkfDB, canUseForum bool) {
+	db.db.Model(u).Select("CanUseForum").Updates(User{CanUseForum: canUseForum})
+}
+
+func (u *User) ResetLoginAttempts(db *DkfDB) {
+	db.db.Model(u).Select("LoginAttempts").Updates(User{LoginAttempts: 0})
+}
+
+func (u *User) IncrLoginAttempts(db *DkfDB) {
+	db.db.Model(u).Select("LoginAttempts").Updates(User{LoginAttempts: u.LoginAttempts + 1})
+}
+
+func (u *User) ResetChipsTest(db *DkfDB) {
+	db.db.Model(u).Select("ChipsTest").Updates(User{ChipsTest: 1000})
+}
+
+func (u *User) SetPokerXmrSubAddress(db *DkfDB, newPokerXmrSubAddress string) {
+	db.db.Model(u).Select("PokerXmrSubAddress").Updates(User{PokerXmrSubAddress: newPokerXmrSubAddress})
+}
+
+func (u *User) SetPmMode(db *DkfDB, pmMode int64) {
+	db.db.Model(u).Select("PmMode").Updates(User{PmMode: pmMode})
+}
+
+func (u *User) ResetTutorial(db *DkfDB) {
+	db.db.Model(u).Select("ChatTutorial").Updates(User{ChatTutorial: 0})
+}
+
+func (u *User) ToggleDisplayHellbanned(db *DkfDB) {
+	db.db.Model(u).Update("DisplayHellbanned", !u.DisplayHellbanned)
+}
+
+func (u *User) ToggleDisplayModerators(db *DkfDB) {
+	db.db.Model(u).Update("DisplayModerators", !u.DisplayModerators)
+}
+
+func (u *User) ToggleDisplayIgnored(db *DkfDB) {
+	db.db.Model(u).Update("DisplayIgnored", !u.DisplayIgnored)
+}
+
+func (u *User) ToggleAFK(db *DkfDB) {
+	db.db.Model(u).Update("AFK", !u.AFK)
+}
+
+func (u *User) HellBan(db *DkfDB) {
+	u.setHellBan(db, true)
+}
+
+func (u *User) UnHellBan(db *DkfDB) {
+	u.setHellBan(db, false)
+}
+
+func (u *User) setHellBan(db *DkfDB, hb bool) {
+	db.db.Model(u).Select("IsHellbanned", "DisplayHellbanned").Updates(User{IsHellbanned: hb, DisplayHellbanned: false})
+	if err := db.db.Model(&ChatMessage{}).Where("user_id = ?", u.ID).Update("is_hellbanned", hb).Error; err != nil {
 		logrus.Error(err)
 	}
+	MsgPubSub.Pub(RefreshTopic, ChatMessageType{Typ: ForceRefresh})
 }
 
 // GetUserBySessionKey ...
-func GetUserBySessionKey(user *User, sessionKey string) error {
-	return DB.Joins("INNER JOIN sessions s ON s.token = ? AND s.expires_at > DATETIME('now') and s.deleted_at IS NULL AND s.user_id = users.id").
-		Where("users.verified = 1", sessionKey).
+func (d *DkfDB) GetUserBySessionKey(user *User, sessionKey string) error {
+	return d.db.
+		Joins("INNER JOIN sessions s ON s.user_id = users.id").
+		Where("s.token = ? AND users.verified = 1 AND s.deleted_at IS NULL AND s.expires_at > DATETIME('now', 'localtime')", sessionKey).
 		First(user).Error
 }
 
 // GetUserByApiKey ...
-func GetUserByApiKey(user *User, apiKey string) error {
-	return DB.First(user, "api_key = ?", apiKey).Error
+func (d *DkfDB) GetUserByApiKey(user *User, apiKey string) error {
+	return d.db.First(user, "api_key = ?", apiKey).Error
 }
 
 // GetUserByID ...
-func GetUserByID(userID UserID) (out User, err error) {
-	err = DB.First(&out, "id = ?", userID).Error
+func (d *DkfDB) GetUserByID(userID UserID) (out User, err error) {
+	err = d.db.First(&out, "id = ?", userID).Error
+	return
+}
+
+func (d *DkfDB) GetUserRenderMessageByID(userID UserID) (out IUserRenderMessage, err error) {
+	var out1 User
+	err = d.db.Raw(`
+SELECT
+id,
+username,
+refresh_rate,
+chat_color,
+is_incognito,
+is_hellbanned,
+afk,
+afk_indicator_enabled,
+display_ignored,
+display_moderators,
+notify_new_message,
+notify_tagged,
+notify_pmmed,
+chat_read_marker_enabled,
+display_delete_button,
+is_admin,
+display_hellban_button,
+display_kick_button,
+display_hellbanned,
+syntax_highlight_code,
+date_format,
+confirm_external_links,
+can_see_hellbanned,
+role
+FROM users WHERE id = ? LIMIT 1
+`, userID).Scan(&out1).Error
+	return &out1, err
+}
+
+func (d *DkfDB) GetUserByPokerReferralToken(token string) (out User, err error) {
+	err = d.db.First(&out, "poker_referral_token = ?", token).Error
+	return
+}
+
+func (d *DkfDB) GetUserByPokerXmrSubAddress(pokerXmrSubAddress string) (out User, err error) {
+	err = d.db.First(&out, "poker_xmr_sub_address = ?", pokerXmrSubAddress).Error
 	return
 }
 
 // GetUserByUsername ...
-func GetUserByUsername(username string) (out User, err error) {
-	err = DB.First(&out, "username = ? COLLATE NOCASE", username).Error
+func (d *DkfDB) GetUserByUsername(username Username) (out User, err error) {
+	err = d.db.First(&out, "username = ? COLLATE NOCASE", username).Error
 	return
 }
 
-func GetVerifiedUserByUsername(username string) (out User, err error) {
-	err = DB.First(&out, "username = ? COLLATE NOCASE AND verified = 1", username).Error
+func (d *DkfDB) GetUserIDByUsername(username Username) (out UserID, err error) {
+	var tmp struct{ ID UserID }
+	err = d.db.Table("users").Select("id").First(&tmp, "username = ? COLLATE NOCASE", username).Error
+	return tmp.ID, err
+}
+
+func (d *DkfDB) GetVerifiedUserByUsername(username Username) (out User, err error) {
+	err = d.db.First(&out, "username = ? COLLATE NOCASE AND verified = 1", username).Error
 	return
 }
 
-func GetUsersByUsername(usernames []string) (out []User, err error) {
-	err = DB.Find(&out, "username IN (?)", usernames).Error
+func (d *DkfDB) GetUsersByID(ids []UserID) (out []User, err error) {
+	err = d.db.Find(&out, "id IN (?)", ids).Error
 	return
 }
 
-func GetModeratorsUsers() (out []User, err error) {
-	err = DB.Find(&out, "role = ? OR is_admin = 1", "moderator").Error
+func (d *DkfDB) GetUsersByUsername(usernames []string) (out []User, err error) {
+	err = d.db.Find(&out, "username IN (?)", usernames).Error
 	return
 }
 
-func GetClubMembers() (out []User, err error) {
-	err = DB.Find(&out, "is_club_member = ?", true).Error
+func (d *DkfDB) DeleteUserByID(userID UserID) (err error) {
+	err = d.db.Unscoped().Delete(User{}, "id = ?", userID).Error
+	return
+}
+
+func (d *DkfDB) GetModeratorsUsers() (out []User, err error) {
+	err = d.db.Order("username ASC").Find(&out, "role = ? OR is_admin = 1", "moderator").Error
+	return
+}
+
+func (d *DkfDB) GetClubMembers() (out []User, err error) {
+	err = d.db.Find(&out, "is_club_member = ?", true).Error
 	return
 }
 
@@ -317,40 +584,38 @@ func GetClubMembers() (out []User, err error) {
 // Assume I realize I left myself logged into a shared computer.
 // I change my password to protect myself.
 // The session on the public computer needs to be invalidated.
-func (u *User) ChangePassword(hashedPassword string) error {
+func (u *User) ChangePassword(db *DkfDB, hashedPassword string) error {
 	u.Password = hashedPassword
-	if err := DB.Save(u).Error; err != nil {
+	if err := u.Save(db); err != nil {
 		return err
 	}
 	// Delete active user sessions
-	if err := DeleteUserSessions(u.ID); err != nil {
+	if err := db.DeleteUserSessions(u.ID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (u *User) ChangeDuressPassword(hashedDuressPassword string) error {
+func (u *User) ChangeDuressPassword(db *DkfDB, hashedDuressPassword string) error {
 	u.DuressPassword = hashedDuressPassword
-	if err := DB.Save(u).Error; err != nil {
+	if err := u.Save(db); err != nil {
 		return err
 	}
 	// Delete active user sessions
-	if err := DeleteUserSessions(u.ID); err != nil {
+	if err := db.DeleteUserSessions(u.ID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (u *User) CheckPassword(password string) bool {
+func (u *User) CheckPassword(db *DkfDB, password string) bool {
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
 		if err := bcrypt.CompareHashAndPassword([]byte(u.DuressPassword), []byte(password)); err != nil {
 			return false
 		}
-		u.IsUnderDuress = true
-		u.DoSave()
+		u.SetIsUnderDuress(db, true)
 	} else {
-		u.IsUnderDuress = false
-		u.DoSave()
+		u.SetIsUnderDuress(db, false)
 	}
 	return true
 }
@@ -367,6 +632,8 @@ func (e UserErrors) HasError() bool {
 	return e.Username != "" || e.Password != "" || e.GPGPublicKey != ""
 }
 
+var ErrForbiddenUsername = errors.New("forbidden username")
+
 // ValidateUsername ...
 func ValidateUsername(username string, isFirstUser bool) (bool, error) {
 	if !govalidator.IsPrintableASCII(username) {
@@ -376,14 +643,14 @@ func ValidateUsername(username string, isFirstUser bool) (bool, error) {
 	if !isFirstUser {
 		if govalidator.Matches(lowerUsername, "n[o|0]tr[1|i|l][v|y]") ||
 			strings.Contains(lowerUsername, "admin") {
-			return false, errors.New("forbidden username")
+			return false, ErrForbiddenUsername
 		}
 	}
 	if strings.Contains(lowerUsername, "pedo") ||
 		strings.Contains(lowerUsername, "fuck") ||
 		strings.Contains(lowerUsername, "nigger") ||
 		strings.Contains(lowerUsername, "nigga") {
-		return false, errors.New("forbidden username")
+		return false, ErrForbiddenUsername
 	}
 	if !govalidator.Matches(username, "^[a-zA-Z0-9_]+$") {
 		return false, errors.New("username must match [a-zA-Z0-9_]+")
@@ -394,27 +661,27 @@ func ValidateUsername(username string, isFirstUser bool) (bool, error) {
 	return true, nil
 }
 
-func isUsernameReserved(username string) bool {
+func isUsernameReserved(username Username) bool {
 	return false
 }
 
 // GetVerifiedUserBySessionID ...
-func GetVerifiedUserBySessionID(token string) (out User, err error) {
-	err = DB.First(&out, "token = ? and verified = 1", token).Error
+func (d *DkfDB) GetVerifiedUserBySessionID(token string) (out User, err error) {
+	err = d.db.First(&out, "token = ? and verified = 1", token).Error
 	return
 }
 
 // GetRecentUsersCount ...
-func GetRecentUsersCount() int64 {
+func (d *DkfDB) GetRecentUsersCount() int64 {
 	var count int64
-	DB.Table("users").Where("created_at > datetime('now', '-1 Minute')").Count(&count)
+	d.db.Table("users").Where("created_at > datetime('now', '-1 Minute', 'localtime')").Count(&count)
 	return count
 }
 
 // IsUsernameAlreadyTaken ...
-func IsUsernameAlreadyTaken(username string) bool {
+func (d *DkfDB) IsUsernameAlreadyTaken(username Username) bool {
 	var count int64
-	DB.Table("users").Where("username = ? COLLATE NOCASE", username).Count(&count)
+	d.db.Table("users").Where("username = ? COLLATE NOCASE", username).Count(&count)
 	return count > 0 || isUsernameReserved(username)
 }
 
@@ -425,11 +692,17 @@ type PasswordValidator struct {
 }
 
 // NewPasswordValidator ...
-func NewPasswordValidator(password string) *PasswordValidator {
+func NewPasswordValidator(db *DkfDB, password string) *PasswordValidator {
 	p := new(PasswordValidator)
 	p.password = password
 	if len(password) < 8 {
 		p.error = errors.New("password must be at least 8 characters")
+	}
+	if len(password) > 128 {
+		p.error = errors.New("password must be at most 128 characters")
+	}
+	if db.IsPasswordProhibited(password) {
+		p.error = errors.New("this password is too weak")
 	}
 	return p
 }
@@ -455,50 +728,62 @@ func (p *PasswordValidator) Hash() (string, error) {
 	return string(h), p.error
 }
 
-func CanUseUsername(username string, isFirstUser bool) error {
-	if _, err := ValidateUsername(username, isFirstUser); err != nil {
+func (d *DkfDB) CanUseUsername(username Username, isFirstUser bool) error {
+	if _, err := ValidateUsername(string(username), isFirstUser); err != nil {
 		return err
-	} else if IsUsernameAlreadyTaken(username) {
+	} else if d.IsUsernameAlreadyTaken(username) {
 		return errors.New("username already taken")
 	}
 	return nil
 }
 
+func (d *DkfDB) CanRenameTo(oldUsername, newUsername Username) error {
+	if _, err := ValidateUsername(string(newUsername), false); err != nil {
+		return err
+	}
+	if strings.ToLower(string(oldUsername)) != strings.ToLower(string(newUsername)) {
+		if d.IsUsernameAlreadyTaken(newUsername) {
+			return errors.New("username already taken")
+		}
+	}
+	return nil
+}
+
 // CreateUser ...
-func CreateUser(username, password, repassword string, registrationDuration int64, signupInfoEnc string) (User, UserErrors) {
-	return createUser(username, password, repassword, "", false, true, false, false, false, registrationDuration, signupInfoEnc)
+func (d *DkfDB) CreateUser(username, password, repassword string, registrationDuration int64, signupInfoEnc string) (User, UserErrors) {
+	return d.createUser(username, password, repassword, "", false, true, false, false, false, registrationDuration, signupInfoEnc)
 }
 
-func CreateGuestUser(username, password string) (User, UserErrors) {
-	return createUser(username, password, password, "", false, true, true, false, false, 0, "signupInfoEnc")
+func (d *DkfDB) CreateGuestUser(username, password string) (User, UserErrors) {
+	return d.createUser(username, password, password, "", false, true, true, false, false, 0, "signupInfoEnc")
 }
 
-func CreateFirstUser(username, password, repassword string) (User, UserErrors) {
-	return createUser(username, password, repassword, "", true, true, false, true, false, 12000, "")
+func (d *DkfDB) CreateFirstUser(username, password, repassword string) (User, UserErrors) {
+	return d.createUser(username, password, repassword, "", true, true, false, true, false, 12000, "")
 }
 
-func CreateZeroUser() (User, UserErrors) {
+func (d *DkfDB) CreateZeroUser() (User, UserErrors) {
 	password := utils.GenerateToken10()
-	return createUser("0", password, password, config.NullUserPublicKey, false, true, false, false, true, 12000, "")
+	return d.createUser(config.NullUsername, password, password, config.NullUserPublicKey, false, true, false, false, true, 12000, "")
 }
 
 // skipUsernameValidation: entirely skip username validation (for "0" user)
 // isFirstUser: less strict username validation; can use "admin"/"n0tr1v" usernames
-func createUser(username, password, repassword, gpgPublicKey string, isAdmin, verified, temp, isFirstUser, skipUsernameValidation bool, registrationDuration int64, signupInfoEnc string) (User, UserErrors) {
-	username = strings.TrimSpace(username)
+func (d *DkfDB) createUser(usernameStr, password, repassword, gpgPublicKey string, isAdmin, verified, isGuestAcc, isFirstUser, skipUsernameValidation bool, registrationDuration int64, signupInfoEnc string) (User, UserErrors) {
+	username := Username(strings.TrimSpace(usernameStr))
 	var errs UserErrors
 	if !skipUsernameValidation {
-		if err := CanUseUsername(username, isFirstUser); err != nil {
+		if err := d.CanUseUsername(username, isFirstUser); err != nil {
 			errs.Username = err.Error()
 		}
 	}
-	hashedPassword, err := NewPasswordValidator(password).CompareWith(repassword).Hash()
+	hashedPassword, err := NewPasswordValidator(d, password).CompareWith(repassword).Hash()
 	if err != nil {
 		errs.Password = err.Error()
 	}
 	var newUser User
 	if !errs.HasError() {
-		newUser.Temp = temp
+		newUser.Temp = isGuestAcc
 		newUser.Role = "member"
 		newUser.Username = username
 		newUser.Password = hashedPassword
@@ -509,12 +794,15 @@ func createUser(username, password, repassword, gpgPublicKey string, isAdmin, ve
 		newUser.RefreshRate = 5
 		newUser.ChatReadMarkerEnabled = true
 		newUser.ChatReadMarkerColor = "#4e7597"
+		newUser.ChatBackgroundColor = "#111111"
 		newUser.ChatReadMarkerSize = 1
 		newUser.DisplayIgnored = false
 		newUser.DisplayPms = 0
 		newUser.CanUseForum = true
 		newUser.CanUseMultiline = false
+		newUser.CanUseChessAnalyze = false
 		newUser.CanChangeUsername = true
+		newUser.CanUseUppercase = true
 		newUser.CanUploadFile = true
 		newUser.CanChangeColor = true
 		newUser.DisplayDeleteButton = true
@@ -524,12 +812,20 @@ func createUser(username, password, repassword, gpgPublicKey string, isAdmin, ve
 		newUser.LastSeenPublic = true
 		newUser.CollectMetadata = false
 		newUser.RegistrationDuration = registrationDuration
+		newUser.UseStream = true
+		newUser.UseStreamMenu = true
+		newUser.CodeBlockHeight = 300
+		newUser.HellbanOpacity = 30
 		newUser.SignupMetadata = signupInfoEnc
+		_, month, _ := time.Now().UTC().Date()
+		if month == time.December {
+			newUser.Theme = ThemeChristmas
+		}
 		if !verified {
 			token := utils.GenerateToken32()
 			newUser.Token = &token
 		}
-		if err := DB.Create(&newUser).Error; err != nil {
+		if err := d.db.Create(&newUser).Error; err != nil {
 			logrus.Error(err)
 		}
 
@@ -542,8 +838,8 @@ func (u *User) SetAvatar(b []byte) {
 	u.Avatar = b
 }
 
-func (u *User) IncrKarma(karma int64, description string) {
-	if _, err := CreateKarmaHistory(karma, description, u.ID, nil); err != nil {
+func (u *User) IncrKarma(db *DkfDB, karma int64, description string) {
+	if _, err := db.CreateKarmaHistory(karma, description, u.ID, nil); err != nil {
 		logrus.Error(err)
 		return
 	}
@@ -556,4 +852,100 @@ func (u *User) CanSendPM() bool {
 		return true
 	}
 	return u.GeneralMessagesCount >= 20
+}
+
+func (u *User) GetURL() string {
+	return fmt.Sprintf("monero:%s", u.PokerXmrSubAddress)
+}
+
+func (u *User) GetImage() (image.Image, error) {
+	b, err := qr.Encode(u.GetURL(), qr.L, qr.Auto)
+	if err != nil {
+		return nil, err
+	}
+	b, err = barcode.Scale(b, 150, 150)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (d *DkfDB) GetUserBalances(userID UserID) (xmrBalance Piconero, chipsTest PokerChip, err error) {
+	var tmp struct {
+		XmrBalance Piconero
+		ChipsTest  PokerChip
+	}
+	err = d.db.Table("users").Select("xmr_balance, chips_test").First(&tmp, "id = ?", userID).Error
+	return tmp.XmrBalance, tmp.ChipsTest, err
+}
+
+func (d *DkfDB) DecrUserBalance(userID UserID, isTest bool, amount PokerChip) (err error) {
+	if isTest {
+		err = d.db.Exec(`UPDATE users SET chips_test = chips_test - ? WHERE id = ?`, amount, userID).Error
+	} else {
+		err = d.db.Exec(`UPDATE users SET xmr_balance = xmr_balance - ? WHERE id = ?`, amount.ToPiconero(), userID).Error
+	}
+	return
+}
+
+func (d *DkfDB) IncrUserBalance(userID UserID, isTest bool, amount PokerChip) (err error) {
+	if isTest {
+		err = d.db.Exec(`UPDATE users SET chips_test = chips_test + ? WHERE id = ?`, amount, userID).Error
+	} else {
+		err = d.db.Exec(`UPDATE users SET xmr_balance = xmr_balance + ? WHERE id = ?`, amount.ToPiconero(), userID).Error
+	}
+	return
+}
+
+func (u *User) GetXmrBalance(db *DkfDB) (amount Piconero, err error) {
+	var tmp struct{ XmrBalance Piconero }
+	err = db.db.Table("users").Select("xmr_balance").First(&tmp, "id = ?", u.ID).Error
+	return tmp.XmrBalance, err
+}
+
+func (u *User) IncrXmrBalance(db *DkfDB, amount Piconero) (err error) {
+	err = db.db.Exec(`UPDATE users SET xmr_balance = xmr_balance + ? WHERE id = ?`, amount, u.ID).Error
+	return
+}
+
+func (u *User) SubXmrBalance(db *DkfDB, amount Piconero) (err error) {
+	err = db.db.Exec(`UPDATE users SET xmr_balance = xmr_balance - ? WHERE id = ?`, amount, u.ID).Error
+	return
+}
+
+func (db *DkfDB) GetUsersXmrBalance() (out Piconero, err error) {
+	var tmp struct{ SumXmrBalance Piconero }
+	err = db.db.Raw(`SELECT SUM(xmr_balance) as sum_xmr_balance FROM users`).Scan(&tmp).Error
+	return tmp.SumXmrBalance, err
+}
+
+func (d *DkfDB) SetPokerSubAddress(userID UserID, subAddress string) (err error) {
+	err = d.db.Exec(`UPDATE users SET poker_xmr_sub_address = ? WHERE id = ?`, subAddress, userID).Error
+	return
+}
+
+func (u *User) GetUserChips(isTest bool) PokerChip {
+	return utils.Ternary(isTest, u.ChipsTest, u.XmrBalance.ToPokerChip())
+}
+
+func (d *DkfDB) GetUsersRakeBack() (out PokerChip, err error) {
+	var tmp struct{ PokerRakeBack PokerChip }
+	err = d.db.Raw(`SELECT SUM(poker_rake_back) as poker_rake_back FROM users`).Scan(&tmp).Error
+	return tmp.PokerRakeBack, err
+}
+
+func (d *DkfDB) ClaimRakeBack(userID UserID) (err error) {
+	err = d.db.Exec(`UPDATE users SET xmr_balance = xmr_balance + (poker_rake_back * 10000000), poker_rake_back = 0 WHERE id = ?`, int64(userID)).Error
+	return
+}
+
+func (d *DkfDB) IncrUserRakeBack(referredBy UserID, rakeBack PokerChip) (err error) {
+	err = d.db.Exec(`UPDATE users SET poker_rake_back = poker_rake_back + ? WHERE id = ?`, uint64(rakeBack), int64(referredBy)).Error
+	return
+}
+
+func (d *DkfDB) GetRakeBackReferredCount(userID UserID) (count int64, err error) {
+	var tmp struct{ Count int64 }
+	err = d.db.Raw(`SELECT COUNT(id) AS count FROM users WHERE poker_referred_by = ?`, int64(userID)).Scan(&tmp).Error
+	return tmp.Count, err
 }

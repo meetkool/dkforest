@@ -1,0 +1,40 @@
+{{ define "sub-content" }}
+    {{ if .Data.NeedConfirm }}
+        <div class="card mb-3">
+            <div class="card-header">
+                API
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <input type="hidden" name="formName" value="confirm" />
+                    <input name="btn_submit" type="submit" value="Confirm" class="btn btn-primary" />
+                    <input name="btn_submit" type="submit" value="Cancel" class="btn btn-danger" />
+                </form>
+            </div>
+        </div>
+    {{ else }}
+        <div class="card mb-3">
+            <div class="card-header">
+                API
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <input type="hidden" name="formName" value="" />
+                    <div class="form-group">
+                        <label>{{ t "API key" . }}</label>
+                        {{ if .Data.APIKey }}
+                            <div><span style="background-color: black; color: black; font-size: 20px">{{ .Data.APIKey }}</span></div>
+                        {{ else }}
+                            <div><em>No API key yet</em></div>
+                        {{ end }}
+                    </div>
+                    <div class="form-group">
+                        <input type="submit" value="Generate new key" class="btn btn-primary" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    {{ end }}
+{{ end }}

@@ -45,18 +45,10 @@
                         {{ end }}
                     </td>
                     <td class="text-center align-middle">
-                        {{ if .Password }}
-                        <span style="color: green;">Y</span>
-                        {{ else }}
-                        <span style="color: red;">N</span>
-                        {{ end }}
+                        {{ (ne .Password "") | fmtBool }}
                     </td>
                     <td class="text-center align-middle">
-                        {{ if .IsEphemeral }}
-                        <span style="color: red;">N</span>
-                        {{ else }}
-                        <span style="color: green;">Y</span>
-                        {{ end }}
+                        {{ not .IsEphemeral | fmtBool }}
                     </td>
                 </tr>
             {{ else }}

@@ -1,14 +1,20 @@
-# DarkForest
-Welcome traveler, the goal of this website is to provide a decent chat experience for the good folks using tor without javascript.
+# Run with docker
 
-Enjoy your stay and spread the word :)
-demo :- http://dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion
- 
+```
+docker build -t dkf .
+docker run -p 8080:8080 -v /path/to/your/.dkf:/root/.dkf --name dkf dkf
+```
+
 # How to run
 
 Install go-bindata
 ```
 go install github.com/go-bindata/go-bindata/...@latest
+```
+
+Install "air" (for live-reload development)
+```
+go install github.com/cosmtrek/air@latest
 ```
 
 Download dependencies
@@ -22,6 +28,12 @@ go mod vendor
 make bindata-dev
 ```
 
+## Build qtpl templates
+
+```
+go install github.com/valyala/quicktemplate/qtc@latest
+```
+
 ## Serve
 
 ```
@@ -32,10 +44,24 @@ make serve
 ```
 go run --tags "fts5" cmd/dkf/main.go --no-browser
 ```
-----
-![Screenshot from 2023-02-02 19-57-53](https://user-images.githubusercontent.com/96396841/216351824-5ed97806-9419-4144-a9ad-87385c27aee5.png)
+
+### Build prohibited passwords list from rockyou.txt
+
+Download rockyou.txt
+
+```
+curl -L https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt -o rockyou.txt
+```
+
+Import rockyou.txt in database
+
+```
+./dkf build-prohibited-passwords
+```
 
 
+# Notes for running darkforest on a server
 
-
-
+```
+useradd --system --create-home dkf
+```

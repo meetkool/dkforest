@@ -1,0 +1,71 @@
+{{ define "base" }}
+<html lang="en">
+    <head>
+        <title></title>
+        <link rel="stylesheet" type="text/css" href="/public/css/bootstrap.min.css?v={{ .VERSION }}" />
+        <link rel="stylesheet" type="text/css" href="/public/css/style.css?v={{ .VERSION }}" />
+        <style>
+            html, body {background-color: transparent; }
+            .btn-xs {
+                margin: 0 !important;
+                padding: 0 4px !important;
+                font-size: 11px !important;
+            }
+            form {
+                padding: 0;
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div style="margin: 0 15px;">
+            <a href="/api/v1/chat/messages/{{ .Data.RoomName }}{{ if .Data.IsStream }}/stream{{ end }}{{ .Data.ChatQueryParams }}" target="iframe2" class="btn btn-xs btn-secondary" title="Refresh messages">&#8635;</a>
+            {{ if .Data.IsStream }}<a href="/api/v1/chat/messages/{{ .Data.RoomName }}/refresh{{ .Data.ChatQueryParams }}" class="btn btn-xs btn-secondary" title="Stop tab loading icon">&#9633;</a>{{ end }}
+            <a href="/chat/{{ .Data.RoomName }}/archive" rel="noopener noreferrer" target="_blank">{{ t "Read all messages" . }}</a>
+            {{ if .Data.ToggleMentions }}
+                <a href="/chat/{{ .Data.RoomName }}?mentionsOnly=0" class="btn btn-xs btn-success" title="Only Mentions are displayed" target="_top">@</a>
+            {{ else }}
+                <a href="/chat/{{ .Data.RoomName }}?mentionsOnly=1" class="btn btn-xs btn-secondary" title="All messages displayed" target="_top">@</a>
+            {{ end }}
+            {{ if eq .Data.TogglePms 1 }}
+                <a href="/chat/{{ .Data.RoomName }}?pmonly=2" class="btn btn-xs btn-success" title="Only PMs are displayed" target="_top">PM</a>
+            {{ else if eq .Data.TogglePms 2 }}
+                <a href="/chat/{{ .Data.RoomName }}?pmonly=0" class="btn btn-xs btn-warning" title="PMs are hidden" target="_top">PM</a>
+            {{ else }}
+                <a href="/chat/{{ .Data.RoomName }}?pmonly=1" class="btn btn-xs btn-secondary" title="All messages displayed" target="_top">PM</a>
+            {{ end }}
+            <form method="post" class="d-inline-block">
+                <input type="hidden" name="formName" value="toggle-ignored" />
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <button class="btn btn-xs {{ if .AuthUser.DisplayIgnored }}btn-warning{{ else }}btn-secondary{{ end }}" title="toggle ignored users">Ignored</button>
+            </form>
+            {{ if .AuthUser.IsModerator }}
+                <form method="post" class="d-inline-block">
+                    <input type="hidden" name="formName" value="toggle-m" />
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button class="btn btn-xs {{ if .AuthUser.DisplayModerators }}btn-secondary{{ else }}btn-warning{{ end }}" title="toggle moderators messages">Mod</button>
+                </form>
+            {{ end }}
+            {{ if .AuthUser.CanSeeHB }}
+                <form method="post" class="d-inline-block">
+                    <input type="hidden" name="formName" value="toggle-hb" />
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button class="btn btn-xs btn-secondary" title="toggle hellban messages">HB ({{ if .AuthUser.DisplayHellbanned }}on{{ else }}off{{ end }})</button>
+                </form>
+            {{ end }}
+            {{ if .AuthUser.ChatReadMarkerEnabled }}
+                <form method="post" class="d-inline-block">
+                    <input type="hidden" name="formName" value="update-read-marker" />
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <button class="btn btn-xs btn-secondary">Update read marker</button>
+                </form>
+            {{ end }}
+            <form method="post" class="d-inline-block">
+                <input type="hidden" name="formName" value="afk" />
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <button class="btn btn-xs {{ if .AuthUser.AFK }}btn-danger{{ else }}btn-secondary{{ end }}">afk</button>
+            </form>
+        </div>
+    </body>
+</html>
+{{ end }}

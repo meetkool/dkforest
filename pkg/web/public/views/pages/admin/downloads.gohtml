@@ -6,21 +6,28 @@
         <th>File</th>
         <th>User</th>
         <th>Created at</th>
+        <th class="text-right" style="width: 70px;">Actions</th>
     </tr>
     </thead>
     <tbody>
     {{ range .Data.Downloads }}
-    <tr>
-        <td>{{ .Filename }}</td>
-        <td>
-            <a href="?u={{ .UserID }}">{{ .User.Username }}</a>
-        </td>
-        <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
-    </tr>
+        <tr>
+            <td>{{ .Filename }}</td>
+            <td>
+                <a href="?u={{ .UserID }}">{{ .User.Username }}</a>
+            </td>
+            <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
+            <td class="text-right">
+                <form class="d-inline" action="/admin/downloads/{{ .ID }}/delete" method="post">
+                    <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                    <button type="submit" class="btn btn-danger btn-sm" title="Delete">X</button>
+                </form>
+            </td>
+        </tr>
     {{ else }}
-    <tr>
-        <td colspan="2"><em>No invoices to display</em></td>
-    </tr>
+        <tr>
+            <td colspan="2"><em>No downloads to display</em></td>
+        </tr>
     {{ end }}
     </tbody>
 </table>

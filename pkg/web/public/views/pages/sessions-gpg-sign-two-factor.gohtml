@@ -1,13 +1,3 @@
-{{ define "extra-head" }}
-<style>
-    textarea {
-        white-space: pre;
-        overflow-wrap: normal;
-        overflow-x: scroll;
-    }
-</style>
-{{ end }}
-
 {{ define "content" }}
 <div class="container">
     <div class="row">
@@ -27,11 +17,11 @@
                         <div class="form-group">
                             <label for="encrypted_message">{{ t "Please sign the following message with your private key and send the signature" . }}</label>
                             <p><code>gpg --armor --detach-sign file</code></p>
-                            <input name="to_be_signed_message" id="to_be_signed_message" value="{{ .Data.ToBeSignedMessage }}" type="text" class="form-control" style="font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;" readonly />
+                            <input name="to_be_signed_message" id="to_be_signed_message" value="{{ .Data.ToBeSignedMessage }}" type="text" class="form-control mono" readonly />
                         </div>
                         <div class="form-group">
                             <label for="signed_message">{{ t "Message detached signature" . }}</label>
-                            <textarea name="signed_message" id="signed_message" rows="10" class="form-control{{ if .Data.ErrorSignedMessage }} is-invalid{{ end }}" style="font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;" autofocus>{{ .Data.SignedMessage }}</textarea>
+                            <textarea name="signed_message" id="signed_message" rows="10" class="form-control mono{{ if .Data.ErrorSignedMessage }} is-invalid{{ end }}" autofocus>{{ .Data.SignedMessage }}</textarea>
                             {{ if .Data.ErrorSignedMessage }}
                                 <div class="invalid-feedback">{{ .Data.ErrorSignedMessage }}</div>
                             {{ end }}

@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 RestartSec=5
 User=debian-tor
-WorkingDirectory=/root/dist
+WorkingDirectory=/home/dkf/dist
 ExecStart=/usr/bin/tor -f /etc/tor/torrc2
 LimitNOFILE=65536
 

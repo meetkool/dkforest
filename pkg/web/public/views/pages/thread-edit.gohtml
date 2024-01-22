@@ -9,9 +9,9 @@
             <input type="hidden" name="csrf" value="{{ .CSRF }}" />
             <div class="form-group">
                 <select name="category_id" class="form-control">
-                    <option value="1"{{ if eq .Data.Thread.CategoryID 1 }} selected{{ end }}>General</option>
-                    <option value="2"{{ if eq .Data.Thread.CategoryID 2 }} selected{{ end }}>Random</option>
-                    <option value="3"{{ if eq .Data.Thread.CategoryID 3 }} selected{{ end }}>Retarded Area</option>
+                    {{ range .Data.Categories }}
+                        <option value="{{ .ID }}"{{ if eq $.Data.Thread.CategoryID .ID }} selected{{ end }}>{{ .Name }}</option>
+                    {{ end }}
                 </select>
             </div>
             <div class="form-group">

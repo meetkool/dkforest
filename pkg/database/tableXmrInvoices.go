@@ -22,14 +22,15 @@ type XmrInvoice struct {
 	CreatedAt       time.Time
 }
 
-func CreateXmrInvoice(userID UserID, productID int64) (out XmrInvoice, err error) {
-	err = DB.Where("user_id = ? AND product_id = ? AND amount_received IS NULL", userID, productID).First(&out).Error
+func (d *DkfDB) CreateXmrInvoice(userID UserID, productID int64) (out XmrInvoice, err error) {
+	err = d.db.Where("user_id = ? AND product_id = ? AND amount_received IS NULL", userID, productID).First(&out).Error
 	if err == nil {
 		return
 	}
 	resp, err := config.Xmr().CreateAddress(&wallet1.RequestCreateAddress{})
 	if err != nil {
 		logrus.Error(err)
+		return
 	}
 	out = XmrInvoice{
 		UserID:          userID,
@@ -37,14 +38,14 @@ func CreateXmrInvoice(userID UserID, productID int64) (out XmrInvoice, err error
 		Address:         resp.Address,
 		AmountRequested: 10,
 	}
-	if err = DB.Create(&out).Error; err != nil {
+	if err = d.db.Create(&out).Error; err != nil {
 		return
 	}
 	return
 }
 
-func GetXmrInvoiceByAddress(address string) (out XmrInvoice, err error) {
-	err = DB.Where("address = ?", address).First(&out).Error
+func (d *DkfDB) GetXmrInvoiceByAddress(address string) (out XmrInvoice, err error) {
+	err = d.db.Where("address = ?", address).First(&out).Error
 	return
 }
 
@@ -68,8 +69,8 @@ func (i XmrInvoice) GetImage() (image.Image, error) {
 	return b, nil
 }
 
-func (i *XmrInvoice) DoSave() {
-	if err := DB.Save(i).Error; err != nil {
+func (i *XmrInvoice) DoSave(db *DkfDB) {
+	if err := db.db.Save(i).Error; err != nil {
 		logrus.Error(err)
 	}
 }

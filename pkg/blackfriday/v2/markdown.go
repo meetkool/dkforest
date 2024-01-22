@@ -48,6 +48,7 @@ const (
 	BackslashLineBreak                            // Translate trailing backslashes into line breaks
 	DefinitionLists                               // Render definition lists
 	NoLink                                        // No links/images
+	ManualLineBreak                               //
 
 	CommonHTMLFlags HTMLFlags = UseXHTML | Smartypants |
 		SmartypantsFractions | SmartypantsDashes | SmartypantsLatexDashes
@@ -287,7 +288,7 @@ func New(opts ...Option) *Markdown {
 	p.inlineCallback[' '] = maybeLineBreak
 	p.inlineCallback['#'] = censored
 	p.inlineCallback['*'] = emphasis
-	p.inlineCallback['_'] = emphasis
+	//p.inlineCallback['_'] = emphasis
 	if p.extensions&Strikethrough != 0 {
 		p.inlineCallback['~'] = emphasis
 	}

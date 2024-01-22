@@ -4,10 +4,17 @@
     <div class="container">
         <h3>Games</h3>
         <p>You can create a chess game with someone by using the <code>/chess username</code> command.</p>
-        <form method="post" style="width: 400px;">
+        <form method="post" style="width: 500px;">
             <input type="hidden" name="csrf" value="{{ .CSRF }}" />
             <div class="input-group">
-                <input type="text" name="username" value="{{ .Data.Username }}" placeholder="opponent username" class="form-control form-control-sm{{ if .Data.Error }} is-invalid{{ end }}" />
+                <input  style="width: 200px;" type="text" name="username" value="{{ .Data.Username }}" placeholder="opponent username" class="form-control form-control-sm{{ if .Data.Error }} is-invalid{{ end }}" />
+
+                <select name="color" class="form-control form-control-sm">
+                    <option value="w"{{ if eq .Data.Color "w" }}} selected{{ end }}>White</option>
+                    <option value="b"{{ if eq .Data.Color "b" }}} selected{{ end }}>Black</option>
+                    <option value="r"{{ if eq .Data.Color "r" }}} selected{{ end }}>Random</option>
+                </select>
+
                 <div class="input-group-append">
                     <button class="btn btn-sm btn-primary">Create chess game</button>
                 </div>

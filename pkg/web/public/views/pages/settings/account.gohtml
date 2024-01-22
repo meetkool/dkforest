@@ -68,7 +68,7 @@
                                 The maximum dimensions for avatars are: 120x120 pixels.<br />
                                 The maximum file size for avatars is 300 KB.
                             </p>
-                            <input name="avatar" class="{{ if .Data.ErrorAvatar }} is-invalid{{ end }}" type="file" accept=".gif,.png,.jpg,.jpeg,image/gif,image/png,image/jpeg" required />
+                            <input name="avatar" class="{{ if .Data.ErrorAvatar }} is-invalid{{ end }}" type="file" accept=".bmp,.gif,.png,.jpg,.jpeg,.webp,image/gif,image/png,image/jpeg,image/bmp,image/webp" required />
                             {{ if .Data.ErrorAvatar }}
                                 <div class="invalid-feedback">{{ .Data.ErrorAvatar }}</div>
                             {{ end }}

@@ -11,14 +11,14 @@ type KarmaHistory struct {
 	CreatedAt   time.Time
 }
 
-func CreateKarmaHistory(karma int64, description string, userID UserID, fromUserID *int64) (out KarmaHistory, err error) {
+func (d *DkfDB) CreateKarmaHistory(karma int64, description string, userID UserID, fromUserID *int64) (out KarmaHistory, err error) {
 	out = KarmaHistory{
 		Karma:       karma,
 		Description: description,
 		UserID:      userID,
 		FromUserID:  fromUserID,
 	}
-	err = DB.Create(&out).Error
+	err = d.db.Create(&out).Error
 	return
 }
 

@@ -18,7 +18,6 @@
 
     <form method="post">
         <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-        <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
         <div class="form-group">
             <label for="name">{{ t "Gist name 3-50 characters [a-zA-Z0-9_.]" . }}</label>
             <input class="form-control{{ if .Data.ErrorName }} is-invalid{{ end }}" type="text" name="name" id="name" placeholder="Name" value="{{ .Data.Name }}" />

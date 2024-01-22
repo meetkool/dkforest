@@ -14,19 +14,19 @@ type UserPublicNote struct {
 	UpdatedAt time.Time
 }
 
-func GetUserPublicNotes(userID UserID) (out UserPublicNote, err error) {
-	err = DB.First(&out, "user_id = ?", userID).Error
+func (d *DkfDB) GetUserPublicNotes(userID UserID) (out UserPublicNote, err error) {
+	err = d.db.First(&out, "user_id = ?", userID).Error
 	return
 }
 
-func SetUserPublicNotes(userID UserID, notes string) error {
+func (d *DkfDB) SetUserPublicNotes(userID UserID, notes string) error {
 	if !govalidator.RuneLength(notes, "0", "10000") {
 		return errors.New("notes must have 10000 characters maximum")
 	}
 	n := UserPublicNote{UserID: userID}
-	if err := DB.FirstOrCreate(&n, "user_id = ?", userID).Error; err != nil {
+	if err := d.db.FirstOrCreate(&n, "user_id = ?", userID).Error; err != nil {
 		return err
 	}
 	n.Notes = notes
-	return DB.Save(&n).Error
+	return d.db.Save(&n).Error
 }

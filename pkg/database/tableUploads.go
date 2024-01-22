@@ -1,8 +1,10 @@
 package database
 
 import (
+	"dkforest/pkg/config"
 	"dkforest/pkg/utils"
-	"io/ioutil"
+	html2 "html"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -23,14 +25,62 @@ type Upload struct {
 	User         User
 }
 
-// CreateUpload create file on disk in "uploads" folder, and save upload in database as well.
-func CreateUpload(fileName string, content []byte, userID UserID) (*Upload, error) {
-	return CreateUploadWithSize(fileName, content, userID, int64(len(content)))
+func (u *Upload) GetHTMLLink() string {
+	escapedOrigFileName := html2.EscapeString(u.OrigFileName)
+	return `<a href="/uploads/` + u.FileName + `" rel="noopener noreferrer" target="_blank">` + escapedOrigFileName + `</a>`
 }
 
-func CreateUploadWithSize(fileName string, content []byte, userID UserID, size int64) (*Upload, error) {
+func (u *Upload) GetContent() (os.FileInfo, []byte, error) {
+	filePath1 := filepath.Join(config.Global.ProjectUploadsPath.Get(), u.FileName)
+	f, err := os.Open(filePath1)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer f.Close()
+
+	fileBytes, _ := io.ReadAll(f)
+	decFileBytes, err := utils.DecryptAESMaster(fileBytes)
+	if err != nil {
+		decFileBytes = fileBytes
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, nil, err
+	}
+	return fi, decFileBytes, nil
+}
+
+func (u *Upload) Exists() bool {
+	filePath1 := filepath.Join(config.Global.ProjectUploadsPath.Get(), u.FileName)
+	return utils.FileExists(filePath1)
+}
+
+func (u *Upload) Delete(db *DkfDB) error {
+	if err := os.Remove(filepath.Join(config.Global.ProjectUploadsPath.Get(), u.FileName)); err != nil {
+		return err
+	}
+	if err := db.db.Delete(&u).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateUpload create file on disk in "uploads" folder, and save upload in database as well.
+func (d *DkfDB) CreateUpload(fileName string, content []byte, userID UserID) (*Upload, error) {
+	return d.createUploadWithSize(fileName, content, userID, int64(len(content)))
+}
+
+func (d *DkfDB) CreateEncryptedUploadWithSize(fileName string, content []byte, userID UserID, size int64) (*Upload, error) {
+	encryptedContent, err := utils.EncryptAESMaster(content)
+	if err != nil {
+		return nil, err
+	}
+	return d.createUploadWithSize(fileName, encryptedContent, userID, size)
+}
+
+func (d *DkfDB) createUploadWithSize(fileName string, content []byte, userID UserID, size int64) (*Upload, error) {
 	newFileName := utils.MD5([]byte(utils.GenerateToken32()))
-	if err := ioutil.WriteFile(filepath.Join("uploads", newFileName), content, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(config.Global.ProjectUploadsPath.Get(), newFileName), content, 0644); err != nil {
 		return nil, err
 	}
 	upload := Upload{
@@ -39,53 +89,57 @@ func CreateUploadWithSize(fileName string, content []byte, userID UserID, size i
 		OrigFileName: fileName,
 		FileSize:     size,
 	}
-	if err := DB.Create(&upload).Error; err != nil {
+	if err := d.db.Create(&upload).Error; err != nil {
 		logrus.Error(err)
 	}
 	return &upload, nil
 }
 
-func GetUploadByFileName(filename string) (out Upload, err error) {
-	err = DB.First(&out, "file_name = ?", filename).Error
+func (d *DkfDB) GetUploadByFileName(filename string) (out Upload, err error) {
+	err = d.db.First(&out, "file_name = ?", filename).Error
 	return
 }
 
-func GetUploadByID(uploadID UploadID) (out Upload, err error) {
-	err = DB.First(&out, "id = ?", uploadID).Error
+func (d *DkfDB) GetUploadByID(uploadID UploadID) (out Upload, err error) {
+	err = d.db.First(&out, "id = ?", uploadID).Error
 	return
 }
 
-func GetUploads() (out []Upload, err error) {
-	err = DB.Preload("User").Order("id DESC").Find(&out).Error
+func (d *DkfDB) GetUploads() (out []Upload, err error) {
+	err = d.db.Preload("User").Order("id DESC").Find(&out).Error
 	return
 }
 
-func GetUserUploads(userID UserID) (out []Upload, err error) {
-	err = DB.Order("id DESC").Find(&out, "user_id = ?", userID).Error
+func (d *DkfDB) GetUserUploads(userID UserID) (out []Upload, err error) {
+	err = d.db.Order("id DESC").Find(&out, "user_id = ?", userID).Error
 	return
 }
 
-func GetUserTotalUploadSize(userID UserID) int64 {
+func (d *DkfDB) GetUserTotalUploadSize(userID UserID) int64 {
 	var out struct{ TotalSize int64 }
-	if err := DB.Raw(`SELECT SUM(file_size) as total_size FROM uploads WHERE user_id = ?`, userID).Scan(&out).Error; err != nil {
+	if err := d.db.Raw(`SELECT SUM(file_size) as total_size FROM uploads WHERE user_id = ?`, userID).Scan(&out).Error; err != nil {
 		logrus.Error(err)
 	}
 	return out.TotalSize
 }
 
-func DeleteOldUploads() {
-	if err := DB.Exec(`DELETE FROM uploads WHERE created_at < date('now', '-1 Day')`).Error; err != nil {
+func (d *DkfDB) DeleteOldUploads() {
+	if err := d.db.Exec(`DELETE FROM uploads WHERE created_at < date('now', '-1 Day')`).Error; err != nil {
 		logrus.Error(err.Error())
 	}
-	fileInfo, err := ioutil.ReadDir("uploads")
+	entries, err := os.ReadDir(config.Global.ProjectUploadsPath.Get())
 	if err != nil {
 		logrus.Error(err.Error())
 		return
 	}
 	now := time.Now()
-	for _, info := range fileInfo {
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
 		if diff := now.Sub(info.ModTime()); diff > 24*time.Hour {
-			if err := os.Remove(filepath.Join("uploads", info.Name())); err != nil {
+			if err := os.Remove(filepath.Join(config.Global.ProjectUploadsPath.Get(), info.Name())); err != nil {
 				logrus.Error(err.Error())
 			}
 		}

@@ -9,12 +9,8 @@
 }
 
 .emoji {
-    background-image: url('/public/img/emojis_sm.png');
-    width: 18px;
-    height: 18px;
-    background-size: 486px 126px;
-    display: inline-block;
-    vertical-align: middle;
+    font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", Times, Symbola, Aegyptus, Code2000, Code2001, Code2002, Musica, serif, LastResort;
+    font-size: 17px;
 }
 
 .dropdown {
@@ -39,27 +35,28 @@ input[type=text], input[type=password], input[type=number], input[type=email], i
 
 .censored { background-color: black; color: black; padding: 0 3px; }
 .censored:hover { background-color: black; color: white; }
+.censored > a { color: black; }
+.censored > a:hover { color: #007053; text-decoration: underline; }
 
-input.transparent-input.is-invalid, textarea.transparent-input.is-invalid {
+pre.transparent-input.is-invalid, input.transparent-input.is-invalid, textarea.transparent-input.is-invalid, select.transparent-input.is-invalid {
     border: 1px solid rgba(200, 0, 0, 0.8) !important;
 }
-input.transparent-input, textarea.transparent-input {
+pre.transparent-input, input.transparent-input, textarea.transparent-input, select.transparent-input {
     background-color: rgba(50, 50, 50, 0.8) !important;
     border: 1px solid rgba(200, 255, 255, 0.8) !important;
     color: #ccc !important;
 }
-input.transparent-input:hover, textarea.transparent-input:hover {
+pre.transparent-input:hover, input.transparent-input:hover, textarea.transparent-input:hover, select.transparent-input:hover {
     background-color: rgba(50, 50, 50, 0.8) !important;
     border: 1px solid rgba(100, 200, 255, 0.8) !important;
 }
-input.transparent-input::placeholder, textarea.transparent-input::placeholder {
+input.transparent-input::placeholder, textarea.transparent-input::placeholder, select.transparent-input::placeholder {
     color: #aaa !important;
 }
 
 textarea.transparent-input {
     white-space: pre;
     overflow-wrap: normal;
-    overflow-x: scroll;
 }
 
 .bg-label {
@@ -144,4 +141,25 @@ textarea.transparent-input {
     transform: scale(1);
     opacity: 0;
     transition: all 0.4s ease;
+}
+
+.mono { font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace; }
+
+textarea {
+    white-space: pre;
+    overflow-wrap: normal;
+}
+
+.color-pkr { width: 120px; }
+
+.code-select {
+    background-color: rgb(79, 79, 79);
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.code-select code {
+    user-select: all;
+    -webkit-user-select: all;
+    display: block;
 }

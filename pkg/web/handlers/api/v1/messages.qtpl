@@ -1,0 +1,493 @@
+{% import "dkforest/pkg/database" %}
+{% import "dkforest/pkg/managers" %}
+{% import humanize "github.com/dustin/go-humanize" %}
+
+{%- func GenerateStyle(AuthUser *database.User, Data ChatMessagesData) -%}
+<style>
+   /* http://meyerweb.com/eric/tools/css/reset/
+       v2.0 | 20110126
+       License: none (public domain)
+    */
+    html, body, div, span, applet, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    a, abbr, acronym, address, big, cite, code,
+    del, dfn, em, img, ins, kbd, q, s, samp,
+    small, strike, strong, sub, sup, tt, var,
+    b, u, i, center,
+    dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend,
+    table, caption, tbody, tfoot, thead, tr, th, td,
+    article, aside, canvas, details, embed,
+    figure, figcaption, footer, header, hgroup,
+    menu, nav, output, ruby, section, summary,
+    time, mark, audio, video {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        font-size: 100%;
+        font: inherit;
+        vertical-align: baseline;
+    }
+    /* HTML5 display-role reset for older browsers */
+    article, aside, details, figcaption, figure,
+    footer, header, hgroup, menu, nav, section {
+        display: block;
+    }
+    body {
+        line-height: 1;
+    }
+    ol, ul {
+        list-style: none;
+    }
+    blockquote, q {
+        quotes: none;
+    }
+    blockquote:before, blockquote:after,
+    q:before, q:after {
+        content: '';
+        content: none;
+    }
+    table {
+        border-collapse: collapse;
+        border-spacing: 0;
+    }
+    /* --- end --- */
+
+    i { font-style: italic; }
+
+    /* Remove button padding in FF */
+    button::-moz-focus-inner {
+        border:0;
+        padding:0;
+    }
+
+    body { font-family: Lato,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"; }
+    a       { color: #00bc8c; text-decoration: none; }
+    a:hover { color: #007053; text-decoration: underline; }
+    .unread_room       { color: #2392da; text-decoration: none; }
+    .unread_room:hover { color: #004970; text-decoration: underline; }
+    .emoji {
+        font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", Times, Symbola, Aegyptus, Code2000, Code2001, Code2002, Musica, serif, LastResort;
+        font-size: 17px;
+    }
+    .mod-btn {
+        width: 16px; height: 16px;
+        margin: 0; padding: 0;
+        border: 1px solid gray;
+        display: inline;
+        text-align: center;
+        vertical-align: middle;
+        user-select: none;
+        background-color: #444;
+        color: #ea2a2a;
+        -webkit-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+        -moz-box-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+        -webkit-border-radius: 3px;
+        -moz-border-radius: 3px;
+    }
+    .mod-btn:hover {
+        background-color: #222;
+    }
+    .delete_msg_btn {
+        font-size: 15px;
+        line-height: 1;
+    }
+    @keyframes hide_btn {
+        100% { visibility: hidden;  }
+    }
+    @keyframes orange_btn {
+        99% { color: ea2a2a; } 100% { color: orange;  }
+    }
+    .delete_msg_btn::after { content: "×"; }
+    .hb_btn {
+        font-size: 10px;
+        line-height: 1.4;
+    }
+    .hb_btn::after { content: "hb"; }
+    .k_btn {
+        font-size: 10px;
+        line-height: 1.4;
+    }
+    .k_btn::after { content: "k"; }
+    .connection-closed {
+        color: #bf2718;
+        display: block;
+        position: fixed;
+        text-align: center;
+        top: 0;
+        left: calc(50% - 200px);
+        width: 400px;
+        z-index: 2;
+        background-color: #500000;
+        border: 2px solid #ff0000;
+    }
+    #manualrefresh {
+        {% if !Data.ForceManualRefresh %}
+            top: -200%;
+            animation: timeout_messages {%dl Data.ManualRefreshTimeout %}s forwards;
+        {% endif %}
+        color: #bf2718;
+        display: block;
+        position: fixed;
+        text-align: center;
+        left: calc(50% - 200px);
+        width: 400px;
+        z-index: 2;
+        background-color: #500000;
+        border: 2px solid #ff0000;
+    }
+    @keyframes timeout_messages {
+        0%   { top: -200%; }
+        99% { top: -200%; }
+        100% { top: 0; }
+    }
+    .date { color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+    .date-link:hover { color: #999; text-decoration: underline; }
+    .sysmsg { color: #fff; font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+    small { font-size: 80%; font-weight: 400; }
+    .msg { padding: 3px 0 3px 8px; border-bottom: 1px solid #444; color: #888; position: relative; }
+    .msg p:first-of-type { display: inline; }
+    strong { font-weight: bold; }
+    em { font-style: italic; }
+    pre { border: 1px solid #2b442b; padding: 2px; margin: 2px 0; max-height: {%dl AuthUser.CodeBlockHeight %}px; overflow: auto; background-color: rgba(39,40,34,0.6) !important;
+        font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
+    .fullscreen { position: absolute; margin-top: -19px; right: 3px; }
+    code {  border: 1px solid #2b442b; color: #f92672; padding: 0 2px; margin: 0px 0; background-color: rgba(39,40,34,0.6) !important; }
+    .censored { background-color: black; color: black; padding: 0 3px; }
+    .censored:hover { background-color: black; color: white; }
+    .censored > a { color: black; }
+    .censored > a:hover { color: #007053; text-decoration: underline; }
+    ul { list-style-type: disc; margin: 0 0 0 15px; }
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    .afk-indicator { color: #ff9a27; }
+    .spacer16 { display: inline-block; width: 16px; }
+    .spacer36 { display: inline-block; width: 36px; }
+    .spacer56 { display: inline-block; width: 56px; }
+    .d-inline { display: inline; }
+    .o-wrap { overflow-wrap: break-word; }
+    .f-def-clr { color: #888; }
+    .f-orange-clr { color: orange; }
+    .f-white-clr, .f-white-clr:hover { color: white; }
+    .line-through { text-decoration: line-through; }
+    .hb-row { background-color: rgba(0, 0, 0, 0.7); opacity: {%f AuthUser.GetHellbanOpacityF64() %}; }
+    .own-highlight { background-color: rgba(255,241,176,0.05); }
+    .read-marker { border-style: outset; border-top: {%dl AuthUser.ChatReadMarkerSize %}px solid {%s AuthUser.ChatReadMarkerColor %}; }
+    #msgs { {% if !Data.HideRightColumn %}width: calc(100% - 185px); float: left; {% endif %}line-height: 1.2; }
+    #no-msg { padding-left: 10px; color: #ddd; }
+    #rgt-pane-w { width: 150px; height: 100%; position: fixed; right: 15px; overflow-y: auto; }
+    #rgt-pane { line-height: 1.15; }
+    .rgt-title { font-weight: bolder; color: #ced4da; }
+    .mb-20px { margin-bottom: 20px; }
+    .mb-30px { margin-bottom: 30px; }
+    .mt-5px { margin-top: 5px; }
+    .mt-10px { margin-top: 10px; }
+    .notif, .notif:hover { color: #e74c3c; }
+    #msg-err { background-color: #8f2d2d; color: #ffffff; padding: 1px 5px 2px 5px; display: block; text-decoration: none; }
+    #i {
+        background-color: #006400;
+        width: 18px;
+        height: 18px;
+        position: fixed;
+        top: 1px;
+        right: {% if !Data.HideRightColumn %}35px{% else %}8px{% endif %};
+        border-radius: 9px;
+        animation: i1 30s forwards;
+    }
+    @keyframes i1 { 0% { background-color: #006400; } 32% { background-color: #006400; } 33% { background-color: #626400; } 99% { background-color: #626400; } 100% { background-color: #8b0000; } }
+    @keyframes i2 { 0% { background-color: #006400; } 32% { background-color: #006400; } 33% { background-color: #626400; } 99% { background-color: #626400; } 100% { background-color: #8b0000; } }
+    @keyframes horizontal-shaking1 {
+        0% { transform: translateX(0) }
+        25% { transform: translateX(9px) }
+        50% { transform: translateX(-9px) }
+        75% { transform: translateX(9px) }
+        100% { transform: translateX(0) }
+    }
+    @keyframes horizontal-shaking2 {
+        0% { transform: translateX(0) }
+        25% { transform: translateX(9px) }
+        50% { transform: translateX(-9px) }
+        75% { transform: translateX(9px) }
+        100% { transform: translateX(0) }
+    }
+</style>
+{%- endfunc -%}
+
+{% func Messages(VERSION, CSRF, NullUsername string, AuthUser *database.User, Data ChatMessagesData) -%}
+<html lang="en">
+    <head>
+        <title></title>
+        {%- if !Data.ChatMenuData.PreventRefresh && !Data.ForceManualRefresh -%}<meta http-equiv="refresh" content="{%dl AuthUser.RefreshRate %}">{%- endif -%}
+        {%- if AuthUser.CollectMetadata -%}<link rel="stylesheet" type="text/css" href="/public/css/meta.css?v={%s VERSION %}" />{%- endif -%}
+        {%-= GenerateStyle(AuthUser, Data) -%}
+    </head>
+    <body>
+
+        {%- if Data.ForceManualRefresh -%}
+            <div id="manualrefresh">
+                <h4>Manual refresh required</h4>
+                <form method="get" action="/chat/{%s Data.ChatMenuData.RoomName %}" target="_top">
+                    <input type="submit" value="Reload" />
+                </form>
+            </div>
+        {%- elseif !Data.ChatMenuData.PreventRefresh -%}
+            <div id="manualrefresh">
+                <h4>Manual refresh required</h4>
+                <form method="get">
+                    <input type="submit" value="Reload" />
+                </form>
+            </div>
+        {%- endif -%}
+
+        {%- if Data.Error != "" -%}
+            <a href="/api/v1/chat/messages/{%s Data.ChatMenuData.RoomName %}" id="msg-err">× {%s Data.Error %}</a>
+        {%- endif -%}
+
+        {%- if Data.PmSound || Data.TaggedSound -%}
+            <audio src="/public/mp3/sound5.mp3" autoplay></audio>
+        {%- elseif Data.NewMessageSound -%}
+            <audio src="/public/mp3/sound6.mp3" autoplay></audio>
+        {%- endif -%}
+
+        <div id="msgs">
+            {%-= RenderMessages(AuthUser, Data, CSRF, NullUsername, nil, false) -%}
+        </div>
+
+        {% if !AuthUser.HideRightColumn %}
+            <div id="rgt-pane-w">
+                {%-= RenderRightColumn(AuthUser, Data.ChatMenuData) -%}
+            </div>
+        {%- endif -%}
+        {%- if AuthUser.CollectMetadata -%}
+            <div class="div_1"></div>
+            <div class="div_2"></div>
+            <div class="div_f0">a</div>
+        {%- endif -%}
+    </body>
+</html>
+{% endfunc %}
+
+
+{%- func RenderRightColumn(AuthUser *database.User, Data ChatMenuData) -%}
+<div id="rgt-pane">
+    <div class="mb-20px">
+        <div class="rgt-title">Inbox (<a href="/settings/inbox" target="_top"{% if Data.InboxCount > 0 %}class="notif"{% endif %}>{%dl Data.InboxCount %}</a>)</div>
+    </div>
+    <div class="mb-20px">
+        <div class="rgt-title">Rooms:</div>
+        {%- for _, e := range Data.OfficialRooms -%}
+            {%- if e.Name == "club" -%}
+                {%- if AuthUser.IsClubMember -%}
+                    <div><a href="/chat/club" target="_top"{% if e.IsUnread %} class="unread_room"{% endif %}>#club</a></div>
+                {%- endif -%}
+            {%- elseif e.Name == "moderators" -%}
+                {%- if AuthUser.IsModerator() -%}
+                    <div><a href="/chat/moderators" target="_top"{% if e.IsUnread %} class="unread_room"{% endif %}>#moderators</a></div>
+                {%- endif -%}
+            {%- else -%}
+                <div><a href="/chat/{%s e.Name %}" target="_top"{% if e.IsUnread %} class="unread_room"{% endif %}>#{%s e.Name %}</a></div>
+            {%- endif -%}
+        {%- endfor -%}
+        {%- if len(Data.SubscribedRooms) > 0 -%}
+            <div class="mt-10px"></div>
+            {%- for _, e := range Data.SubscribedRooms -%}
+                <div><a href="/chat/{%s e.Name %}" target="_top"{% if e.IsUnread %} class="unread_room"{% endif %}>#{%s e.Name %}</a></div>
+            {%- endfor -%}
+        {%- endif -%}
+        <div class="mt-5px"><a href="/rooms" target="_top">[...]</a></div>
+    </div>
+    <div class="mb-20px">
+        <div class="rgt-title">In this room:</div>
+        {%- for _, e := range Data.Members -%}
+            {%= Member(AuthUser, Data, e) %}
+        {%- endfor -%}
+    </div>
+    {%- if Data.VisibleMemberInChat || AuthUser.DisplayHellbanned -%}
+        <div class="mb-30px">
+            {%- if len(Data.MembersInChat) > 0 -%}
+                <div class="rgt-title">In other rooms:</div>
+                {%- for _, e := range Data.MembersInChat -%}
+                    {%= Member(AuthUser, Data, e) %}
+                {%- endfor -%}
+            {%- endif -%}
+        </div>
+    {%- endif -%}
+</div>
+{%- endfunc -%}
+
+{%- func RenderMessages(AuthUser database.IUserRenderMessage, Data ChatMessagesData, CSRF, NullUsername string, readMarkerRev *int, isEdit bool) -%}
+    {%- code
+        baseTopBarURL := "/api/v1/chat/top-bar/" + Data.ChatMenuData.RoomName
+        readMarkerRendered := false
+        isFirstMsg := true
+    -%}
+    {%- for idx, e := range Data.Messages -%}
+        {%-= RenderMessage(idx, e, AuthUser, Data, baseTopBarURL, &readMarkerRendered, &isFirstMsg, CSRF, NullUsername, readMarkerRev, isEdit) -%}
+    {% endfor %}
+    {% if len(Data.Messages) == 0 %}
+        <div id="no-msg"><em>No message yet</em></div>
+    {% endif %}
+{%- endfunc -%}
+
+{%- func RenderMessage(idx int, e database.ChatMessage, AuthUser database.IUserRenderMessage,
+    Data ChatMessagesData, baseTopBarURL string, readMarkerRendered, isFirstMsg *bool, CSRF, NullUsername string, readMarkerRev *int, isEdit bool) -%}
+    {%- if e.UserCanSee(AuthUser) -%}
+        {%- if AuthUser.GetChatReadMarkerEnabled() && e.CreatedAt.Before(Data.ReadMarker.ReadAt) && !*readMarkerRendered  && !isEdit%}
+            <div class="read-marker read-marker-0"{% if idx == 0 %} style="display:none;"{% endif %}></div>
+            {%- code *readMarkerRendered = true -%}
+        {%- elseif AuthUser.GetChatReadMarkerEnabled() && e.CreatedAt.After(Data.ReadMarker.ReadAt) && !*readMarkerRendered && isEdit && readMarkerRev != nil -%}
+            <style>.read-marker-{%d (*readMarkerRev) %}{display:none !important;}</style>
+            {%- code *readMarkerRev++ -%}
+            <div class="read-marker read-marker-{%d *readMarkerRev %}"></div>
+            {%- code *readMarkerRendered = true -%}
+        {% endif %}
+        <div id="msgid-{%s e.UUID %}" class="msgidc-{%s e.UUID %}-{%dl e.Rev %} msg
+            {%- if (e.User.IsHellbanned || e.IsHellbanned) && AuthUser.GetDisplayHellbanned() %} hb-row
+            {%- elseif AuthUser.GetID() == e.User.ID && AuthUser.GetHighlightOwnMessages() %} own-highlight{%- endif -%}
+        ">
+            {%- if e.UserCanDelete(AuthUser) -%}
+                {%- if AuthUser.GetDisplayDeleteButton() -%}
+                    {%- if e.TooOldToDelete() -%}
+                        <button id="btn_delete_{%s e.UUID %}" class="mod-btn delete_msg_btn f-orange-clr" title="delete"></button>
+                    {%- else -%}
+                        <button id="btn_delete_{%s e.UUID %}" class="mod-btn delete_msg_btn" title="delete"
+                            style="
+                            {%- if string(e.User.Username) != NullUsername -%}
+                                {%- if (AuthUser.IsModerator() && e.UserID != AuthUser.GetID()) || AuthUser.GetIsAdmin() || e.IsRoomOwner(AuthUser.GetID()) -%}
+                                    animation: {%dl e.DeleteSecondsRemaining() %}s 1s forwards orange_btn;
+                                {%- else -%}
+                                    animation: {%dl e.DeleteSecondsRemaining() %}s 1s forwards hide_btn;
+                                {%- endif -%}
+                            {%- endif -%}
+                            "
+                            ></button>
+                    {%- endif -%}
+                    <style>#btn_delete_{%s e.UUID %}:active { background-image: url('/api/v1/chat/messages/delete/{%s e.UUID %}'); }</style>
+                {%- endif -%}
+                {%- if AuthUser.IsModerator() -%}
+                    {%- if !e.OwnMessage(AuthUser.GetID()) -%}
+                        {%- if AuthUser.GetDisplayHellbanButton() -%}
+                            {%- if string(e.User.Username) == NullUsername -%}
+                                <div class="spacer16"></div>
+                            {%- else -%}
+                                {%- if e.User.IsHellbanned -%}
+                                    <form method="post" action="/api/v1/users/{%s e.UserID.String() %}/unhellban" class="d-inline">
+                                        <input type="hidden" name="csrf" value="{%s CSRF %}" />
+                                        <button class="mod-btn hb_btn f-orange-clr line-through" title="unhellban"></button>
+                                    </form>
+                                {%- else -%}
+                                    <form method="post" action="/api/v1/users/{%s e.UserID.String() %}/hellban" class="d-inline">
+                                        <input type="hidden" name="csrf" value="{%s CSRF %}" />
+                                        <button class="mod-btn hb_btn f-orange-clr" title="hellban"></button>
+                                    </form>
+                                {%- endif -%}
+                            {%- endif -%}
+                        {%- endif -%}
+                        {%- if AuthUser.GetDisplayKickButton() -%}
+                            <form method="post" action="/api/v1/users/{%s e.UserID.String() %}/kick" class="d-inline">
+                                <input type="hidden" name="csrf" value="{%s CSRF %}" />
+                                <button class="mod-btn k_btn f-orange-clr" title="kick"></button>
+                            </form>
+                        {%- endif -%}
+                    {%- else -%}
+                        {%- if AuthUser.GetDisplayKickButton() && AuthUser.GetDisplayHellbanButton() -%}
+                            <div class="spacer36"></div>
+                        {%- elseif AuthUser.GetDisplayKickButton() || AuthUser.GetDisplayHellbanButton() -%}
+                            <div class="spacer16"></div>
+                        {%- endif -%}
+                    {%- endif -%}
+                {%- endif -%}
+            {%- else -%}
+                {%- if Data.NbButtons == 3 -%}
+                    <div class="spacer56"></div>
+                {%- elseif Data.NbButtons == 2 -%}
+                    <div class="spacer36"></div>
+                {%- elseif Data.NbButtons == 1 -%}
+                    <div class="spacer16"></div>
+                {%- endif -%}
+            {%- endif -%}
+            {%- if !Data.HideTimestamps -%}
+                <a href="{%s baseTopBarURL %}?quote={%s e.UUID %}{%= unesc(Data.TopBarQueryParams) %}" target="iframe1" class="date date-link" title="{%s e.CreatedAt.Format("01-02 15:04:05") %}{% if *isFirstMsg %} ({%s humanize.Time(e.CreatedAt) %}){% endif %}">{%s e.CreatedAt.Format(AuthUser.GetDateFormat()) %}</a>
+                {% code *isFirstMsg = false %}
+            {%- endif -%}
+            <a href="/u/{%s string(e.GetProfile(AuthUser.GetID())) %}" target="_blank" class="f-def-clr">-</a>
+            {%- if e.System -%}
+                <span class="sysmsg">{%= unesc(e.Message) %}</span>
+            {%- else -%}
+                {%- if e.Moderators -%}<span class="sysmsg">[<a href="{%s baseTopBarURL %}?m=1{%= unesc(Data.TopBarQueryParams) %}" target="iframe1" class="sysmsg f-white-clr">M</a>]</span>&nbsp;{%- endif -%}
+                {%- if e.GroupID != nil -%}<span class="sysmsg">[<a href="{%s baseTopBarURL %}?g={%s e.Group.Name %}{%= unesc(Data.TopBarQueryParams) %}" target="iframe1" class="sysmsg f-white-clr">{%s e.Group.Name %}</a>]</span>&nbsp;{%- endif -%}
+                {%- if e.ToUserID != nil -%}
+                    [{%-= fromUsername(AuthUser, Data, e, baseTopBarURL) -%}
+                    →
+                    {%- if e.ToUser.ID == AuthUser.GetID() -%}<span {%= unesc(e.ToUser.GenerateChatStyle()) %}>{%s string(e.ToUser.Username) %}</span>{%- else -%}<a {%= unesc(e.ToUser.GenerateChatStyle()) %} href="{%s baseTopBarURL %}?pm={%s string(e.ToUser.Username) %}{%s Data.TopBarQueryParams %}" target="iframe1">{%s string(e.ToUser.Username) %}</a>{%- endif -%}] -
+                {%- else -%}
+                    {%-= fromUsername(AuthUser, Data, e, baseTopBarURL) -%}
+                    {%- if !e.IsMe() -%}
+                        {%- if AuthUser.CanSeeHB() && (e.IsHellbanned || e.User.IsHellbanned) && (e.ToUserID == nil) -%}
+                            <a href="{%s baseTopBarURL %}?hbm=1{%= unesc(Data.TopBarQueryParams) %}" target="iframe1" class="f-def-clr">-</a>
+                        {%- else -%}
+                            -
+                        {%- endif -%}
+                    {%- endif -%}
+                {%- endif -%}
+                <span {%= unesc(e.User.GenerateChatStyle()) %}><span class="o-wrap">{%s= unesc(e.MsgToDisplay(AuthUser)) %}</span></span>
+            {%- endif -%}
+        </div>
+    {%- endif -%}
+{%- endfunc -%}
+
+
+{% func Member(AuthUser *database.User, Data ChatMenuData, El managers.UserInfo) %}
+    {%- code baseTopBarURL := "/api/v1/chat/top-bar/" + Data.RoomName -%}
+    {%- if El.Username == AuthUser.GetUsername() -%}
+        <div>
+            <span style="color: {%s El.Color %};">{%s string(El.Username) %}</span>
+            {%- if El.AfkIndicatorEnabled -%}
+                <small class="afk-indicator">afk</small>
+            {%- endif -%}
+        </div>
+    {%- else -%}
+        {%- if !El.IsHellbanned || AuthUser.GetID() == El.UserID || (El.IsHellbanned && AuthUser.GetIsHellbanned()) || AuthUser.GetDisplayHellbanned() -%}
+            <div>
+                {%- code tagType := "tag" -%}
+                {%- if AuthUser.CanSeeHB() && El.IsHellbanned -%}
+                    {%- code tagType = "htag" -%}
+                {%- endif -%}
+                {%- stripspace -%}
+                    <a href="{%s baseTopBarURL %}?{%s tagType %}={%s string(El.Username) %}{%= unesc(Data.TopBarQueryParams) %}"
+                       target="iframe1"
+                       {% if El.IsHellbanned && AuthUser.GetDisplayHellbanned() %}class="hb-row"{% endif %}
+                       style="color: {%s El.Color %};">{%s string(El.Username[0]) %}</a>
+                    <a href="{%s baseTopBarURL %}?pm={%s string(El.Username) %}{%= unesc(Data.TopBarQueryParams) %}"
+                       target="iframe1"
+                       {% if El.IsHellbanned && AuthUser.GetDisplayHellbanned() %}class="hb-row"{% endif %}
+                       style="color: {%s El.Color %};">{%s string(El.Username[1 : len(El.Username)-1]) %}</a>
+                    <a href="/u/{%s string(El.Username) %}"
+                       rel="noopener noreferrer" target="_blank"
+                       {% if El.IsHellbanned && AuthUser.GetDisplayHellbanned() %}class="hb-row"{% endif %}
+                       style="color: {%s El.Color %};">{%s string(El.Username[len(El.Username)-1]) %}</a>
+                {%- endstripspace -%}
+                {%- if El.AfkIndicatorEnabled -%}
+                    <small class="afk-indicator">afk</small>
+                {%- endif -%}
+            </div>
+        {%- endif -%}
+    {%- endif -%}
+{% endfunc %}
+
+
+{%- func fromUsername(AuthUser database.IUserRenderMessage, Data ChatMessagesData, El database.ChatMessage, baseTopBarURL string) -%}
+    {%- code tagType := "tag" -%}
+    {%- if El.ToUserID != nil -%}
+        {%- code tagType = "pm" -%}
+    {%- elseif AuthUser.CanSeeHB() && (El.IsHellbanned || El.User.IsHellbanned) -%}
+        {%- code tagType = "htag" -%}
+    {%- elseif AuthUser.IsModerator() && El.Moderators -%}
+        {%- code tagType = "mtag" -%}
+    {%- endif -%}
+    {%- if El.User.ID == AuthUser.GetID() -%}
+        {%- if El.CanBeEdited() -%}<a {%= unesc(El.User.GenerateChatStyle()) %} href="{%s baseTopBarURL %}?e={%s El.CreatedAt.Format("15:04:05") %}{%= unesc(Data.TopBarQueryParams) %}" target="iframe1">{%s string(El.User.Username) %}</a>{%- else -%}<span {%= unesc(El.User.GenerateChatStyle()) %}>{%s string(El.User.Username) %}</span>{%- endif -%}
+    {%- else -%}<a {%= unesc(El.User.GenerateChatStyle()) %} href="{%s baseTopBarURL %}?{%s tagType %}={%s string(El.User.Username) %}{%= unesc(Data.TopBarQueryParams) %}" target="iframe1">{%s string(El.User.Username) %}</a>{%- endif -%}
+{%- endfunc -%}

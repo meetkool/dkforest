@@ -9,6 +9,9 @@
 </style>
 <div>
     <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" class="captcha-img" />
+    {{ if .Data.CaptchaAnswerImg }}
+        <img src="data:image/png;base64,{{ .Data.CaptchaAnswerImg }}" alt="captcha answer" class="captcha-img" />
+    {{ end }}
     <div><a href="/captcha-help">Need help to solve the captcha?</a></div>
 </div>
 {{ end }}

@@ -13,27 +13,27 @@ type UserForumThreadSubscription struct {
 	User      User
 }
 
-func (s *UserForumThreadSubscription) DoSave() {
-	if err := DB.Save(s).Error; err != nil {
+func (s *UserForumThreadSubscription) DoSave(db *DkfDB) {
+	if err := db.db.Save(s).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func SubscribeToForumThread(userID UserID, threadID ForumThreadID) (err error) {
-	return DB.Create(&UserForumThreadSubscription{UserID: userID, ThreadID: threadID}).Error
+func (d *DkfDB) SubscribeToForumThread(userID UserID, threadID ForumThreadID) (err error) {
+	return d.db.Create(&UserForumThreadSubscription{UserID: userID, ThreadID: threadID}).Error
 }
 
-func UnsubscribeFromForumThread(userID UserID, threadID ForumThreadID) (err error) {
-	return DB.Delete(&UserForumThreadSubscription{}, "user_id = ? AND thread_id = ?", userID, threadID).Error
+func (d *DkfDB) UnsubscribeFromForumThread(userID UserID, threadID ForumThreadID) (err error) {
+	return d.db.Delete(&UserForumThreadSubscription{}, "user_id = ? AND thread_id = ?", userID, threadID).Error
 }
 
-func IsUserSubscribedToForumThread(userID UserID, threadID ForumThreadID) bool {
+func (d *DkfDB) IsUserSubscribedToForumThread(userID UserID, threadID ForumThreadID) bool {
 	var count int64
-	DB.Model(UserForumThreadSubscription{}).Where("user_id = ? AND thread_id = ?", userID, threadID).Count(&count)
+	d.db.Model(UserForumThreadSubscription{}).Where("user_id = ? AND thread_id = ?", userID, threadID).Count(&count)
 	return count == 1
 }
 
-func GetUsersSubscribedToForumThread(threadID ForumThreadID) (out []UserForumThreadSubscription, err error) {
-	err = DB.Preload("User").Find(&out, "thread_id = ?", threadID).Error
+func (d *DkfDB) GetUsersSubscribedToForumThread(threadID ForumThreadID) (out []UserForumThreadSubscription, err error) {
+	err = d.db.Preload("User").Find(&out, "thread_id = ?", threadID).Error
 	return
 }

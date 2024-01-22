@@ -21,6 +21,19 @@
 
 <hr />
 
+<form method="get" class="mb-3" target="_blank" action="/debug/pprof/profile">
+    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+    <input type="hidden" name="formName" value="pprof" />
+    <div class="input-group" style="width: 150px;">
+        <input type="number" name="seconds" value="10" class="form-control" />
+        <div class="input-group-append">
+            <button class="btn btn-secondary">{{ t "pprof" . }}</button>
+        </div>
+    </div>
+</form>
+
+<hr />
+
 <form id="" method="post" class="mb-3">
     <input type="hidden" name="csrf" value="{{ .CSRF }}" />
     <input type="hidden" name="formName" value="saveSettings" />
@@ -80,12 +93,30 @@
         </div>
         <label class="form-check-label" for="maybeAuthEnabled">Maybe auth enabled</label>
     </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="powEnabled" id="powEnabled" value="1"{{ if .Data.PowEnabled }} checked{{ end }} />
+            <label for="powEnabled" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="powEnabled">Proof of work enabled</label>
+    </div>
+    <div class="form-check form-check-1">
+        <div class="checkbox-wrapper form-check-input">
+            <input class="my-cbx" type="checkbox" name="pokerWithdrawEnabled" id="pokerWithdrawEnabled" value="1"{{ if .Data.PokerWithdrawEnabled }} checked{{ end }} />
+            <label for="pokerWithdrawEnabled" class="toggle"><span></span></label>
+        </div>
+        <label class="form-check-label" for="pokerWithdrawEnabled">Poker withdraw enabled</label>
+    </div>
     <div>
         <label class="form-check-label" for="captchaDifficulty">Captcha difficulty</label>
         <select name="captchaDifficulty" id="captchaDifficulty">
             <option value="1"{{ if eq .Data.CaptchaDifficulty 1 }} selected{{ end }}>Easy</option>
             <option value="2"{{ if eq .Data.CaptchaDifficulty 2 }} selected{{ end }}>Hard</option>
         </select>
+    </div>
+    <div>
+        <label class="form-check-label" for="moneroPrice">Monero price</label>
+        <input type="text" name="moneroPrice" id="moneroPrice" value="{{ .Data.MoneroPrice }}" />
     </div>
     <div class="form-group mt-3">
         <button class="btn btn-primary" type="submit"><i class="fa fa-save"></i> Save</button>

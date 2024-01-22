@@ -1,6 +1,8 @@
 package database
 
 import (
+	"dkforest/pkg/config"
+	"dkforest/pkg/utils"
 	"time"
 
 	hutils "dkforest/pkg/web/handlers/utils"
@@ -19,9 +21,17 @@ type Gist struct {
 	CreatedAt time.Time
 }
 
-func GetGistByUUID(uuid string) (out Gist, err error) {
-	err = DB.First(&out, "uuid = ?", uuid).Error
+func (d *DkfDB) GetGistByUUID(uuid string) (out Gist, err error) {
+	err = d.db.First(&out, "uuid = ?", uuid).Error
 	return
+}
+
+func GetGistPasswordHash(password string) string {
+	return utils.Sha512(getGistSaltedPasswordBytes(password))
+}
+
+func getGistSaltedPasswordBytes(password string) []byte {
+	return getSaltedPasswordBytes(config.GistPasswordSalt, password)
 }
 
 func (g *Gist) HasAccess(c echo.Context) bool {
@@ -40,8 +50,8 @@ func (g *Gist) HasAccess(c echo.Context) bool {
 }
 
 // DoSave user in the database, ignore error
-func (g *Gist) DoSave() {
-	if err := DB.Save(g).Error; err != nil {
+func (g *Gist) DoSave(db *DkfDB) {
+	if err := db.db.Save(g).Error; err != nil {
 		logrus.Error(err)
 	}
 }

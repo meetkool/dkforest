@@ -1,0 +1,16 @@
+[Unit]
+Description=DarkForest
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=dkf
+WorkingDirectory=/home/dkf
+ExecStart=/home/dkf/monero-wallet-rpc --wallet-file /home/dkf/dkf-poker.keys --daemon-ssl-allow-any-cert --proxy 127.0.0.1:9050 --daemon-address 18.169.212.248:18081 --rpc-bind-port 6061 --password '' --disable-rpc-login
+LimitNOFILE=65536
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

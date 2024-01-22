@@ -4,7 +4,7 @@
         <div class="card mb-3">
             <div class="card-body">
                 {{ t "Created at" $ }}: {{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}<br />
-                {{ t "Expires at" $ }}: {{ .ExpiresAt.Format "Jan 02, 2006 15:04:05" }}<br />
+                {{ t "Expires at" $ }}: {{ .ExpiresAt.Format "Jan 02, 2006 15:04:05" }} ({{ .ExpiresAt | until }})<br />
                 {{ if .CurrentSession }}
                     {{ t "Your current session" $ }}
                     <form method="post" class="mt-3">

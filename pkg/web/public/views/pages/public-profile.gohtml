@@ -1,15 +1,10 @@
 {{ define "extra-head" }}
 <style>
-    textarea {
-        white-space: pre;
-        overflow-wrap: normal;
-        overflow-x: scroll;
-        background-color: rgba(255,255,255,.2) !important;
-        color: #fff !important;
-    }
     table td {
         padding-right: 10px;
     }
+    .thumbnail { width: 130px; height: 130px; margin-right: 10px; }
+    .username { font-size: 25px; }
 </style>
 {{ end }}
 
@@ -20,7 +15,7 @@
     <table>
         <tr>
             <td rowspan="5">
-                <div class="img-thumbnail" style="width: 130px; height: 130px; margin-right: 10px;">
+                <div class="img-thumbnail thumbnail">
                     {{ if .Data.User.Avatar }}
                         <img src="data:image;base64,{{ .Data.User.Avatar | b64 }}" alt="avatar" />
                     {{ else }}
@@ -29,7 +24,7 @@
                 </div>
             </td>
             <td colspan="2">
-                <span {{ .Data.UserStyle | attr }}><span style="font-size: 25px;">{{ .Data.User.Username }}</span></span>
+                <span {{ .Data.UserStyle | attr }}><span class="username">{{ .Data.User.Username }}</span></span>
                 {{ if .AuthUser }}
                     {{ if .AuthUser.IsAdmin }}
                         <a href="/admin/users/{{ .Data.User.ID }}/edit" class="btn btn-secondary btn-sm">Edit</a>
@@ -37,9 +32,25 @@
                 {{ end }}
             </td>
         </tr>
-        <tr><td>Joined:</td><td><span>{{ .Data.User.CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span></td></tr>
+        <tr>
+            <td>Joined:</td>
+            <td>
+                <span>
+                    {{ .Data.User.CreatedAt.Format "Jan 02, 2006" }}
+                    {{ if .AuthUser }}{{ if .AuthUser.IsAdmin }}<span style="color: red;">{{ .Data.User.CreatedAt.Format "15:04:05" }}</span>{{ end }}{{ end }}
+                </span>
+            </td>
+        </tr>
         {{ if .Data.User.LastSeenPublic }}
-            <tr><td>Last seen:</td><td><span>{{ .Data.User.LastSeenAt.Format "Jan 02, 2006 15:04:05" }}</span></td></tr>
+            <tr>
+                <td>Last seen:</td>
+                <td>
+                    <span>
+                        {{ .Data.User.LastSeenAt.Format "Jan 02, 2006" }}
+                        {{ if .AuthUser }}{{ if .AuthUser.IsAdmin }}<span style="color: red;">{{ .Data.User.LastSeenAt.Format "15:04:05" }}</span>{{ end }}{{ end }}
+                    </span>
+                </td>
+            </tr>
         {{ else if .AuthUser }}
             {{ if .AuthUser.IsAdmin }}
                 <tr><td>Last seen (admin only):</td><td><span>{{ .Data.User.LastSeenAt.Format "Jan 02, 2006 15:04:05" }}</span></td></tr>
@@ -49,16 +60,17 @@
         <tr><td>Homepage:</td><td><span>{{ if .Data.User.Website }}<a href="{{ .Data.User.Website }}" rel="noopener noreferrer" target="_blank">{{ .Data.User.Website }}</a>{{ else }}none{{ end }}</span></td></tr>
         <tr><td>Email:</td><td><span>{{ if .Data.User.Email }}{{ .Data.User.Email }}{{ else }}none{{ end }}</span></td></tr>
     </table>
+    <a href="/forum/search?author={{ .Data.User.Username }}">forum threads</a>
     <div class="mt-3">
         <label>Age public key:</label>
-        {{ if .Data.User.AgePublicKey }}{{ .Data.User.AgePublicKey }}{{ else }}none{{ end }}
+        <span style="color: #c0ebff;">{{ if .Data.User.AgePublicKey }}{{ .Data.User.AgePublicKey }}{{ else }}none{{ end }}</span>
     </div>
     <div class="mt-3">
-        <label for="pgpPublicKey">PGP key:</label><br />
-        <textarea id="pgpPublicKey" rows="10" class="form-control" readonly style="font-family: SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">{{ .Data.User.GPGPublicKey }}</textarea>
+        <label for="pgpPublicKey">PGP key: <span style="color: #82e17f;">{{ .Data.User.GPGPublicKey | getKeyFingerprint }}</span></label><br />
+        <textarea id="pgpPublicKey" rows="10" class="form-control mono" readonly>{{ .Data.User.GPGPublicKey }}</textarea>
     </div>
     <div class="mt-3">
-        <label for="publicNotes">Public notes:{{ if .Data.PublicNotes.Notes }} <small>(last edited: {{ .Data.PublicNotes.UpdatedAt.Format "Jan 02, 2006 15:04" }}){{ end }}</small></label><br />
+        <label for="publicNotes">Public notes:{{ if .Data.PublicNotes.Notes }} <small>(last edited: {{ .Data.PublicNotes.UpdatedAt.Format "Jan 02, 2006" }}){{ end }}</small></label><br />
         <textarea id="publicNotes" rows="10" class="form-control" readonly>{{ .Data.PublicNotes.Notes }}</textarea>
     </div>
 </div>

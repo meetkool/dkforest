@@ -1,0 +1,21 @@
+{{ define "content" }}
+    <div id="parent">
+        <div class="container" id="form_login">
+            <div class="row">
+                <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                    <div class="card" style="background-color: rgba(0, 0, 0, 0.7);">
+                        <div class="card-header" style="background-color: rgba(50, 50, 50, 0.7); color: #ccc;">
+                            <strong>{{ t "Upload file not found" . }}</strong>
+                        </div>
+                        <div class="card-body">
+                            <p>
+                                This file no longer exists.<br />
+                                Uploaded files are automatically deleted after 24h.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{{ end }}

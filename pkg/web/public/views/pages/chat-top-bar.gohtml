@@ -58,20 +58,28 @@
             [list]::-webkit-calendar-picker-indicator {
                 display: none !important;
             }
+
+            #top-bar-form { margin: 0; padding: 5px 0 0 0; }
+            #refresh-btn { line-height: 20px; }
+            #file-upload-btn { height: 16px; font-size: 9px; margin-top: 2px; margin-left: 5px; position: absolute; }
+            #err-lbl { color: #e74c3c; font-size: 80%; }
+            #success-lbl { color: #198754; font-size: 80%; }
+            #username-td { padding-right: 5px; }
+            #links-td { color: #aaa; }
         </style>
     </head>
     <body>
-        <form method="post" style="margin: 0; padding: 5px 0 0 0;" enctype="multipart/form-data">
+        <form method="post" id="top-bar-form" enctype="multipart/form-data">
             <input type="hidden" name="csrf" value="{{ .CSRF }}" />
             <table>
                 <tr>
-                    <td style="padding-right: 5px;"><span {{ .AuthUser.GenerateChatStyle | attr }}>{{ .AuthUser.Username }}</span></td>
+                    <td id="username-td"><span {{ .AuthUser.GenerateChatStyle | attr }}>{{ .AuthUser.Username }}</span></td>
                     <td>
                         <div class="wrapper">
                             {{ if .Data.Multiline }}
-                                <textarea name="message" maxlength="10000" autocomplete="off" autofocus>{{ .Data.Message }}</textarea>
+                                <textarea name="message" maxlength="10000" autocomplete="off"{{ if .AuthUser.SpellcheckEnabled }} spellcheck="true"{{ end }} autofocus>{{ .Data.Message }}</textarea>
                             {{ else }}
-                                <input value="{{ .Data.Message }}" type="text" name="message" maxlength="10000" autocomplete="off" autofocus{{ if .AuthUser.AutocompleteCommandsEnabled }} list="commands"{{ end }} />
+                                <input value="{{ .Data.Message }}" type="text" name="message" maxlength="10000" autocomplete="off"{{ if .AuthUser.SpellcheckEnabled }} spellcheck="true"{{ end }} autofocus{{ if .AuthUser.AutocompleteCommandsEnabled }} list="commands"{{ end }} />
                                 {{ if .AuthUser.AutocompleteCommandsEnabled }}
                                     <datalist id="commands">
                                         {{ range .Data.CommandsList }}<option value="{{ . }}">{{ end }}
@@ -85,20 +93,20 @@
                 <tr>
                     <td>
                         {{ if or .Data.Error .Data.Success }}
-                            <a href="/api/v1/chat/top-bar/{{ .Data.RoomName }}?{{ if .Data.Multiline }}{{ .Data.QueryParamsMl | safeURL }}{{ else }}{{ .Data.QueryParamsNml | safeURL }}{{ end }}" title="Refresh">&#8635;</a>
+                            <a href="/api/v1/chat/top-bar/{{ .Data.RoomName }}?{{ if .Data.Multiline }}{{ .Data.QueryParamsMl | safeURL }}{{ else }}{{ .Data.QueryParamsNml | safeURL }}{{ end }}" title="Refresh" id="refresh-btn">&#8635;</a>
                         {{ end }}
                     </td>
-                    <td style="color: #aaa;">
+                    <td id="links-td">
                         {{ if .Data.Error }}
-                            <span style="color: #e74c3c; font-size: 80%;">{{ .Data.Error }}</span>
+                            <span id="err-lbl">{{ .Data.Error }}</span>
                         {{ else if .Data.Success }}
-                            <span style="color: #198754; font-size: 80%;">{{ .Data.Success }}</span>
+                            <span id="success-lbl">{{ .Data.Success }}</span>
                         {{ else }}
                             <a href="/settings/chat" target="_top">{{ t "Settings" . }}</a> |
                             <a href="/chat/help" target="_top">{{ t "Available commands" . }}</a> |
                             <a href="/chat/create-room" target="_top">{{ t "Create room" . }}</a>
                             {{ if .AuthUser.CanUseMultiline }} | <a href="/chat/{{ .Data.RoomName }}?{{ if .Data.Multiline }}{{ .Data.QueryParamsNml | safeURL }}{{ else }}{{ .Data.QueryParamsMl | safeURL }}{{ end }}" target="_top">ml</a>{{ end }}
-                            {{ if .AuthUser.CanUpload }} | <input name="file" type="file" style="height: 16px; font-size: 9px; margin-top: 2px; margin-left: 5px; position: absolute;" />{{ end }}
+                            {{ if .AuthUser.CanUpload }} | <input name="file" type="file" id="file-upload-btn" />{{ end }}
                         {{ end }}
                     </td>
                     <td></td>

@@ -1,0 +1,17 @@
+{{ define "extra-head" }}
+    <style>
+        {{ .Data.Odometer.Css | css }}
+    </style>
+{{ end }}
+
+{{ define "title" }}dkf - odometer{{ end }}
+
+{{ define "content" }}
+
+<div class="container">
+    <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+        {{ .Data.Odometer.Html | safe }}
+    </div>
+</div>
+
+{{ end }}

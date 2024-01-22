@@ -1,0 +1,159 @@
+{{ define "title" }}dkf - poker{{ end }}
+
+{{ define "content" }}
+    <div class="container mb-5">
+        <div class="mb-3">
+            Deposit xmr address:
+            {{ if .Data.PokerXmrSubAddress }}<pre style="user-select: all; -webkit-user-select: all; color: #eaac45;">{{ .Data.PokerXmrSubAddress }}</pre>{{ else }}none{{ end }}
+        </div>
+        <div class="mb-3">
+            <div class="float-left mr-3">
+                {{ if .Data.PokerXmrSubAddress }}
+                    <img src="data:image/png;base64,{{ .Data.Img }}" class="img-thumbnail" alt="" />
+                {{ end }}
+            </div>
+            1 <small>XMR</small> == {{ .Data.XmrPrice }}<br />
+            0.01 <small>XMR</small> == 1,000 <small>chips</small><br />
+            rake follows <a href="https://www.pokerstars.com/poker/room/rake" rel="noopener noreferrer" target="_blank">pokerstars</a> (round half to even)<br />
+            rake is capped<br />
+            2 confirmations needed for deposits under 0.2 XMR (~4min)<br />
+            10 confirmations needed for deposits over 0.2 XMR (~20min)<br />
+            Rake back percentage is <strong>{{ .Data.RakeBackPct }}%</strong><br />
+            <div class="clearfix"></div>
+        </div>
+        <div class="mb-3">
+            <table class="mb-3">
+                <tr>
+                    <td>
+                        <span style="vertical-align: middle;">Balance: <span style="color: #eaac45;">{{ .Data.XmrBalance }} <small>pXMR</small></span></span><br />
+                        <small>({{ .Data.XmrBalance.XmrStr }} <small>XMR</small> | {{ .Data.XmrBalance.ToPokerChip }} <small>chips</small>)</small>
+                    </td>
+                    <td style="vertical-align: middle;"><span class="ml-3" style="font-size: 30px; color: #1ee91e;">{{ .Data.XmrBalance.UsdStr }}</span></td>
+                </tr>
+            </table>
+            <div class="mb-3">
+                <a href="/poker/rake-back">Rake back</a>: <span style="color: #eaac45;">{{ .Data.RakeBack }} <small>chips</small></span>
+                {{ if gt .Data.RakeBack 0 }}
+                    <form method="post" class="d-inline ml-3">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                        <input type="hidden" name="form_name" value="claim_rake_back" />
+                        <button class="btn btn-primary btn-sm">Claim chips</button>
+                    </form>
+                {{ end }}
+            </div>
+            Free tables balance: <span style="color: #eaac45;">{{ .Data.ChipsTest }} <small>chips</small></span>
+            <form method="post" class="d-inline ml-3">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <input type="hidden" name="form_name" value="reset_chips" />
+                <button class="btn btn-primary btn-sm">Reset chips</button>
+            </form>
+        </div>
+        <div class="mb-3">
+            <hr />
+            {{ if .Data.Error }}
+                <div class="alert alert-danger">{{ .Data.Error }}</div>
+            {{ end }}
+            <form method="post" class="form-inline">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <input type="hidden" name="withdraw_unique" value="{{ .Data.WithdrawUnique }}" />
+                <input type="text" name="withdraw_address" value="{{ .Data.WithdrawAddress }}" placeholder="address" class="form-control mr-2" style="width: 400px;" />
+                <input type="number" name="withdraw_amount" value="{{ if gt .Data.WithdrawAmount 0 }}{{ .Data.WithdrawAmount }}{{ end }}" min="{{ .Data.MinWithdrawAmount }}" max="{{ .Data.XmrBalance }}" placeholder="amount (pXMR)" class="form-control mr-2" style="width: 170px; -moz-appearance:textfield;" />
+                <button class="btn btn-primary">Withdraw</button>
+            </form>
+            <div>To withdraw, use the "balance" (<small>{{ .Data.XmrBalance.RawString }} <small>pXMR</small></small>) which denomination is in <a href="https://www.getmonero.org/resources/moneropedia/denominations.html" rel="noopener noreferrer" target="_blank">piconero</a></div>
+            <hr />
+            <span>Helper to convert from/to XMR/pXMR/chips/USD...</span>
+            <form method="post" class="form-inline">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <input type="hidden" name="form_name" value="helper" />
+                <input type="text" name="amount" placeholder="Amount" class="form-control form-control-sm mr-2" style="width: 170px;" autocomplete="off" value="{{ .Data.HelperAmount }}" />
+                <select class="form-control form-control-sm mr-2" name="type">
+                    <option value="xmr"{{ if eq .Data.HelperType "xmr" }} selected{{ end }}>XMR</option>
+                    <option value="pxmr"{{ if eq .Data.HelperType "pxmr" }} selected{{ end }}>pXMR</option>
+                    <option value="chips"{{ if eq .Data.HelperType "chips" }} selected{{ end }}>Poker chips</option>
+                    <option value="usd"{{ if eq .Data.HelperType "usd" }} selected{{ end }}>USD</option>
+                </select>
+                <button class="btn btn-primary btn-sm">Convert</button>
+            </form>
+            <span>
+                {{ .Data.HelperXmr }} <small>XMR</small> |
+                {{ .Data.HelperpXmr }} <small>pXMR</small> |
+                {{ .Data.HelperChips }} <small>chips</small> |
+                {{ .Data.HelperUsd }}
+            </span>
+            <hr />
+        </div>
+        <h3>Tables</h3>
+        {{ if .Data.ErrorTable }}
+            <div class="alert alert-danger">{{ .Data.ErrorTable }}</div>
+        {{ end }}
+        <table class="table table-novpadding table-sm table-hover table-striped">
+            <tr>
+                <th>Table</th>
+                <th class="text-center">Players</th>
+                <th>Min/max buy-in (chips)</th>
+                <th class="text-center">Big Blind</th>
+                <th class="text-center">Type</th>
+                <th class="text-right">Join</th>
+            </tr>
+            {{ range .Data.Tables }}
+                <tr>
+                    <td class="align-middle">
+                        {{ .Name }}<br />
+                        {{ if gt .TableBalance 0 }}(<span style="color: #eaac45;">{{ .TableBalance }} <small>chips</small></span>){{ end }}
+                    </td>
+                    <td class="text-center align-middle">{{ if gt .NbSeated 0 }}<span style="color: #1ee91e; font-weight: bolder;">{{ .NbSeated }}/6</span>{{ else }}{{ .NbSeated }}/6{{ end }}</td>
+                    <td class="align-middle">{{ .MinBuyIn }} - {{ .MaxBuyIn }}</td>
+                    <td class="text-center align-middle">{{ .MinBet }}</td>
+                    <td class="text-center align-middle">{{ if .IsTest }}FREE{{ else }}XMR{{ end }}</td>
+                    <td class="text-right">
+                        <form method="post" class="d-inline-block">
+                            <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                            <input type="hidden" name="form_name" value="join_table" />
+                            <input type="hidden" name="table_slug" value="{{ .Slug }}" />
+                            <div class="input-group">
+                                <input type="number" min="{{ .MinBuyIn.Raw }}" max="{{ .MaxBuyIn.Raw }}" name="buy_in" value="{{ .MinBuyIn.Raw }}" class="form-control form-control-sm" style="width: 100px; -moz-appearance:textfield;" />
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary btn-sm">Buy-in</button>
+                                </div>
+                            </div>
+                        </form>
+                        {{ if gt .TableBalance 0 }}
+                            <form method="post" class="d-inline-block">
+                                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                <input type="hidden" name="form_name" value="cash_out" />
+                                <input type="hidden" name="table_slug" value="{{ .Slug }}" />
+                                <button class="btn btn-primary btn-sm">Cash out</button>
+                            </form>
+                        {{ end }}
+                        <a href="/poker/{{ .Slug }}" class="btn btn-primary btn-sm">Enter</a>
+                    </td>
+                </tr>
+            {{ else }}
+                <tr><td colspan="6"><em>No table to show</em></td></tr>
+            {{ end }}
+        </table>
+
+        <h3>Transactions</h3>
+        <table class="table table-novpadding table-sm table-hover table-striped">
+            <tr>
+                <th>Amount XMR</th>
+                <th>Confirmations</th>
+                <th>In/Out</th>
+                <th>Status</th>
+                <th>Created at</th>
+            </tr>
+            {{ range .Data.Transactions }}
+                <tr>
+                    <td style="font-family: monospace;">{{ .Amount.XmrStr }}</td>
+                    <td>{{ if .IsIn }}{{ .Confirmations }}/{{ .ConfirmationsNeeded }}{{ else }}-{{ end }}</td>
+                    <td>{{ if .IsIn }}IN{{ else }}OUT{{ end }}</td>
+                    <td>{{ if eq .Status 1 }}pending{{ else if eq .Status 2 }}success{{ else if eq .Status 3 }}failed{{ else }}-{{ end }}</td>
+                    <td>{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</td>
+                </tr>
+            {{ else }}
+                <tr><td colspan="5"><em>No transactions to show</em></td></tr>
+            {{ end }}
+        </table>
+    </div>
+{{ end }}

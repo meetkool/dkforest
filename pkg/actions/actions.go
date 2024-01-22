@@ -2,9 +2,23 @@ package actions
 
 import (
 	"bytes"
-	"dkforest/pkg/web/handlers/api/v1"
+	captcha "dkforest/pkg/captcha"
+	"dkforest/pkg/color"
+	"dkforest/pkg/config"
+	"dkforest/pkg/database"
+	dutils "dkforest/pkg/database/utils"
+	"dkforest/pkg/managers"
+	"dkforest/pkg/utils"
+	"dkforest/pkg/web"
+	"dkforest/pkg/web/handlers/interceptors"
+	"dkforest/pkg/web/handlers/poker"
 	"fmt"
+	"github.com/mattn/go-colorable"
 	wallet1 "github.com/monero-ecosystem/go-monero-rpc-client/wallet"
+	migrate "github.com/rubenv/sql-migrate"
+	"github.com/sirupsen/logrus"
+	"github.com/skratchdot/open-golang/open"
+	cli "github.com/urfave/cli/v2"
 	"log"
 	"math/rand"
 	"os"
@@ -13,19 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	captcha "dkforest/pkg/captcha"
-	"dkforest/pkg/color"
-	"dkforest/pkg/config"
-	"dkforest/pkg/database"
-	"dkforest/pkg/managers"
-	"dkforest/pkg/utils"
-	"dkforest/pkg/web"
-	"github.com/mattn/go-colorable"
-	migrate "github.com/rubenv/sql-migrate"
-	"github.com/sirupsen/logrus"
-	"github.com/skratchdot/open-golang/open"
-	cli "github.com/urfave/cli/v2"
 )
 
 func Start(c *cli.Context) error {
@@ -34,33 +35,34 @@ func Start(c *cli.Context) error {
 	logrus.SetFormatter(LogFormatter{})
 	logrus.SetOutput(colorable.NewColorableStderr())
 
-	logrus.Info("DarkForest v" + config.Global.GetVersion().String())
+	logrus.Info("DarkForest v" + config.Global.AppVersion.Get().String())
 
 	port := c.Int("port")
 	host := c.String("host")
 	noBrowser := c.Bool("no-browser")
 
-	config.Global.SetCookieSecure(c.Bool("cookie-secure"))
-	config.Global.SetCookieDomain(c.String("cookie-domain"))
+	config.Global.CookieSecure.Set(c.Bool("cookie-secure"))
+	config.Global.CookieDomain.Set(c.String("cookie-domain"))
 
 	ensureProjectHome()
 
-	initDB()
-	defer database.DB.Close()
+	dbPath := filepath.Join(config.Global.ProjectPath.Get(), config.DbFileName)
+	db := database.NewDkfDB(dbPath)
 
-	runMigrations()
+	runMigrations(db)
 
-	config.IsFirstUse.Store(isFirstUse())
+	config.IsFirstUse.Store(isFirstUse(db))
 
 	captcha.SetCustomStore(captcha.NewMemoryStore(captcha.CollectNum, 120*time.Second))
 
 	if false {
-		err := database.DB.Debug().Exec(`
+		err := db.DB().Debug().Exec(`
 	`).Error
 		logrus.Error(err)
 	}
 
-	settings := database.GetSettings()
+	db.GetPokerCasino()
+	settings := db.GetSettings()
 	config.ProtectHome.Store(settings.ProtectHome)
 	config.HomeUsersList.Store(settings.HomeUsersList)
 	config.ForceLoginCaptcha.Store(settings.ForceLoginCaptcha)
@@ -70,26 +72,68 @@ func Start(c *cli.Context) error {
 	config.ForumEnabled.Store(settings.ForumEnabled)
 	config.SilentSelfKick.Store(settings.SilentSelfKick)
 	config.MaybeAuthEnabled.Store(settings.MaybeAuthEnabled)
+	config.PowEnabled.Store(settings.PowEnabled)
+	config.PokerWithdrawEnabled.Store(settings.PokerWithdrawEnabled)
 	config.CaptchaDifficulty.Store(settings.CaptchaDifficulty)
+	config.MoneroPrice.Store(settings.MoneroPrice)
 
-	config.Xmr()
+	walletClient := config.Xmr()
 
-	utils.SGo(func() { cleanupDatabase() })
+	utils.SGo(func() { cleanupDatabase(db) })
 	utils.SGo(func() { managers.ActiveUsers.CleanupUsersCache() })
-	utils.SGo(func() { xmrWatch() })
+	utils.SGo(func() { xmrWatch(db) })
 	utils.SGo(func() { openBrowser(noBrowser, int64(port)) })
 
-	v1.ChessInstance = v1.NewChess()
-	v1.BattleshipInstance = v1.NewBattleship()
-	v1.WWInstance = v1.NewWerewolf()
+	poker.Refund(db)
 
-	web.Start(host, port)
+	if !walletIsBalanced(db, walletClient) {
+		// TODO: automatically send transactions that are not processed
+		config.PokerWithdrawEnabled.Store(false)
+		logrus.Error("wallet is not balanced")
+		dutils.RootAdminNotify(db, "wallet is not balanced; poker withdraw disabled")
+	}
+
+	interceptors.LoadFilters(db)
+	interceptors.ChessInstance = interceptors.NewChess(db)
+	interceptors.BattleshipInstance = interceptors.NewBattleship(db)
+	interceptors.WWInstance = interceptors.NewWerewolf(db)
+
+	web.Start(db, host, port)
 	return nil
 }
 
-func isFirstUse() bool {
+// Returns either or not the monero wallet balance matches the database balance
+func walletIsBalanced(db *database.DkfDB, client wallet1.Client) (balanced bool) {
+	resBalance, err := client.GetBalance(&wallet1.RequestGetBalance{})
+	if err != nil {
+		logrus.Error(err)
+		return false
+	}
+	walletBalance := database.Piconero(resBalance.Balance)
+
+	var diffInOut database.Piconero
+	if err := db.WithE(func(tx *database.DkfDB) error {
+		sumIn, err := tx.GetPokerXmrTransactionsSumIn()
+		if err != nil {
+			return err
+		}
+		sumOut, err := tx.GetPokerXmrTransactionsSumOut()
+		if err != nil {
+			return err
+		}
+		diffInOut = sumIn - sumOut
+		return nil
+	}); err != nil {
+		logrus.Error(err)
+		return false
+	}
+
+	return walletBalance == diffInOut
+}
+
+func isFirstUse(db *database.DkfDB) bool {
 	var count int64
-	database.DB.Model(database.User{}).Count(&count)
+	db.DB().Model(database.User{}).Count(&count)
 	return count <= 0
 }
 
@@ -103,7 +147,7 @@ func openBrowser(noBrowser bool, port int64) {
 	}
 }
 
-func runMigrations() {
+func runMigrations(db *database.DkfDB) {
 	logrus.Info("running migrations")
 	migrations := &migrate.AssetMigrationSource{
 		Asset: config.MigrationsFs.ReadFile,
@@ -117,41 +161,52 @@ func runMigrations() {
 		},
 		Dir: "migrations",
 	}
-	database.DB.Exec("PRAGMA foreign_keys=OFF")
-	n, err := migrate.Exec(database.DB.DB(), "sqlite3", migrations, migrate.Up)
+	db.DB().Exec("PRAGMA foreign_keys=OFF")
+	n, err := migrate.Exec(utils.Must(db.DB().DB()), "sqlite3", migrations, migrate.Up)
 	if err != nil {
 		panic(err)
 	}
-	database.DB.Exec("PRAGMA foreign_keys=ON")
+	db.DB().Exec("PRAGMA foreign_keys=ON")
 	logrus.Infof("applied %d migrations", n)
 }
 
-func initDB() {
-	dbPath := filepath.Join(config.Global.ProjectPath(), config.DbFileName)
-	db, err := database.OpenSqlite3DB(dbPath)
-	if err != nil {
-		logrus.Fatal("Failed to open sqlite3 db : " + err.Error())
-		return
-	}
-	database.DB = db
-}
-
-//  Ensure the project folder is created properly
+// Ensure the project folder is created properly
 func ensureProjectHome() {
-	config.Global.SetProjectPath(utils.MustGetDefaultProjectPath())
-	projectPath := config.Global.ProjectPath()
+	config.Global.ProjectPath.Set(utils.MustGetDefaultProjectPath())
+	projectPath := config.Global.ProjectPath.Get()
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		logrus.Fatal("Failed to create project folder", err)
 	}
 
-	config.Global.SetProjectLocalsPath(filepath.Join(projectPath, "locals"))
-	if err := os.MkdirAll(config.Global.ProjectLocalsPath(), 0755); err != nil {
+	config.Global.ProjectLocalsPath.Set(filepath.Join(projectPath, "locals"))
+	if err := os.MkdirAll(config.Global.ProjectLocalsPath.Get(), 0755); err != nil {
 		logrus.Fatal("Failed to create dkforest locals folder", err)
 	}
 
-	config.Global.SetProjectHTMLPath(filepath.Join(projectPath, "html"))
-	if err := os.MkdirAll(config.Global.ProjectHTMLPath(), 0755); err != nil {
+	config.Global.ProjectHTMLPath.Set(filepath.Join(projectPath, "html"))
+	if err := os.MkdirAll(config.Global.ProjectHTMLPath.Get(), 0755); err != nil {
 		logrus.Fatal("Failed to create dkforest html folder", err)
+	}
+
+	config.Global.ProjectMemesPath.Set(filepath.Join(projectPath, "memes"))
+	if err := os.MkdirAll(config.Global.ProjectMemesPath.Get(), 0755); err != nil {
+		logrus.Fatal("Failed to create memes uploads folder", err)
+	}
+
+	config.Global.ProjectUploadsPath.Set(filepath.Join(projectPath, "uploads"))
+	if err := os.MkdirAll(config.Global.ProjectUploadsPath.Get(), 0755); err != nil {
+		logrus.Fatal("Failed to create dkforest uploads folder", err)
+	}
+
+	config.Global.ProjectFiledropPath.Set(filepath.Join(projectPath, "filedrop"))
+	if err := os.MkdirAll(config.Global.ProjectFiledropPath.Get(), 0755); err != nil {
+		logrus.Fatal("Failed to create dkforest filedrop folder", err)
+	}
+
+	// Contains files that we offer for download directly
+	config.Global.ProjectDownloadsPath.Set(filepath.Join(projectPath, "downloads"))
+	if err := os.MkdirAll(config.Global.ProjectDownloadsPath.Get(), 0755); err != nil {
+		logrus.Fatal("Failed to create dkforest downloads folder", err)
 	}
 }
 
@@ -197,7 +252,7 @@ func (f LogFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func xmrWatch() {
+func xmrWatch(db *database.DkfDB) {
 	var once utils.Once
 	for {
 		select {
@@ -209,29 +264,75 @@ func xmrWatch() {
 			continue
 		}
 		for _, transfer := range transfers.In {
-			invoice, err := database.GetXmrInvoiceByAddress(transfer.Address)
-			if err != nil {
-				logrus.Error(err, transfer.TxID)
+			if processPokerTransfer(db, transfer) {
 				continue
 			}
-			origConfirmations := invoice.Confirmations
-			invoice.Confirmations = int64(transfer.Confirmations)
-			amount := int64(transfer.Amount)
-			invoice.AmountReceived = &amount
-			invoice.DoSave()
-			if origConfirmations >= 10 {
-				continue
-			} else if transfer.Confirmations < 10 {
-				logrus.Error("payment processing")
-				continue
-			}
-			logrus.Error("payment done")
-			// TODO: execute something
 		}
 	}
 }
 
-func cleanupDatabase() {
+func processPokerTransfer(db *database.DkfDB, transfer *wallet1.Transfer) (found bool) {
+	var user database.User
+	pokerTransfer, err := db.GetPokerXmrTransaction(transfer.TxID)
+	if err != nil {
+		user, err = db.GetUserByPokerXmrSubAddress(transfer.Address)
+		if err != nil {
+			return false // Not a poker deposit address
+		}
+
+		// Create a new transaction and rotate user deposit address
+		if txErr := db.WithE(func(tx *database.DkfDB) error {
+			userID := user.ID
+			pokerTransfer, err = tx.CreatePokerXmrInTransaction(userID, transfer)
+			if err != nil {
+				return err
+			}
+			// Update user's xmr deposit address
+			res, err := config.Xmr().CreateAddress(&wallet1.RequestCreateAddress{})
+			if err != nil {
+				return err
+			}
+			if err := tx.SetPokerSubAddress(userID, res.Address); err != nil {
+				return err
+			}
+			return nil
+		}); txErr != nil {
+			logrus.Error(txErr)
+			return true
+		}
+	} else {
+		if pokerTransfer.Confirmations < 10 {
+			pokerTransfer.Confirmations = utils.MinInt(transfer.Confirmations, 10)
+			pokerTransfer.DoSave(db)
+		}
+		if pokerTransfer.Processed {
+			return true
+		}
+		user, _ = db.GetUserByID(pokerTransfer.UserID)
+	}
+
+	if !pokerTransfer.HasEnoughConfirmations() {
+		return true
+	}
+
+	// Increment user's xmr balance, and update transfer status
+	if txErr := db.WithE(func(tx *database.DkfDB) error {
+		if err := user.IncrXmrBalance(tx, pokerTransfer.Amount); err != nil {
+			return err
+		}
+		pokerTransfer.Processed = true
+		pokerTransfer.DoSave(tx)
+		return nil
+	}); txErr != nil {
+		logrus.Error(err)
+		return true
+	}
+
+	dutils.RootAdminNotify(db, fmt.Sprintf("new deposit %s xmr by %s", pokerTransfer.Amount.XmrStr(), user.Username))
+	return true
+}
+
+func cleanupDatabase(db *database.DkfDB) {
 	var once utils.Once
 	for {
 		select {
@@ -239,13 +340,45 @@ func cleanupDatabase() {
 		case <-time.After(1 * time.Hour):
 		}
 		start := time.Now()
-		database.DeleteOldSessions()
-		database.DeleteOldUploads()
-		database.DeleteOldChatMessages()
-		database.DeleteOldPrivateChatRooms()
-		database.DeleteOldCaptchaRequests()
-		database.DeleteOldAuditLogs()
-		database.DeleteOldSecurityLogs()
+		db.DeleteOldSessions()
+		db.DeleteOldUploads()
+		db.DeleteOldChatMessages()
+		db.DeleteOldPrivateChatRooms()
+		db.DeleteOldCaptchaRequests()
+		db.DeleteOldAuditLogs()
+		db.DeleteOldSecurityLogs()
+		db.DeleteOldIgnoredUsers()
+		db.DeleteOldPmBlacklistedUsers()
+		db.DeleteOldPmWhitelistedUsers()
+		db.DeleteOldChatInboxMessages()
+		db.DeleteOldDownloads()
+		db.DeleteOldSessionNotifications()
 		logrus.Debugf("done cleaning database, took %s", time.Since(start))
 	}
+}
+
+func BuildProhibitedPasswords(c *cli.Context) error {
+	// TODO: Fix gormbulk to use new gorm lib
+	//fmt.Println("start")
+	//if !utils.FileExists("rockyou.txt") {
+	//	return errors.New("rockyou.txt not found")
+	//}
+	//
+	//ensureProjectHome()
+	//
+	//dbPath := filepath.Join(config.Global.ProjectPath.Get(), config.DbFileName)
+	//db := database.NewDkfDB(dbPath).DB()
+	//
+	//readFile, _ := os.Open("rockyou.txt")
+	//fileScanner := bufio.NewScanner(readFile)
+	//fileScanner.Split(bufio.ScanLines)
+	//var rows []interface{}
+	//for fileScanner.Scan() {
+	//	rows = append(rows, database.ProhibitedPassword{Password: fileScanner.Text()})
+	//}
+	//readFile.Close()
+	//if err := gormbulk.BulkInsert(db, rows, 10000); err != nil {
+	//	logrus.Error(err)
+	//}
+	return nil
 }

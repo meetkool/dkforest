@@ -16,12 +16,12 @@ type UserBadge struct {
 	Badge     Badge
 }
 
-func CreateUserBadge(userID UserID, badgeID int64) error {
+func (d *DkfDB) CreateUserBadge(userID UserID, badgeID int64) error {
 	ub := UserBadge{UserID: userID, BadgeID: badgeID}
-	return DB.Create(&ub).Error
+	return d.db.Create(&ub).Error
 }
 
-func GetUsersBadges() (out []UserBadge, err error) {
-	err = DB.Preload("User").Preload("Badge").Order("created_at").Find(&out).Error
+func (d *DkfDB) GetUsersBadges() (out []UserBadge, err error) {
+	err = d.db.Preload("User").Preload("Badge").Order("created_at").Find(&out).Error
 	return
 }

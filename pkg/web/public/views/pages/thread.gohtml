@@ -70,7 +70,12 @@
                         {{ end }}
                     </div>
                     <div style="display: flex; flex-direction: column;">
-                        <div style="flex: 1;"><a {{ .User.GenerateChatStyle | attr }} href="/u/{{ .User.Username }}">{{ .User.Username }}</a></div>
+                        <div style="flex: 1;">
+                            <a {{ .User.GenerateChatStyle | attr }} href="/u/{{ .User.Username }}">{{ .User.Username }}</a>
+                            {{- if .IsSigned -}}
+                                <a href="/t/{{ $.Data.Thread.UUID }}/messages/{{ .UUID }}/raw" class="ml-2" title="PGP signed" rel="noopener noreferrer" target="_blank">✅</a>
+                            {{- end -}}
+                        </div>
                         <div style="flex: 1;"><a href="#{{ .UUID }}">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</a></div>
                         <div>
                             {{ if $.AuthUser }}
@@ -83,7 +88,7 @@
                     </div>
                 </div>
                 <div style="padding: 5px 5px 10px 10px;">
-                    {{ .Escape | safe }}
+                    {{ .Escape $.DB | safe }}
                 </div>
             </div>
         {{ end }}

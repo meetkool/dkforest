@@ -1,6 +1,7 @@
 package config
 
 import (
+	"dkforest/pkg/utils/rwmtx"
 	"embed"
 	wallet1 "github.com/monero-ecosystem/go-monero-rpc-client/wallet"
 	"net"
@@ -13,8 +14,17 @@ import (
 )
 
 const (
-	DbFileName = "dkf.db"
-	AppDirName = ".dkf"
+	GogsURL                = "http://127.0.0.1:3000"
+	DbFileName             = "dkf.db"
+	AppDirName             = ".dkf"
+	MaxUserFileUploadSize  = 30 << 20  // 30 MB
+	MaxUserTotalUploadSize = 100 << 20 // 100 MB
+	MaxAvatarFormSize      = 1 << 20   // 1 MB
+	MaxAvatarSize          = 300 << 10 // 300 KB
+
+	// MaxFileSizeBeforeDownload files that are bigger than this limit will trigger
+	// a file download instead of simple in-browser rendering
+	MaxFileSizeBeforeDownload = 1 << 20 // 1 MB
 )
 
 // DefaultMasterKey Should be overwritten using ldflags
@@ -24,7 +34,9 @@ var RoomPasswordSalt = "room_pa$$word_$alt_OYvUwmNPVTdsw"
 
 const (
 	DkfOnion     = "http://dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion"
-	DkfGitOnion  = "http://yylovpz7taca7jfrub3wltxabzzjp34fngj5lpwl6eo47ekt5cxs6mid.onion"
+	DkfGitOnion  = "http://git.dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion"
+	I2pGitOnion  = "http://git.dkforest4gwaceahf4te3vs7ycddtbpf2lucocxdzhphezikdgnq.b32.i2p"
+	DkfGit1Onion = "http://yylovpz7taca7jfrub3wltxabzzjp34fngj5lpwl6eo47ekt5cxs6mid.onion"
 	DreadOnion   = "http://dreadytofatroptsdj6io7l3xptbet6onoyno2yv7jicoxknyazubrad.onion"
 	BhcOnion     = "http://blkhatjxlrvc5aevqzz5t6kxldayog6jlx5h7glnu44euzongl4fh5ad.onion"
 	CryptbbOnion = "http://cryptbbtg65gibadeeo2awe3j7s6evg7eklserehqr4w4e2bis5tebid.onion"
@@ -38,6 +50,8 @@ const (
 	GeneralRoomID         = 1
 	AnnouncementsRoomName = "announcements"
 )
+
+const PowDifficulty = 7
 
 const EditMessageTimeLimit = 2 * time.Minute
 
@@ -56,6 +70,8 @@ var (
 	ForumEnabled             = atom.NewBool(true)  // either or not people can use the forum features
 	SilentSelfKick           = atom.NewBool(true)  // either or not self kick are silent
 	SignupEnabled            = atom.NewBool(true)  // either or not people can sign up
+	PowEnabled               = atom.NewBool(false) // either or not pow is enabled to signup
+	PokerWithdrawEnabled     = atom.NewBool(true)  // either or not poker withdraw is enabled
 	SignupFakeEnabled        = atom.NewBool(true)  // either or not signup is faked to be enabled
 	ProtectHome              = atom.NewBool(true)  // enable "dynamic login url" to prevent ddos on the login page
 	HomeUsersList            = atom.NewBool(true)  // either or not to display the online users on the login page
@@ -72,6 +88,7 @@ var (
 	CaptchaRequiredGenerated = atom.NewInt64(0)
 	CaptchaRequiredSuccess   = atom.NewInt64(0)
 	CaptchaRequiredFailed    = atom.NewInt64(0)
+	MoneroPrice              = atom.NewFloat64(0)
 
 	RpsCounter         = ratecounter.NewRateCounter()
 	RejectedReqCounter = ratecounter.NewRateCounter()
@@ -144,147 +161,24 @@ var ConnMap = NewConnManager()
 
 // GlobalConf ...
 type GlobalConf struct {
-	sync.RWMutex
-	appVersion        *version.Version
-	projectPath       string // project path
-	projectLocalsPath string // directory where we keep custom translation files
-	projectHtmlPath   string
-	sha               string
-	masterKey         string
-	cookieSecure      bool
-	cookieDomain      string
-	baseURL           string // (http://127.0.0.1:8080)
+	AppVersion           rwmtx.RWMtx[*version.Version]
+	ProjectPath          rwmtx.RWMtx[string] // project path
+	ProjectLocalsPath    rwmtx.RWMtx[string] // directory where we keep custom translation files
+	ProjectHTMLPath      rwmtx.RWMtx[string]
+	ProjectMemesPath     rwmtx.RWMtx[string]
+	ProjectUploadsPath   rwmtx.RWMtx[string]
+	ProjectFiledropPath  rwmtx.RWMtx[string]
+	ProjectDownloadsPath rwmtx.RWMtx[string]
+	Sha                  rwmtx.RWMtx[string]
+	MasterKey            rwmtx.RWMtx[string]
+	CookieSecure         rwmtx.RWMtx[bool]
+	CookieDomain         rwmtx.RWMtx[string]
+	BaseURL              rwmtx.RWMtx[string] // (http://127.0.0.1:8080)
 }
 
 // NewGlobalConf ...
 func NewGlobalConf() *GlobalConf {
 	c := new(GlobalConf)
-	c.masterKey = DefaultMasterKey
+	c.MasterKey.Set(DefaultMasterKey)
 	return c
-}
-
-// ProjectPath ...
-func (c *GlobalConf) ProjectPath() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.projectPath
-}
-
-// SetProjectPath ...
-func (c *GlobalConf) SetProjectPath(v string) {
-	c.Lock()
-	defer c.Unlock()
-	c.projectPath = v
-}
-
-// MasterKey ...
-func (c *GlobalConf) MasterKey() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.masterKey
-}
-
-// SetMasterKey ...
-func (c *GlobalConf) SetMasterKey(v string) {
-	c.Lock()
-	defer c.Unlock()
-	c.masterKey = v
-}
-
-// GetVersion ...
-func (c *GlobalConf) GetVersion() *version.Version {
-	c.RLock()
-	defer c.RUnlock()
-	return c.appVersion
-}
-
-// SetVersion ...
-func (c *GlobalConf) SetVersion(newVersion string) {
-	c.Lock()
-	defer c.Unlock()
-	c.appVersion = version.Must(version.NewVersion(newVersion))
-}
-
-// Sha ...
-func (c *GlobalConf) Sha() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.sha
-}
-
-// SetSha ...
-func (c *GlobalConf) SetSha(sha string) {
-	c.Lock()
-	defer c.Unlock()
-	c.sha = sha
-}
-
-// CookieSecure ...
-func (c *GlobalConf) CookieSecure() bool {
-	c.RLock()
-	defer c.RUnlock()
-	return c.cookieSecure
-}
-
-// SetCookieSecure ...
-func (c *GlobalConf) SetCookieSecure(cookieSecure bool) {
-	c.Lock()
-	defer c.Unlock()
-	c.cookieSecure = cookieSecure
-}
-
-// CookieDomain ...
-func (c *GlobalConf) CookieDomain() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.cookieDomain
-}
-
-// SetCookieDomain ...
-func (c *GlobalConf) SetCookieDomain(cookieDomain string) {
-	c.Lock()
-	defer c.Unlock()
-	c.cookieDomain = cookieDomain
-}
-
-// ProjectLocalsPath ...
-func (c *GlobalConf) ProjectLocalsPath() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.projectLocalsPath
-}
-
-// SetProjectLocalsPath ...
-func (c *GlobalConf) SetProjectLocalsPath(projectLocalsPath string) {
-	c.Lock()
-	defer c.Unlock()
-	c.projectLocalsPath = projectLocalsPath
-}
-
-// ProjectHTMLPath ...
-func (c *GlobalConf) ProjectHTMLPath() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.projectHtmlPath
-}
-
-// SetProjectHTMLPath ...
-func (c *GlobalConf) SetProjectHTMLPath(projectHtmlPath string) {
-	c.Lock()
-	defer c.Unlock()
-	c.projectHtmlPath = projectHtmlPath
-}
-
-// BaseURL ...
-func (c *GlobalConf) BaseURL() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.baseURL
-}
-
-// SetBaseURL ...
-func (c *GlobalConf) SetBaseURL(v string) {
-	c.Lock()
-	defer c.Unlock()
-	c.baseURL = v
 }

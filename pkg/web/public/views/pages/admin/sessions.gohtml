@@ -24,10 +24,10 @@
     <tbody>
     {{ range .Data.Sessions }}
         <tr>
-            <td style="width: 300px; font-family: monospace;">{{ .Token }}</td>
+            <td style="font-family: monospace;">{{ .Token | trunc 7 }}</td>
             <td>{{ .ExpiresAt.Format "Jan 02, 2006 - 15:04:05" }}</td>
             <td>{{ .CreatedAt.Format "Jan 02, 2006 - 15:04:05" }}</td>
-            <td>{{ .UserAgent }}</td>
+            <td style="font-size: 10px;">{{ .UserAgent }}</td>
             <td>{{ .User.Username }}</td>
         </tr>
     {{ end }}

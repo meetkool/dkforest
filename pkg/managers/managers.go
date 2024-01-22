@@ -20,7 +20,7 @@ func init() {
 
 type UserInfo struct {
 	UserID              database.UserID
-	Username            string
+	Username            database.Username
 	Color               string
 	RefreshRate         int64
 	LastUpdate          time.Time
@@ -31,24 +31,45 @@ type UserInfo struct {
 	AfkIndicatorEnabled bool
 }
 
-func NewUserInfo(user database.User, lastActivity *time.Time) UserInfo {
+type IUserInfoUser interface {
+	GetID() database.UserID
+	GetUsername() database.Username
+	GetRefreshRate() int64
+	GetChatColor() string
+	IsModerator() bool
+	GetIsIncognito() bool
+	GetIsHellbanned() bool
+	GetAFK() bool
+	GetAfkIndicatorEnabled() bool
+}
+
+func newUserInfo(user IUserInfoUser, lastActivity *time.Time) UserInfo {
 	return UserInfo{
-		UserID:              user.ID,
-		Username:            user.Username,
-		RefreshRate:         user.RefreshRate,
-		Color:               user.ChatColor,
+		UserID:              user.GetID(),
+		Username:            user.GetUsername(),
+		RefreshRate:         user.GetRefreshRate(),
+		Color:               user.GetChatColor(),
 		IsModerator:         user.IsModerator(),
-		IsIncognito:         user.IsIncognito,
-		IsHellbanned:        user.IsHellbanned,
-		AfkIndicatorEnabled: user.AFK && user.AfkIndicatorEnabled,
+		IsIncognito:         user.GetIsIncognito(),
+		IsHellbanned:        user.GetIsHellbanned(),
+		AfkIndicatorEnabled: user.GetAFK() && user.GetAfkIndicatorEnabled(),
 		LastUpdate:          time.Now(),
 		LastActivity:        lastActivity,
 	}
 }
 
+func NewUserInfo(user IUserInfoUser) UserInfo {
+	return newUserInfo(user, nil)
+}
+
+func NewUserInfoUpdateActivity(user IUserInfoUser) UserInfo {
+	now := time.Now()
+	return newUserInfo(user, &now)
+}
+
 func (m UserInfo) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		Username string
+		Username database.Username
 		Color    string
 	}{
 		Username: m.Username,
@@ -56,11 +77,14 @@ func (m UserInfo) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type UsersMap map[string]UserInfo // Username -> UserInfo
+type UsersMap map[database.Username]UserInfo // Username -> UserInfo
 
-func (m UsersMap) ToArray() (out []UserInfo) {
+func (m UsersMap) ToArray() []UserInfo {
+	out := make([]UserInfo, len(m))
+	i := 0
 	for _, userInfo := range m {
-		out = append(out, userInfo)
+		out[i] = userInfo
+		i++
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].LastActivity != nil && out[j].LastActivity != nil {
@@ -72,7 +96,7 @@ func (m UsersMap) ToArray() (out []UserInfo) {
 		}
 		return out[i].Username < out[j].Username
 	})
-	return
+	return out
 }
 
 const privateRoomKeyPrefix = "p_"
@@ -109,13 +133,17 @@ func (m *ActiveUsersManager) UpdateUserInRoom(room database.ChatRoom, userInfo U
 	}
 	roomKey := getRoomKey(room)
 	usersMap := m.getRoomUsersMap(roomKey)
+
+	m.RLock()
 	prevUserInfo := usersMap[userInfo.Username]
+	m.RUnlock()
 	if prevUserInfo.LastActivity == nil && userInfo.LastActivity == nil {
 		now := time.Now()
 		userInfo.LastActivity = &now
 	} else if userInfo.LastActivity == nil {
 		userInfo.LastActivity = prevUserInfo.LastActivity
 	}
+
 	m.Lock()
 	usersMap[userInfo.Username] = userInfo
 	m.activeUsers[roomKey] = usersMap
@@ -153,6 +181,20 @@ func (m *ActiveUsersManager) getRoomUsersMap(roomKey RoomKey) UsersMap {
 	return usersMap
 }
 
+func (m *ActiveUsersManager) LocateUser(target database.Username) (out []database.RoomID) {
+	m.RLock()
+	for roomKey, usersMap := range m.activeUsers {
+		for username := range usersMap {
+			if strings.ToLower(string(username)) == strings.ToLower(string(target)) {
+				roomID := database.RoomID(utils.DoParseInt64(string(roomKey)))
+				out = append(out, roomID)
+			}
+		}
+	}
+	m.RUnlock()
+	return
+}
+
 // GetActiveUsers gets a list of all users that are in public rooms.
 // We use this to display online users on the home (login) page if the feature is enabled.
 func (m *ActiveUsersManager) GetActiveUsers() []UserInfo {
@@ -169,7 +211,20 @@ func (m *ActiveUsersManager) GetActiveUsers() []UserInfo {
 	return activeUsers.ToArray()
 }
 
-func (m *ActiveUsersManager) GetRoomUsers(room database.ChatRoom, ignoredSet *hashset.HashSet[string]) (inRoom, inChat []UserInfo) {
+func GetUserIgnoreSet(db *database.DkfDB, authUser *database.User) *hashset.HashSet[database.Username] {
+	ignoredSet := hashset.New[database.Username]()
+	// Only fill the ignored set if the user does not display the ignored users ("Toggle ignored" chat setting)
+	// and if the user has "Hide ignored users from users lists" enabled (user setting)
+	if !authUser.DisplayIgnored && authUser.HideIgnoredUsersFromList {
+		ignoredUsersUsernames, _ := db.GetIgnoredUsersUsernames(authUser.ID)
+		for _, ignoredUserUsername := range ignoredUsersUsernames {
+			ignoredSet.Insert(ignoredUserUsername)
+		}
+	}
+	return ignoredSet
+}
+
+func (m *ActiveUsersManager) GetRoomUsers(room database.ChatRoom, ignoredSet *hashset.HashSet[database.Username]) (inRoom, inChat []UserInfo) {
 	outsideUsers := make(UsersMap)
 	newRoomUsersMap := make(UsersMap)
 	roomIDStr := getRoomKey(room)
@@ -194,7 +249,7 @@ func (m *ActiveUsersManager) GetRoomUsers(room database.ChatRoom, ignoredSet *ha
 		}
 	}
 	// Delete ignored users
-	ignoredSet.Each(func(ignoreUsername string) {
+	ignoredSet.Each(func(ignoreUsername database.Username) {
 		delete(newRoomUsersMap, ignoreUsername)
 		delete(outsideUsers, ignoreUsername)
 	})

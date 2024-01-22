@@ -16,7 +16,9 @@
 {{ block "navbar" . }}
     <nav style="padding: 0px 8px 0px 0px;" class="navbar navbar-expand-sm navbar-dark bg-dark{{ block "nav-mb" . }} mb-3{{ end }}">
         <a style="padding: 0px 0px;"  class="navbar-brand" href="/">
-            {{ if .AuthUser }}
+            {{ if .IsAprilFool2023 }}
+                <img src="/public/img/logo_donkey_kong.png" alt="logo" />
+            {{ else if .AuthUser }}
                 {{ if eq .AuthUser.Theme 1 }}
                     <img src="/public/img/logo_christmas.png" alt="logo" />
                 {{ else }}
@@ -41,9 +43,9 @@
                             <li class="nav-item"><a class="nav-link" href="/forum">{{ t "Forum" . }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/links">{{ t "Links" . }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/chess">{{ t "Chess" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/poker">{{ t "Poker" . }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/vip">{{ t "VIP" . }}</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/club">{{ t "Club" . }}</a></li>
-                            <li class="nav-item"><a class="nav-link" href="http://yylovpz7taca7jfrub3wltxabzzjp34fngj5lpwl6eo47ekt5cxs6mid.onion" rel="noopener noreferrer" target="_blank">{{ t "Git" . }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ .GitURL }}" rel="noopener noreferrer" target="_blank">{{ t "Git" . }}</a></li>
                         {{ end }}
                     </ul>
                 {{ end }}
@@ -65,6 +67,13 @@
                                         <input type="hidden" name="csrf" value="{{ .CSRF }}" />
                                         <button type="submit" class="dropdown-item" role="link" style="cursor: pointer;">{{ t "Sign out" . }}</button>
                                     </form>
+                                    {{ if gt .AuthUser.XmrBalance 0 }}
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="/poker">
+                                            <span style="color: #1ee91e;">{{ .AuthUser.XmrBalance.UsdStr }}</span><br />
+                                            <span style="font-size: 10px;">{{ .AuthUser.XmrBalance.XmrStr }} <small>XMR</small></span>
+                                        </a>
+                                    {{ end }}
                                     {{- /*
                                         {{ if not .AuthUser.IsHellbanned }}
                                             <form action="/logout" method="post">

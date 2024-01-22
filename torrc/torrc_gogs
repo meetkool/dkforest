@@ -1,0 +1,8 @@
+SOCKSPort 0
+DataDirectory /var/lib/tor_gogs
+
+HiddenServiceDir /var/lib/hidden_service_gogs/
+HiddenServicePort 80 127.0.0.1:3000
+
+ExitRelay 0
+HardwareAccel 1

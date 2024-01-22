@@ -1,0 +1,16 @@
+[Unit]
+Description=DarkForest
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=dkf
+WorkingDirectory=/home/dkf
+ExecStart=/home/dkf/monero-wallet-rpc --wallet-file /home/dkf/dkf-poker-stagenet.keys --daemon-address 3.10.182.182:38081 --stagenet --rpc-bind-port 6061 --password '' --disable-rpc-login
+LimitNOFILE=65536
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

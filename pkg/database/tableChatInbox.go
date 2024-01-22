@@ -22,8 +22,14 @@ type ChatInboxMessage struct {
 	Room          ChatRoom
 }
 
-func GetUserChatInboxMessages(userID UserID) (msgs []ChatInboxMessage, err error) {
-	err = DB.Order("id DESC").
+func (d *DkfDB) DeleteOldChatInboxMessages() {
+	if err := d.db.Delete(ChatInboxMessage{}, "created_at < date('now', '-90 Day')").Error; err != nil {
+		logrus.Error(err)
+	}
+}
+
+func (d *DkfDB) GetUserChatInboxMessages(userID UserID) (msgs []ChatInboxMessage, err error) {
+	err = d.db.Order("id DESC").
 		Limit(50).
 		Preload("User").
 		Preload("ToUser").
@@ -33,14 +39,14 @@ func GetUserChatInboxMessages(userID UserID) (msgs []ChatInboxMessage, err error
 	for _, msg := range msgs {
 		ids = append(ids, msg.ID)
 	}
-	if err := DB.Model(&ChatInboxMessage{}).Where("id IN (?)", ids).UpdateColumn("is_read", true).Error; err != nil {
+	if err := d.db.Model(&ChatInboxMessage{}).Where("id IN (?)", ids).UpdateColumn("is_read", true).Error; err != nil {
 		logrus.Error(err)
 	}
 	return
 }
 
-func GetUserChatInboxMessagesSent(userID UserID) (msgs []ChatInboxMessage, err error) {
-	err = DB.Order("id DESC").
+func (d *DkfDB) GetUserChatInboxMessagesSent(userID UserID) (msgs []ChatInboxMessage, err error) {
+	err = d.db.Order("id DESC").
 		Limit(50).
 		Preload("User").
 		Preload("ToUser").
@@ -49,30 +55,30 @@ func GetUserChatInboxMessagesSent(userID UserID) (msgs []ChatInboxMessage, err e
 	return
 }
 
-func DeleteChatInboxMessageByID(messageID int64) error {
-	return DB.Where("id = ?", messageID).Delete(&ChatInboxMessage{}).Error
+func (d *DkfDB) DeleteChatInboxMessageByID(messageID int64) error {
+	return d.db.Where("id = ?", messageID).Delete(&ChatInboxMessage{}).Error
 }
 
-func DeleteChatInboxMessageByChatMessageID(chatMessageID int64) error {
-	return DB.Where("chat_message_id = ?", chatMessageID).Delete(&ChatInboxMessage{}).Error
+func (d *DkfDB) DeleteChatInboxMessageByChatMessageID(chatMessageID int64) error {
+	return d.db.Where("chat_message_id = ?", chatMessageID).Delete(&ChatInboxMessage{}).Error
 }
 
-func DeleteAllChatInbox(userID UserID) error {
-	return DB.Where("to_user_id = ?", userID).Delete(&ChatInboxMessage{}).Error
+func (d *DkfDB) DeleteAllChatInbox(userID UserID) error {
+	return d.db.Where("to_user_id = ?", userID).Delete(&ChatInboxMessage{}).Error
 }
 
-func DeleteUserChatInboxMessages(userID UserID) error {
-	return DB.Where("user_id = ?", userID).Delete(&ChatInboxMessage{}).Error
+func (d *DkfDB) DeleteUserChatInboxMessages(userID UserID) error {
+	return d.db.Where("user_id = ?", userID).Delete(&ChatInboxMessage{}).Error
 }
 
-func CreateInboxMessage(msg string, roomID RoomID, fromUserID, toUserID UserID, isPm, moderators bool, msgID *int64) {
+func (d *DkfDB) CreateInboxMessage(msg string, roomID RoomID, fromUserID, toUserID UserID, isPm, moderators bool, msgID *int64) {
 	inbox := ChatInboxMessage{Message: msg, RoomID: roomID, UserID: fromUserID, ToUserID: toUserID, IsPm: isPm, Moderators: moderators, ChatMessageID: msgID}
-	if err := DB.Create(&inbox).Error; err != nil {
+	if err := d.db.Create(&inbox).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func GetUserInboxMessagesCount(userID UserID) (count int64) {
-	DB.Table("chat_inbox_messages").Where("to_user_id = ? AND is_read = ?", userID, false).Count(&count)
+func (d *DkfDB) GetUserInboxMessagesCount(userID UserID) (count int64) {
+	d.db.Table("chat_inbox_messages").Where("to_user_id = ? AND is_read = ?", userID, false).Count(&count)
 	return
 }

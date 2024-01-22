@@ -30,6 +30,13 @@
 
     <div>
         <div>
+            <code>/locate username</code>
+        </div>
+        <p>Find in which (public) room(s) a user currently is.</p>
+    </div>
+
+    <div>
+        <div>
             <code>/ignore username</code> (or: <code>/i username</code>)
         </div>
         <p>Hides all messages from that user</p>
@@ -96,6 +103,25 @@
     {{ end }}
 
     <div>
+        <div><code>/code</code> or <code>/pm username /code</code></div>
+        <p>
+            Open a modal with a textarea where it is easy to paste and edit code in.<br />
+            Automatically put the text in code fence and do syntax highlighting when posted.<br />
+            User account must have "multiline" enabled.
+        </p>
+    </div>
+
+    <div>
+        <div><code>/hide HH:MM:SS</code></div>
+        <p>Hide message at specified timestamp</p>
+    </div>
+
+    <div>
+        <div><code>/unhide HH:MM:SS</code></div>
+        <p>Un-hide message at specified timestamp</p>
+    </div>
+
+    <div>
         <div><code>/g groupName</code></div>
         <p>Send message to specified group</p>
     </div>
@@ -124,6 +150,26 @@
         </div>
     {{ end }}
 
+    <div>
+        <div><code>/memes</code></div>
+        <p>List all memes</p>
+    </div>
+
+    <div>
+        <div><code>/chips</code></div>
+        <p>Display your chips balance</p>
+    </div>
+
+    <div>
+        <div><code>/chips-reset</code></div>
+        <p>Reset your chips balance to 1000</p>
+    </div>
+
+    <div>
+        <div><code>/itr</code></div>
+        <p>List the users "In This Room"</p>
+    </div>
+
     <h4>Private room commands</h4>
 
     <h5>All users</h5>
@@ -137,6 +183,10 @@
     </div>
 
     <h5>Room owner</h5>
+    <div>
+        <div><code>/ro</code></div>
+        <p>Toggle the room "read-only" property. When "read-only" is enabled, only the owner can write in the room.</p>
+    </div>
     <div>
         <div><code>/whitelist username</code> (or: <code>/wl username</code>)</div>
         <p>Toggle add/remove username from the whitelist</p>
@@ -193,6 +243,20 @@
             <code>/kk username</code>
         </div>
         <p>Same as /k but keeps the messages</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/ks username</code>
+        </div>
+        <p>Same as /k, Silent (no system message)</p>
+    </div>
+
+    <div>
+        <div>
+            <code>/kks username</code>
+        </div>
+        <p>Same as /k, keeps the messages, Silent (no system message)</p>
     </div>
 
     <div>
@@ -268,44 +332,52 @@
 
     <h3>Emojis:</h3>
     <div style="columns: 4 auto;" class="mb-3">
-        <div><span class="emoji" style="background-position: -54px -0px;"    title=":smile:"></span>         <code>:smile:        </code></div>
-        <div><span class="emoji" style="background-position: -18px -0px;"    title=":happy:"></span>         <code>:happy:        </code></div>
-        <div><span class="emoji" style="background-position: -0px -18px;"    title=":happy-sweat:"></span>   <code>:happy-sweat:  </code></div>
-        <div><span class="emoji" style="background-position: -108px -0px;"   title=":heart-eyes:"></span>    <code>:heart-eyes:   </code></div>
-        <div><span class="emoji" style="background-position:  -72px -0px;"   title=":blush:"></span>         <code>:blush:        </code></div>
-        <div><span class="emoji" style="background-position: -252px -18px;"  title=":sleeping:"></span>      <code>:sleeping:     </code></div>
-        <div><span class="emoji" style="background-position: -234px -0px;"   title=":tongue:"></span>        <code>:tongue:       </code></div>
-        <div><span class="emoji" style="background-position: -234px -18px;"  title=":cool:"></span>          <code>:cool:         </code></div>
-        <div><span class="emoji" style="background-position: -90px -0px;"    title=":wink:"></span>          <code>:wink:         </code></div>
-        <div><span class="emoji" style="background-position: -198px -0px;"   title=":crazy:"></span>         <code>:crazy:        </code></div>
-        <div><span class="emoji" style="background-position: -396px -0px;"   title=":joy:"></span>           <code>:joy:          </code></div>
-        <div><span class="emoji" style="background-position: -414px -0px;"   title=":sob:"></span>           <code>:sob:          </code></div>
-        <div><span class="emoji" style="background-position: -90px -18px;"   title=":scream:"></span>        <code>:scream:       </code></div>
-        <div><span class="emoji" style="background-position: -126px -18px;"  title=":angry:"></span>         <code>:angry:        </code></div>
-        <div><span class="emoji" style="background-position: -144px -18px;"  title=":triumph:"></span>       <code>:triumph:      </code></div>
-        <div><span class="emoji" style="background-position: -360px -18px;"  title=":evil:"></span>          <code>:evil:         </code></div>
-        <div><span class="emoji" style="background-position: -54px -54px;"   title=":see-no-evil:"></span>   <code>:see-no-evil:  </code></div>
-        <div><span class="emoji" style="background-position: -72px -54px;"   title=":hear-no-evil:"></span>  <code>:hear-no-evil: </code></div>
-        <div><span class="emoji" style="background-position: -90px -54px;"   title=":speak-no-evil:"></span> <code>:speak-no-evil:</code></div>
-        <div><span class="emoji" style="background-position: -360px -36px;"  title=":cat-happy:"></span>     <code>:cat-happy:    </code></div>
-        <div><span class="emoji" style="background-position: -360px -54px;"  title=":eyes:"></span>          <code>:eyes:         </code></div>
-        <div><span class="emoji" style="background-position: -144px -54px;"  title=":poop:"></span>          <code>:poop:         </code></div>
-        <div><span class="emoji" style="background-position: -432px -54px;"  title=":+1:"></span>            <code>:+1:           </code></div>
-        <div><span class="emoji" style="background-position: -54px -72px;"   title=":wave:"></span>          <code>:wave:         </code></div>
-        <div><span class="emoji" style="background-position: -234px -72px;"  title=":clap:"></span>          <code>:clap:         </code></div>
-        <div><span class="emoji" style="background-position: -162px -54px;"  title=":fire:"></span>          <code>:fire:         </code></div>
-        <div><span class="emoji" style="background-position: -180px -54px;"  title=":sparkles:"></span>      <code>:sparkles:     </code></div>
-        <div><span class="emoji" style="background-position: -270px -54px;"  title=":sweat:"></span>         <code>:sweat:        </code></div>
-        <div><span class="emoji" style="background-position: -180px -108px;" title=":heart:"></span>         <code>:heart:        </code></div>
-        <div><span class="emoji" style="background-position: -198px -108px;" title=":broken-heart:"></span>  <code>:broken-heart: </code></div>
-        <div><span class="emoji" style="background-position: -180px -72px;"  title=":praise:"></span>        <code>:praise:       </code></div>
-        <div><span class="emoji" style="background-position: -108px -54px;"  title=":skull:"></span>         <code>:skull:        </code></div>
-        <div><span class="emoji" style="background-position: -126px -54px;"  title=":alien:"></span>         <code>:alien:        </code></div>
-        <div><span class="emoji" style="background-position: -306px -54px;"  title=":zzz:"></span>           <code>:zzz:          </code></div>
-    </div>
-    <div style="columns: 4 auto;" class="mb-3">
-        <div><span title=":fox:">🦊</span> <code>:fox:</code></div>
-        <div><span title=":popcorn:">🍿</span> <code>:popcorn:</code></div>
+        <div><span class="emoji" title=":smile:">☺</span>             <code>:smile:            </code></div>
+        <div><span class="emoji" title=":happy:">😃</span>            <code>:happy:            </code></div>
+        <div><span class="emoji" title=":happy-sweat:">😅</span>      <code>:happy-sweat:      </code></div>
+        <div><span class="emoji" title=":nerd:">🤓</span>             <code>:nerd:             </code></div>
+        <div><span class="emoji" title=":heart-eyes:">😍</span>       <code>:heart-eyes:       </code></div>
+        <div><span class="emoji" title=":money-mouth:">🤑</span>      <code>:money-mouth:      </code></div>
+        <div><span class="emoji" title=":blush:">☺</span>             <code>:blush:            </code></div>
+        <div><span class="emoji" title=":sleeping:">😴</span>         <code>:sleeping:         </code></div>
+        <div><span class="emoji" title=":tongue:">😛</span>           <code>:tongue:           </code></div>
+        <div><span class="emoji" title=":cool:">😎</span>             <code>:cool:             </code></div>
+        <div><span class="emoji" title=":wink:">😉</span>             <code>:wink:             </code></div>
+        <div><span class="emoji" title=":thinking:">🤔</span>         <code>:thinking:         </code></div>
+        <div><span class="emoji" title=":crazy:">😜</span>            <code>:crazy:            </code></div>
+        <div><span class="emoji" title=":joy:">😂</span>              <code>:joy:              </code></div>
+        <div><span class="emoji" title=":sob:">😭</span>              <code>:sob:              </code></div>
+        <div><span class="emoji" title=":pleading-face:">🥺</span>    <code>:pleading-face:    </code></div>
+        <div><span class="emoji" title=":shush:">🤫</span>            <code>:shush:            </code></div>
+        <div><span class="emoji" title=":scream:">😱</span>           <code>:scream:           </code></div>
+        <div><span class="emoji" title=":angry:">😡</span>            <code>:angry:            </code></div>
+        <div><span class="emoji" title=":triumph:">😤</span>          <code>:triumph:          </code></div>
+        <div><span class="emoji" title=":vomit:">🤮</span>            <code>:vomit:            </code></div>
+        <div><span class="emoji" title=":evil:">😈</span>             <code>:evil:             </code></div>
+        <div><span class="emoji" title=":facepalm:">🤦</span>         <code>:facepalm:         </code></div>
+        <div><span class="emoji" title=":see-no-evil:">🙈</span>      <code>:see-no-evil:      </code></div>
+        <div><span class="emoji" title=":hear-no-evil:">🙉</span>     <code>:hear-no-evil:     </code></div>
+        <div><span class="emoji" title=":speak-no-evil:">🙊</span>    <code>:speak-no-evil:    </code></div>
+        <div><span class="emoji" title=":cat-happy:">😸</span>        <code>:cat-happy:        </code></div>
+        <div><span class="emoji" title=":eyes:">👀</span>             <code>:eyes:             </code></div>
+        <div><span class="emoji" title=":poop:">💩</span>             <code>:poop:             </code></div>
+        <div><span class="emoji" title=":+1:">👍</span>               <code>:+1:               </code></div>
+        <div><span class="emoji" title=":wave:">👋</span>             <code>:wave:             </code></div>
+        <div><span class="emoji" title=":clap:">👏</span>             <code>:clap:             </code></div>
+        <div><span class="emoji" title=":fire:">🔥</span>             <code>:fire:             </code></div>
+        <div><span class="emoji" title=":sparkles:">✨</span>         <code>:sparkles:         </code></div>
+        <div><span class="emoji" title=":sweat:">💦</span>            <code>:sweat:            </code></div>
+        <div><span class="emoji" title=":heart:">❤</span>             <code>:heart:            </code></div>
+        <div><span class="emoji" title=":broken-heart:">💔</span>     <code>:broken-heart:     </code></div>
+        <div><span class="emoji" title=":anatomical-heart:">🫀</span> <code>:anatomical-heart: </code></div>
+        <div><span class="emoji" title=":praise:">🙌</span>           <code>:praise:           </code></div>
+        <div><span class="emoji" title=":skull:">💀</span>            <code>:skull:            </code></div>
+        <div><span class="emoji" title=":alien:">👽</span>            <code>:alien:            </code></div>
+        <div><span class="emoji" title=":zzz:">💤</span>              <code>:zzz:              </code></div>
+        <div><span class="emoji" title=":fox:">🦊</span>              <code>:fox:              </code></div>
+        <div><span class="emoji" title=":popcorn:">🍿</span>          <code>:popcorn:          </code></div>
+        <div><span class="emoji" title=":money-bag:">💰</span>        <code>:money-bag:        </code></div>
+        <div><span class="emoji" title=":lungs:">🫁</span>            <code>:lungs:            </code></div>
     </div>
     
     <table>

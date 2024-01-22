@@ -53,10 +53,13 @@ import (
 	"errors"
 	"io"
 	"math/rand"
+	"strings"
 	"time"
 )
 
 const (
+	//alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+	ALPHABET = "0123456789"
 	// The number of captchas created that triggers garbage collection used
 	// by default store.
 	CollectNum = 100
@@ -72,8 +75,6 @@ var (
 	globalStore = NewMemoryStore(CollectNum, Expiration)
 )
 
-var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 // SetCustomStore sets custom storage for captchas, replacing the default
 // memory store. This function must be called before generating any captchas.
 func SetCustomStore(s Store) {
@@ -86,14 +87,16 @@ func randomId(rnd *rand.Rand) string {
 	return hex.EncodeToString(b)
 }
 
-// randomDigits returns a byte slice of the given length containing
-// pseudorandom numbers in range 0-9. The slice can be used as a captcha
+// randomAnswer returns a string of the given length containing
+// pseudorandom characters in range A-Z2-7. The string can be used as a captcha
 // solution.
-func randomDigits(length int, rnd *rand.Rand) (out []byte) {
+func randomAnswer(length int, rnd *rand.Rand) string {
+	out := make([]rune, length)
+	alphabet := ALPHABET
 	for i := 0; i < length; i++ {
-		out = append(out, byte(rnd.Intn(10)))
+		out[i] = rune(alphabet[rnd.Intn(len(alphabet))])
 	}
-	return
+	return string(out)
 }
 
 type Params struct {
@@ -104,15 +107,22 @@ type Params struct {
 // New creates a new captcha with the standard length, saves it in the internal
 // storage and returns its id.
 func New() (string, string) {
-	return newLen(Params{})
+	return newLen(Params{}, false)
 }
 
 func NewWithParams(params Params) (id, b64 string) {
-	return newLen(params)
+	return newLen(params, false)
 }
 
-func newLen(params Params) (id, b64 string) {
-	r := rnd
+func NewWithSolution(seed int64) (id string, answer string, captchaImg string, captchaHelpImg string) {
+	id, img := newLen(Params{Rnd: rand.New(rand.NewSource(seed))}, false)
+	_, solutionImg := newLen(Params{Rnd: rand.New(rand.NewSource(seed))}, true)
+	answer, _ = globalStore.Get(id, false)
+	return id, answer, img, solutionImg
+}
+
+func newLen(params Params, isHelpImg bool) (id, b64 string) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano())) // rand.New is not thread-safe
 	s := globalStore
 	if params.Store != nil {
 		s = params.Store
@@ -121,11 +131,11 @@ func newLen(params Params) (id, b64 string) {
 		r = params.Rnd
 	}
 	id = randomId(r)
-	digits := randomDigits(6, r)
-	s.Set(id, digits)
+	answer := randomAnswer(6, r)
+	s.Set(id, answer)
 
 	var buf bytes.Buffer
-	_ = writeImage(s, &buf, id, r)
+	_ = writeImage(s, &buf, id, r, isHelpImg)
 	captchaImg := base64.StdEncoding.EncodeToString(buf.Bytes())
 
 	return id, captchaImg
@@ -133,19 +143,19 @@ func newLen(params Params) (id, b64 string) {
 
 // WriteImage writes PNG-encoded image representation of the captcha with the given id.
 func WriteImage(w io.Writer, id string, rnd *rand.Rand) error {
-	return writeImage(globalStore, w, id, rnd)
+	return writeImage(globalStore, w, id, rnd, false)
 }
 
 func WriteImageWithStore(store Store, w io.Writer, id string, rnd *rand.Rand) error {
-	return writeImage(store, w, id, rnd)
+	return writeImage(store, w, id, rnd, false)
 }
 
-func writeImage(store Store, w io.Writer, id string, rnd *rand.Rand) error {
+func writeImage(store Store, w io.Writer, id string, rnd *rand.Rand, isHelpImg bool) error {
 	d, err := store.Get(id, false)
 	if err != nil {
 		return err
 	}
-	_, err = NewImage(d, config.CaptchaDifficulty.Load(), rnd).WriteTo(w)
+	_, err = NewImage(d, config.CaptchaDifficulty.Load(), rnd, isHelpImg).WriteTo(w)
 	return err
 }
 
@@ -154,28 +164,34 @@ func writeImage(store Store, w io.Writer, id string, rnd *rand.Rand) error {
 //
 // The function deletes the captcha with the given id from the internal
 // storage, so that the same captcha can't be verified anymore.
-func Verify(id string, digits []byte) error {
-	return verify(globalStore, id, digits, true)
+func Verify(id, answer string) error {
+	return verify(globalStore, id, answer, true)
 }
 
-func VerifyDangerous(store Store, id string, digits []byte) error {
-	return verify(store, id, digits, false)
+func VerifyDangerous(store Store, id, answer string) error {
+	return verify(store, id, answer, false)
 }
 
-func verify(store Store, id string, digits []byte, clear bool) error {
-	if digits == nil || len(digits) == 0 {
+func reverse(s string) string {
+	rns := []rune(s)
+	for i, j := 0, len(rns)-1; i < j; i, j = i+1, j-1 {
+		rns[i], rns[j] = rns[j], rns[i]
+	}
+	return string(rns)
+}
+
+func verify(store Store, id, answer string, clear bool) error {
+	if len(answer) == 0 {
 		return ErrInvalidCaptcha
 	}
+	answer = strings.ToUpper(answer)
 	realID, err := store.Get(id, clear)
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(digits, realID) {
-		// reverse digits
-		for i, j := 0, len(digits)-1; i < j; i, j = i+1, j-1 {
-			digits[i], digits[j] = digits[j], digits[i]
-		}
-		if !bytes.Equal(digits, realID) {
+	if answer != realID {
+		answer = reverse(answer)
+		if answer != realID {
 			return ErrInvalidCaptcha
 		}
 	}
@@ -185,29 +201,14 @@ func verify(store Store, id string, digits []byte, clear bool) error {
 // VerifyString is like Verify, but accepts a string of digits.  It removes
 // spaces and commas from the string, but any other characters, apart from
 // digits and listed above, will cause the function to return false.
-func VerifyString(id, digits string) error {
-	return verifyString(globalStore, id, digits, true)
+func VerifyString(id, answer string) error {
+	return verifyString(globalStore, id, answer, true)
 }
 
 func VerifyStringDangerous(store Store, id, digits string) error {
 	return verifyString(store, id, digits, false)
 }
 
-func verifyString(store Store, id, digits string, clear bool) error {
-	if digits == "" {
-		return ErrInvalidCaptcha
-	}
-	ns := make([]byte, len(digits))
-	for i := range ns {
-		d := digits[i]
-		switch {
-		case '0' <= d && d <= '9':
-			ns[i] = d - '0'
-		case d == ' ' || d == ',':
-			// ignore
-		default:
-			return ErrInvalidCaptcha
-		}
-	}
-	return verify(store, id, ns, clear)
+func verifyString(store Store, id, answer string, clear bool) error {
+	return verify(store, id, answer, clear)
 }

@@ -240,7 +240,7 @@ func (c *Cache[K, V]) replace(k K, v V, d time.Duration) error {
 func (c *Cache[K, V]) update(k K, v V) error {
 	vv, found := c.items[k]
 	if !found || vv.IsExpired() {
-		return fmt.Errorf("item %s not found", k)
+		return fmt.Errorf("item %v not found", k)
 	}
 	vv.value = v
 	c.items[k] = vv

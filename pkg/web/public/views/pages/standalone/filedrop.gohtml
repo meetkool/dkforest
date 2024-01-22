@@ -1,0 +1,32 @@
+{{ define "content" }}
+    <div id="parent">
+        <div class="container" id="form_login">
+            <div class="row">
+                <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                    {{ if .Data.Success }}
+                        <div class="alert alert-success">{{ .Data.Success }}</div>
+                    {{ else }}
+                        {{ if .Data.Error }}
+                            <div class="alert alert-danger">{{ .Data.Error }}</div>
+                        {{ end }}
+                        <div class="card" style="background-color: rgba(0, 0, 0, 0.7);">
+                            <div class="card-header" style="background-color: rgba(50, 50, 50, 0.7); color: #ccc;">
+                                <strong>{{ t "File drop" . }}</strong>
+                            </div>
+                            <div class="card-body">
+                                <form method="post" enctype="multipart/form-data"><input name="file" type="file" /><input type="submit" value="submit" /></form>
+                                <p class="mt-3">
+                                    For big files, you should consider running the custom dkf file uploader<br />
+                                    <a href="http://git.dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion/n0tr1v/dkforest/src/master/cmd/dkfupload/main.go">http://git.dkf.onion/n0tr1v/dkforest/src/master/cmd/dkfupload/main.go</a>
+                                </p>
+                                <p>
+                                    <code>./dkfupload --file /path/to/file.gz --uuid {{ .Data.Filedrop.UUID }}</code>
+                                </p>
+                            </div>
+                        </div>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+    </div>
+{{ end }}

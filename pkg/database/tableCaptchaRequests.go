@@ -19,8 +19,8 @@ type CaptchaRequest struct {
 //	return base64.StdEncoding.EncodeToString(r.CaptchaImg)
 //}
 
-func DeleteOldCaptchaRequests() {
-	if err := DB.Delete(CaptchaRequest{}, "created_at < date('now', '-90 Day')").Error; err != nil {
+func (d *DkfDB) DeleteOldCaptchaRequests() {
+	if err := d.db.Delete(CaptchaRequest{}, "created_at < date('now', '-90 Day')").Error; err != nil {
 		logrus.Error(err)
 	}
 }

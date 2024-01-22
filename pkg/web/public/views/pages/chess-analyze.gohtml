@@ -1,0 +1,13 @@
+{{ define "title" }}dkf - chess{{ end }}
+
+{{ define "content" }}
+    <div class="container">
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <textarea name="pgn" placeholder="PGN" class="form-control">{{ .Data.Pgn }}</textarea>
+            </div>
+            <button class="btn btn-primary">Analyze</button>
+        </form>
+    </div>
+{{ end }}

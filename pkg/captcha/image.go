@@ -1,7 +1,3 @@
-// Copyright 2011-2014 Dmitry Chestnykh. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package captcha
 
 import (
@@ -17,7 +13,6 @@ import (
 	"io"
 	"math"
 	"math/rand"
-	"strconv"
 	"sync"
 )
 
@@ -48,7 +43,7 @@ type Image struct {
 }
 
 type Number struct {
-	Num     int
+	Num     uint8
 	Angle   float64
 	FaceIdx int
 	Face    font1.Face
@@ -156,6 +151,16 @@ func distance(p1, p2 iPoint) float64 {
 
 func angle(p1, p2 iPoint) float64 {
 	return math.Atan2(p1.GetY()-p2.GetY(), p1.GetX()-p2.GetX())
+}
+
+type Points []Point
+
+func (p Points) Pairs(clb func(i int, p1, p2 Point)) {
+	for i := 1; i < len(p); i++ {
+		p1 := p[i-1]
+		p2 := p[i]
+		clb(i, p1, p2)
+	}
 }
 
 type Point struct {
@@ -335,6 +340,13 @@ func (m *Image) createPoint(col, row int) Point {
 		pxY: float64(m.borderTop+row*(m.numHeight+m.digitVertSpacing)) + (float64(m.numHeight) / 2) + m.RandFloat(-m.centerOffset, m.centerOffset)}
 }
 
+func RandChoice[T any](rnd *rand.Rand, arr []T) T {
+	if len(arr) == 0 {
+		panic("empty array")
+	}
+	return arr[rnd.Intn(len(arr))]
+}
+
 func (m *Image) RandInt(min, max int) int {
 	if min == max {
 		return min
@@ -342,7 +354,7 @@ func (m *Image) RandInt(min, max int) int {
 	if max < min {
 		min, max = max, min
 	}
-	return int(m.rnd.Int63n(int64(max-min+1))) + min
+	return m.rnd.Intn(max-min+1) + min
 }
 
 func (m *Image) RandFloat(min, max float64) float64 {
@@ -358,13 +370,13 @@ func (m *Image) RandFloat(min, max float64) float64 {
 var signatureFace = loadSignatureFace()
 var faces = loadFontFaces()
 
-func NewImage(digits []byte, difficulty int64, rnd *rand.Rand) *Image {
+func NewImage(answer string, difficulty int64, rnd *rand.Rand, isHelpImg bool) *Image {
 	//start := time.Now()
 	//defer func() { fmt.Println("took:", time.Since(start)) }()
 
 	m := new(Image)
 	m.rnd = rnd
-	m.renderHelpImg = false
+	m.renderHelpImg = isHelpImg
 	m.displayDebug = false
 	m.imageWidth = 240
 	m.imageHeight = 120
@@ -400,19 +412,21 @@ func NewImage(digits []byte, difficulty int64, rnd *rand.Rand) *Image {
 	m.thirdPath = m.generateSemiValidPath(usedCoordsMap)
 	updateUsedCoordsMap(m.thirdPath, usedCoordsMap)
 
+	alphabet := ALPHABET
+
 	// Generate all numbers
 	m.numbersMatrix = make([][]Number, 0)
 	for row := 0; row < m.nbNumRows; row++ {
 		numbers := make([]Number, 0)
 		for col := 0; col < m.nbNumCols; col++ {
-			d := m.RandInt(0, 9)
+			d := m.RandInt(0, len(alphabet)-1)
 			opacity := uint8(255)
 			if m.renderHelpImg {
 				opacity = 100
 			}
 			faceIdx := m.RandInt(0, len(faces)-1)
 			numbers = append(numbers, Number{
-				Num:     d,
+				Num:     alphabet[d],
 				Angle:   m.RandFloat(-40, 40),
 				FaceIdx: faceIdx,
 				Face:    faces[faceIdx],
@@ -423,7 +437,7 @@ func NewImage(digits []byte, difficulty int64, rnd *rand.Rand) *Image {
 
 	// Replace numbers by the answer digits
 	for i, c := range m.mainPath.points {
-		d := int(digits[i])
+		d := answer[i]
 		// 7 with negative angle looks like 1
 		if d == 7 {
 			m.numbersMatrix[c.Y][c.X].Angle = m.RandFloat(0, 40)
@@ -471,6 +485,8 @@ func (m *Image) withState(clb func()) {
 	defer m.c.Pop()
 	clb()
 }
+
+var blackClr = color.RGBA{R: 15, G: 15, B: 15, A: 255}
 
 // This is a hack because github.com/golang/freetype is not thread safe and will crash the program.
 // So we can only render 1 captcha at the time.
@@ -538,258 +554,178 @@ func (m *Image) renderUselessLines() {
 	d := 20.0
 	m.withState(func() {
 		for i := 0; i < 3; i++ {
-			if m.RandInt(0, 1) == 0 {
-				d *= -1
-			}
+			d = RandChoice(m.rnd, []float64{d, -d})
 			pt1 := Point{pxX: 0, pxY: m.RandFloat(-50, 30+float64(m.imageHeight))}
 			pt2 := Point{pxX: float64(m.imageWidth), pxY: m.RandFloat(-30, 50+float64(m.imageHeight))}
 			m.renderPath([]Point{pt1, pt2})
 		}
 		for i := 0; i < 3; i++ {
-			if m.RandInt(0, 1) == 0 {
-				d *= -1
-			}
+			d = RandChoice(m.rnd, []float64{d, -d})
 			pt1 := Point{pxX: 0, pxY: m.RandFloat(-30, 30+float64(m.imageHeight))}
 			pt2 := Point{pxX: float64(m.imageWidth), pxY: m.RandFloat(-30, 30+float64(m.imageHeight))}
-			grad := gg.NewLinearGradient(pt1.GetX(), pt1.GetY(), pt2.GetX(), pt2.GetY())
-			grad.AddColorStop(0, m.getLineColor())
-			grad.AddColorStop(0.5, m.getLineColor())
-			grad.AddColorStop(1, m.getLineColor())
+			grad := getGradient1(pt1, pt2, m.getLineColor(), m.getLineColor(), m.getLineColor())
 			m.c.SetStrokeStyle(grad)
 			m.c.SetDash(5, 3)
 			m.c.SetLineWidth(1)
-			m.c.MoveTo(pt1.GetX(), pt1.GetY())
-			m.c.CubicTo(pt1.GetX()+d, pt1.GetY()+d, pt2.GetX()-d, pt2.GetY()-d, pt2.GetX(), pt2.GetY())
-			m.c.Stroke()
+			m.strokeCubicLine(pt1, pt2, d)
 		}
 		for i := 0; i < 3; i++ {
-			if m.RandInt(0, 1) == 0 {
-				d *= -1
-			}
+			d = RandChoice(m.rnd, []float64{d, -d})
 			pt1 := Point{pxY: 0, pxX: m.RandFloat(-30, 30+float64(m.imageWidth))}
 			pt2 := Point{pxY: float64(m.imageHeight), pxX: m.RandFloat(-30, 30+float64(m.imageHeight))}
-			grad := gg.NewLinearGradient(pt1.GetX(), pt1.GetY(), pt2.GetX(), pt2.GetY())
-			grad.AddColorStop(0, m.getLineColor())
-			grad.AddColorStop(0.5, m.getLineColor())
-			grad.AddColorStop(1, m.getLineColor())
+			grad := getGradient1(pt1, pt2, m.getLineColor(), m.getLineColor(), m.getLineColor())
 			m.c.SetStrokeStyle(grad)
 			m.c.SetDash(5, 3)
 			m.c.SetLineWidth(1)
-			m.c.MoveTo(pt1.GetX(), pt1.GetY())
-			m.c.CubicTo(pt1.GetX()+d, pt1.GetY()+d, pt2.GetX()-d, pt2.GetY()-d, pt2.GetX(), pt2.GetY())
-			m.c.Stroke()
+			m.strokeCubicLine(pt1, pt2, d)
 		}
 	})
 }
 
-func (m *Image) renderPath(points []Point) {
+func getGradient(p1, p2 Point, gradColors []color.RGBA, i int) gg.Gradient {
+	c1 := gradColors[(i*2)-2]
+	c2 := gradColors[(i*2)-1]
+	c3 := gradColors[i*2]
+	return getGradient1(p1, p2, c1, c2, c3)
+}
+
+func getGradient1(p1, p2 Point, c1, c2, c3 color.RGBA) gg.Gradient {
+	grad := gg.NewLinearGradient(p1.GetX(), p1.GetY(), p2.GetX(), p2.GetY())
+	grad.AddColorStop(0, c1)
+	grad.AddColorStop(0.5, c2)
+	grad.AddColorStop(1, c3)
+	return grad
+}
+
+func (m *Image) getGradientColors(nbPoints int) []color.RGBA {
+	gradColors := make([]color.RGBA, nbPoints*2)
+	for i := 0; i < nbPoints*2; i += 2 {
+		gradColors[i] = m.getLineColor()
+		gradColors[i+1] = m.getLineColor()
+	}
+	return gradColors
+}
+
+func (m *Image) strokeCubicLine(p1, p2 Point, d float64) {
+	m.c.MoveTo(p1.GetX(), p1.GetY())
+	m.c.CubicTo(p1.GetX()+d, p1.GetY()+d, p2.GetX()-d, p2.GetY()-d, p2.GetX(), p2.GetY())
+	m.c.Stroke()
+}
+
+func (m *Image) renderPath(points Points) {
 	d := m.CubicDelta
 
-	gradColors := make([]color.RGBA, 0)
-	for i := 0; i < len(points); i++ {
-		gradColors = append(gradColors, m.getLineColor())
-		gradColors = append(gradColors, m.getLineColor())
-	}
+	gradColors := m.getGradientColors(len(points))
+
+	// Draw the whole line
+	m.withState(func() {
+		points.Pairs(func(i int, prev, pt Point) {
+			grad := getGradient(prev, pt, gradColors, i)
+			m.c.SetStrokeStyle(grad)
+			//m.c.SetColor(color.White)
+
+			m.withState(func() {
+				m.c.SetLineWidth(4)
+				m.c.SetColor(blackClr)
+				m.strokeCubicLine(prev, pt, d)
+			})
+
+			m.withState(func() {
+				m.c.SetLineWidth(1.5)
+				m.strokeCubicLine(prev, pt, d)
+			})
+		})
+	})
 
 	m.withState(func() {
-		// Draw the whole line
-		m.withState(func() {
-			startColor := gradColors[0]
-			for i := 1; i < len(points); i++ {
-				prev := points[i-1]
-				pt := points[i]
+		m.c.SetLineWidth(1.5)
+		m.c.SetDash(10, 300)
+		points.Pairs(func(i int, prev, pt Point) {
+			grad := getGradient(prev, pt, gradColors, i)
+			m.c.SetStrokeStyle(grad)
+			//m.c.SetColor(color.RGBA{255, 0, 0, 255})
 
-				midColor := gradColors[(i*2)-1]
-				lastColor := gradColors[i*2]
-				grad := gg.NewLinearGradient(prev.GetX(), prev.GetY(), pt.GetX(), pt.GetY())
-				grad.AddColorStop(0, startColor)
-				grad.AddColorStop(0.5, midColor)
-				grad.AddColorStop(1, lastColor)
-				startColor = lastColor
-				m.c.SetStrokeStyle(grad)
-				//m.c.SetColor(color.White)
+			m.strokeCubicLine(prev, pt, d)
 
+			if i == len(points)-1 {
 				m.withState(func() {
 					m.c.SetLineWidth(4)
-					m.c.SetColor(color.RGBA{R: 15, G: 15, B: 15, A: 255})
-					m.c.MoveTo(prev.GetX(), prev.GetY())
-					m.c.CubicTo(prev.GetX()+d, prev.GetY()+d, pt.GetX()-d, pt.GetY()-d, pt.GetX(), pt.GetY())
-					m.c.Stroke()
+					m.c.SetColor(blackClr)
+					m.strokeCubicLine(pt, prev, -d)
 				})
 
 				m.withState(func() {
-					m.c.SetLineWidth(1.5)
-					m.c.MoveTo(prev.GetX(), prev.GetY())
-					m.c.CubicTo(prev.GetX()+d, prev.GetY()+d, pt.GetX()-d, pt.GetY()-d, pt.GetX(), pt.GetY())
-					m.c.Stroke()
+					m.c.SetDashOffset(4)
+					m.c.SetDash(30, 300)
+					m.strokeCubicLine(pt, prev, -d)
 				})
-			}
-		})
-
-		m.withState(func() {
-			m.c.SetLineWidth(1.5)
-			m.c.SetDash(10, 300)
-			startColor := gradColors[0]
-			for i := 1; i < len(points); i++ {
-				prev := points[i-1]
-				pt := points[i]
-
-				midColor := gradColors[(i*2)-1]
-				lastColor := gradColors[i*2]
-				grad := gg.NewLinearGradient(prev.GetX(), prev.GetY(), pt.GetX(), pt.GetY())
-				grad.AddColorStop(0, startColor)
-				grad.AddColorStop(0.5, midColor)
-				grad.AddColorStop(1, lastColor)
-				startColor = lastColor
-				m.c.SetStrokeStyle(grad)
-				//m.c.SetColor(color.RGBA{255, 0, 0, 255})
-
-				m.c.MoveTo(prev.GetX(), prev.GetY())
-				m.c.CubicTo(prev.GetX()+d, prev.GetY()+d, pt.GetX()-d, pt.GetY()-d, pt.GetX(), pt.GetY())
-				m.c.Stroke()
-
-				if i == len(points)-1 {
-					m.withState(func() {
-						m.c.SetLineWidth(4)
-						m.c.SetColor(color.RGBA{R: 15, G: 15, B: 15, A: 255})
-						m.c.MoveTo(pt.GetX(), pt.GetY())
-						m.c.CubicTo(pt.GetX()-d, pt.GetY()-d, prev.GetX()+d, prev.GetY()+d, prev.GetX(), prev.GetY())
-						m.c.Stroke()
-					})
-
-					m.withState(func() {
-						m.c.SetDashOffset(4)
-						m.c.SetDash(30, 300)
-						m.c.MoveTo(pt.GetX(), pt.GetY())
-						m.c.CubicTo(pt.GetX()-d, pt.GetY()-d, prev.GetX()+d, prev.GetY()+d, prev.GetX(), prev.GetY())
-						m.c.Stroke()
-					})
-				} else {
-					m.withState(func() {
-						m.c.MoveTo(pt.GetX(), pt.GetY())
-						m.c.CubicTo(pt.GetX()-d, pt.GetY()-d, prev.GetX()+d, prev.GetY()+d, prev.GetX(), prev.GetY())
-						m.c.Stroke()
-					})
-				}
+			} else {
+				m.withState(func() {
+					m.strokeCubicLine(pt, prev, -d)
+				})
 			}
 		})
 	})
 }
 
-func (m *Image) renderFakePath(points []Point) {
-	d := m.CubicDelta
-
-	gradColors := make([]color.RGBA, 0)
-	for i := 0; i < len(points); i++ {
-		gradColors = append(gradColors, m.getLineColor())
-		gradColors = append(gradColors, m.getLineColor())
-	}
-
+func (m *Image) renderFakePath(points Points) {
 	if m.renderHelpImg {
 		return
 	}
 
+	d := m.CubicDelta
+	gradColors := m.getGradientColors(len(points))
+
+	// Draw the whole line
 	m.withState(func() {
-
-		// Draw the whole line
-		m.withState(func() {
-			startColor := gradColors[0]
-			for i := 1; i < len(points); i++ {
-				prev := points[i-1]
-				pt := points[i]
-				midColor := gradColors[(i*2)-1]
-				lastColor := gradColors[i*2]
-				grad := gg.NewLinearGradient(prev.GetX(), prev.GetY(), pt.GetX(), pt.GetY())
-				grad.AddColorStop(0, startColor)
-				grad.AddColorStop(0.5, midColor)
-				grad.AddColorStop(1, lastColor)
-				startColor = lastColor
-				m.c.SetStrokeStyle(grad)
-				m.withState(func() {
-					m.c.SetLineWidth(1)
-					m.c.MoveTo(prev.GetX(), prev.GetY())
-					m.c.CubicTo(prev.GetX()-d, prev.GetY()-d, pt.GetX()+d, pt.GetY()+d, pt.GetX(), pt.GetY())
-					m.c.Stroke()
-				})
-			}
+		m.c.SetLineWidth(1)
+		points.Pairs(func(i int, prev, pt Point) {
+			grad := getGradient(prev, pt, gradColors, i)
+			m.c.SetStrokeStyle(grad)
+			m.strokeCubicLine(prev, pt, -d)
 		})
+	})
 
-		// Semi transparent black line on top of the line
-		m.withState(func() {
-			m.c.SetLineWidth(4)
-			m.c.SetColor(color.RGBA{R: 15, G: 15, B: 15, A: 100})
-			for i := 1; i < len(points); i++ {
-				prev := points[i-1]
-				pt := points[i]
-				m.c.MoveTo(prev.GetX(), prev.GetY())
-				m.c.CubicTo(prev.GetX()-d, prev.GetY()-d, pt.GetX()+d, pt.GetY()+d, pt.GetX(), pt.GetY())
-				m.c.Stroke()
-				m.c.MoveTo(pt.GetX(), pt.GetY())
-				m.c.CubicTo(pt.GetX()+d, pt.GetY()+d, prev.GetX()-d, prev.GetY()-d, prev.GetX(), prev.GetY())
-				m.c.Stroke()
-			}
+	// Semi transparent black line on top of the line
+	m.withState(func() {
+		m.c.SetLineWidth(4)
+		m.c.SetColor(color.RGBA{R: 15, G: 15, B: 15, A: 100})
+		points.Pairs(func(i int, prev, pt Point) {
+			m.strokeCubicLine(prev, pt, -d)
+			m.strokeCubicLine(pt, prev, d)
 		})
+	})
 
-		// Draw the whole line again with dashes
-		m.withState(func() {
-			m.c.SetDash(5, 3)
-			startColor := gradColors[0]
-			for i := 1; i < len(points); i++ {
-				prev := points[i-1]
-				pt := points[i]
+	// Draw the whole line again with dashes
+	m.withState(func() {
+		m.c.SetDash(5, 3)
+		points.Pairs(func(i int, prev, pt Point) {
+			grad := getGradient(prev, pt, gradColors, i)
+			m.c.SetStrokeStyle(grad)
 
-				midColor := gradColors[(i*2)-1]
-				lastColor := gradColors[i*2]
-				grad := gg.NewLinearGradient(prev.GetX(), prev.GetY(), pt.GetX(), pt.GetY())
-				grad.AddColorStop(0, startColor)
-				grad.AddColorStop(0.5, midColor)
-				grad.AddColorStop(1, lastColor)
-				startColor = lastColor
-				m.c.SetStrokeStyle(grad)
-				//m.c.SetColor(color.White)
+			m.withState(func() {
+				m.c.SetLineWidth(4)
+				m.c.SetColor(blackClr)
+				m.strokeCubicLine(prev, pt, -d)
+			})
 
-				m.withState(func() {
-					m.c.SetLineWidth(4)
-					m.c.SetColor(color.RGBA{R: 15, G: 15, B: 15, A: 255})
-					m.c.MoveTo(prev.GetX(), prev.GetY())
-					m.c.CubicTo(prev.GetX()-d, prev.GetY()-d, pt.GetX()+d, pt.GetY()+d, pt.GetX(), pt.GetY())
-					m.c.Stroke()
-				})
-
-				m.withState(func() {
-					m.c.SetLineWidth(1.5)
-					m.c.MoveTo(prev.GetX(), prev.GetY())
-					m.c.CubicTo(prev.GetX()-d, prev.GetY()-d, pt.GetX()+d, pt.GetY()+d, pt.GetX(), pt.GetY())
-					m.c.Stroke()
-				})
-			}
+			m.withState(func() {
+				m.c.SetLineWidth(1.5)
+				m.strokeCubicLine(prev, pt, -d)
+			})
 		})
+	})
 
-		// Draw line edges with longer dashes
-		m.withState(func() {
-			m.c.SetDash(30, 200)
-			m.c.SetLineWidth(1.5)
-			startColor := gradColors[0]
-			for i := 1; i < len(points); i++ {
-				prev := points[i-1]
-				pt := points[i]
+	// Draw line edges with longer dashes
+	m.withState(func() {
+		m.c.SetDash(30, 200)
+		m.c.SetLineWidth(1.5)
+		points.Pairs(func(i int, prev, pt Point) {
+			grad := getGradient(prev, pt, gradColors, i)
+			m.c.SetStrokeStyle(grad)
 
-				midColor := gradColors[(i*2)-1]
-				lastColor := gradColors[i*2]
-				grad := gg.NewLinearGradient(prev.GetX(), prev.GetY(), pt.GetX(), pt.GetY())
-				grad.AddColorStop(0, startColor)
-				grad.AddColorStop(0.5, midColor)
-				grad.AddColorStop(1, lastColor)
-				startColor = lastColor
-				m.c.SetStrokeStyle(grad)
-
-				m.c.MoveTo(prev.GetX(), prev.GetY())
-				m.c.CubicTo(prev.GetX()-d, prev.GetY()-d, pt.GetX()+d, pt.GetY()+d, pt.GetX(), pt.GetY())
-				m.c.Stroke()
-				m.c.MoveTo(pt.GetX(), pt.GetY())
-				m.c.CubicTo(pt.GetX()+d, pt.GetY()+d, prev.GetX()-d, prev.GetY()-d, prev.GetX(), prev.GetY())
-				m.c.Stroke()
-			}
+			m.strokeCubicLine(prev, pt, -d)
+			m.strokeCubicLine(pt, prev, d)
 		})
 	})
 }
@@ -800,7 +736,7 @@ func (m *Image) renderBackground() {
 		//grad.AddColorStop(0, color.RGBA{10, 10, 10, 255})
 		//grad.AddColorStop(1, color.RGBA{50, 50, 50, 255})
 		//m.c.SetFillStyle(grad)
-		m.c.SetColor(color.RGBA{R: 15, G: 15, B: 15, A: 255})
+		m.c.SetColor(blackClr)
 		m.c.DrawRectangle(0, 0, float64(m.imageWidth), float64(m.imageHeight))
 		m.c.Fill()
 	})
@@ -808,7 +744,7 @@ func (m *Image) renderBackground() {
 
 func (m *Image) renderBorder() {
 	m.withState(func() {
-		m.c.SetColor(color.RGBA{R: 15, G: 15, B: 15, A: 255})
+		m.c.SetColor(blackClr)
 		m.c.DrawRectangle(0, 0, float64(m.imageWidth)-0.5, float64(m.imageHeight)-0.5)
 		m.c.Stroke()
 	})
@@ -899,7 +835,7 @@ func (m *Image) renderDigits(idx int64, clr color.RGBA) {
 					m.c.Translate(float64(x+m.numWidth/2), float64(y+m.numHeight/2))
 					m.c.Rotate(gg.Radians(num.Angle))
 					m.c.SetFontFace(num.Face)
-					m.c.DrawString(strconv.Itoa(num.Num), float64(-m.numWidth/2), float64(m.numHeight/2))
+					m.c.DrawString(string(num.Num), float64(-m.numWidth/2), float64(m.numHeight/2))
 					//m.withState(func() {
 					//	m.c.SetColor(color.RGBA{255, 0, 0, 255})
 					//	m.c.DrawCircle(0, 0, 2)

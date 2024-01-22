@@ -23,11 +23,16 @@ type SessionNotification struct {
 	IsRead       bool
 	ReadAt       *time.Time
 	CreatedAt    time.Time
-	User         User
 }
 
-func GetUserNotifications(userID UserID) (msgs []Notification, err error) {
-	err = DB.Order("id DESC").
+func (d *DkfDB) DeleteOldSessionNotifications() {
+	if err := d.db.Delete(SessionNotification{}, "created_at < date('now', '-90 Day')").Error; err != nil {
+		logrus.Error(err)
+	}
+}
+
+func (d *DkfDB) GetUserNotifications(userID UserID) (msgs []Notification, err error) {
+	err = d.db.Order("id DESC").
 		Limit(50).
 		Preload("User").
 		Find(&msgs, "user_id = ?", userID).Error
@@ -36,15 +41,15 @@ func GetUserNotifications(userID UserID) (msgs []Notification, err error) {
 		ids = append(ids, msg.ID)
 	}
 	now := time.Now()
-	if err := DB.Model(&Notification{}).Where("id IN (?)", ids).
-		UpdateColumn("is_read", true, "read_at", &now).Error; err != nil {
+	if err := d.db.Model(&Notification{}).Where("id IN (?)", ids).
+		Updates(map[string]any{"is_read": true, "read_at": &now}).Error; err != nil {
 		logrus.Error(err)
 	}
 	return
 }
 
-func GetUserSessionNotifications(sessionToken string) (msgs []SessionNotification, err error) {
-	err = DB.Order("id DESC").
+func (d *DkfDB) GetUserSessionNotifications(sessionToken string) (msgs []SessionNotification, err error) {
+	err = d.db.Order("session_notifications.id DESC").
 		Limit(50).
 		Joins("INNER JOIN sessions s ON s.token = session_token").
 		Joins("INNER JOIN users u ON u.id = s.user_id").
@@ -54,49 +59,49 @@ func GetUserSessionNotifications(sessionToken string) (msgs []SessionNotificatio
 		ids = append(ids, msg.ID)
 	}
 	now := time.Now()
-	if err := DB.Model(&SessionNotification{}).Where("id IN (?)", ids).
-		UpdateColumn("is_read", true, "read_at", &now).Error; err != nil {
+	if err := d.db.Table("session_notifications").Where("id IN (?)", ids).
+		Updates(map[string]any{"is_read": true, "read_at": &now}).Error; err != nil {
 		logrus.Error(err)
 	}
 	return
 }
 
-func DeleteNotificationByID(notificationID int64) error {
-	return DB.Where("id = ?", notificationID).Delete(&Notification{}).Error
+func (d *DkfDB) DeleteNotificationByID(notificationID int64) error {
+	return d.db.Where("id = ?", notificationID).Delete(&Notification{}).Error
 }
 
-func DeleteSessionNotificationByID(sessionNotificationID int64) error {
-	return DB.Where("id = ?", sessionNotificationID).Delete(&SessionNotification{}).Error
+func (d *DkfDB) DeleteSessionNotificationByID(sessionNotificationID int64) error {
+	return d.db.Where("id = ?", sessionNotificationID).Delete(&SessionNotification{}).Error
 }
 
-func DeleteAllNotifications(userID UserID) error {
-	return DB.Where("user_id = ?", userID).Delete(&Notification{}).Error
+func (d *DkfDB) DeleteAllNotifications(userID UserID) error {
+	return d.db.Where("user_id = ?", userID).Delete(&Notification{}).Error
 }
 
-func CreateNotification(msg string, userID UserID) {
+func (d *DkfDB) CreateNotification(msg string, userID UserID) {
 	inbox := Notification{Message: msg, UserID: userID, IsRead: false}
-	if err := DB.Create(&inbox).Error; err != nil {
+	if err := d.db.Create(&inbox).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func GetUserNotificationsCount(userID UserID) (count int64) {
-	DB.Table("notifications").Where("user_id = ? AND is_read = ?", userID, false).Count(&count)
+func (d *DkfDB) GetUserNotificationsCount(userID UserID) (count int64) {
+	d.db.Table("notifications").Where("user_id = ? AND is_read = ?", userID, false).Count(&count)
 	return
 }
 
-func GetUserSessionNotificationsCount(sessionToken string) (count int64) {
-	DB.Table("session_notifications").Where("session_token = ? AND is_read = ?", sessionToken, false).Count(&count)
+func (d *DkfDB) GetUserSessionNotificationsCount(sessionToken string) (count int64) {
+	d.db.Table("session_notifications").Where("session_token = ? AND is_read = ?", sessionToken, false).Count(&count)
 	return
 }
 
-func CreateSessionNotification(msg string, sessionToken string) {
+func (d *DkfDB) CreateSessionNotification(msg string, sessionToken string) {
 	inbox := SessionNotification{Message: msg, SessionToken: sessionToken, IsRead: false}
-	if err := DB.Create(&inbox).Error; err != nil {
+	if err := d.db.Create(&inbox).Error; err != nil {
 		logrus.Error(err)
 	}
 }
 
-func DeleteAllSessionNotifications(sessionToken string) error {
-	return DB.Where("session_token = ?", sessionToken).Delete(&SessionNotification{}).Error
+func (d *DkfDB) DeleteAllSessionNotifications(sessionToken string) error {
+	return d.db.Where("session_token = ?", sessionToken).Delete(&SessionNotification{}).Error
 }

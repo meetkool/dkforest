@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ed25519"
 	"crypto/md5"
 	cryptoRand "crypto/rand"
 	"crypto/rsa"
@@ -11,6 +12,9 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/x509"
+	"dkforest/pkg/hashset"
+	"dkforest/pkg/utils/crypto"
+	"encoding/base32"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -19,13 +23,14 @@ import (
 	"fmt"
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/asaskevich/govalidator"
+	"hash/crc32"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
@@ -40,6 +45,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"dkforest/pkg/clockwork"
 	"dkforest/pkg/config"
@@ -108,9 +114,40 @@ func ParseInt64(v string) (int64, error) {
 	return strconv.ParseInt(v, 10, 64)
 }
 
+// ParseInt shortcut for strconv.Atoi
+func ParseInt(v string) (int, error) {
+	return strconv.Atoi(v)
+}
+
+// ParseInt64OrDefault ...
+func ParseInt64OrDefault(v string, d int64) (out int64) {
+	var err error
+	out, err = ParseInt64(v)
+	if err != nil {
+		out = d
+	}
+	return
+}
+
 // DoParseInt64 same as ParseInt64 but ignore errors
 func DoParseInt64(v string) (out int64) {
 	out, _ = ParseInt64(v)
+	return
+}
+
+// DoParseInt same as ParseInt but ignore errors
+func DoParseInt(v string) (out int) {
+	out, _ = ParseInt(v)
+	return
+}
+
+func ParseUint64(v string) (uint64, error) {
+	p, err := strconv.ParseInt(v, 10, 64)
+	return uint64(p), err
+}
+
+func DoParseUint64(v string) (out uint64) {
+	out, _ = ParseUint64(v)
 	return
 }
 
@@ -192,22 +229,35 @@ func MD5(in []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+func Crc32(in []byte) uint32 {
+	h := crc32.NewIEEE()
+	_, _ = h.Write(in)
+	return h.Sum32()
+}
+
 // ShortDisplayID generate a short display id
 func ShortDisplayID(size int64) string {
 	if size <= 4 || size > 20 {
 		return ""
 	}
 	b := make([]byte, size)
-	rand.Read(b)
+	_, _ = cryptoRand.Read(b)
 	return hex.EncodeToString(b)[0:size]
 }
 
 // GenerateToken32 generate a random 32 bytes hex token
+// fe3aa9e2a3362ed6fb19295e76dca9b74c9edb415affe1a9b3d8be23b8608e23
 func GenerateToken32() string {
 	return GenerateTokenN(32)
 }
 
+// GenerateToken16 ...
+func GenerateToken16() string {
+	return GenerateTokenN(16)
+}
+
 // GenerateToken10 ...
+// 0144387f11c617517a41
 func GenerateToken10() string {
 	return GenerateTokenN(10)
 }
@@ -323,6 +373,9 @@ func Dot(in int64) string {
 // EncryptAES ...
 func EncryptAES(plaintext []byte, key []byte) ([]byte, error) {
 	gcm, ns, err := getGCMKeyBytes(key)
+	if err != nil {
+		return nil, err
+	}
 	nonce := make([]byte, ns)
 	if _, err = io.ReadFull(cryptoRand.Reader, nonce); err != nil {
 		return nil, err
@@ -348,6 +401,28 @@ func DecryptAES(ciphertext []byte, key []byte) ([]byte, error) {
 	return gcm.Open(nil, nonce, ciphertext, nil)
 }
 
+// EncryptAESMaster same as EncryptAES but use the default master key
+func EncryptAESMaster(plaintext []byte) ([]byte, error) {
+	return EncryptAES(plaintext, []byte(config.Global.MasterKey.Get()))
+}
+
+// DecryptAESMaster same as DecryptAES but use the default master key
+func DecryptAESMaster(ciphertext []byte) ([]byte, error) {
+	return DecryptAES(ciphertext, []byte(config.Global.MasterKey.Get()))
+}
+
+func EncryptStream(password []byte, src io.Reader) (*crypto.StreamEncrypter, error) {
+	return crypto.NewStreamEncrypter(password, nil, src)
+}
+
+func DecryptStream(password, iv []byte, src io.Reader) (*crypto.StreamDecrypter, error) {
+	decrypter, err := crypto.NewStreamDecrypter(password, nil, crypto.StreamMeta{IV: iv}, src)
+	if err != nil {
+		return nil, err
+	}
+	return decrypter, nil
+}
+
 func GetGCM(key string) (cipher.AEAD, int, error) {
 	keyBytes, err := hex.DecodeString(key)
 	if err != nil {
@@ -371,6 +446,46 @@ func getGCMKeyBytes(keyBytes []byte) (cipher.AEAD, int, error) {
 	}
 	nonceSize := gcm.NonceSize()
 	return gcm, nonceSize, nil
+}
+
+func GetKeyFingerprint(pkey string) string {
+	if e := GetEntityFromPKey(pkey); e != nil {
+		return FormatPgPFingerprint(e.PrimaryKey.Fingerprint)
+	}
+	return ""
+}
+
+func FormatPgPFingerprint(fpBytes []byte) string {
+	fp := strings.ToUpper(hex.EncodeToString(fpBytes))
+	return fmt.Sprintf("%s %s %s %s %s  %s %s %s %s %s",
+		fp[0:4], fp[4:8], fp[8:12], fp[12:16], fp[16:20],
+		fp[20:24], fp[24:28], fp[28:32], fp[32:36], fp[36:40])
+}
+
+func PgpCheckClearSignMessage(pkey, msg string) bool {
+	keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(pkey))
+	if err != nil {
+		return false
+	}
+	b, _ := clearsign.Decode([]byte(msg))
+	if b == nil {
+		return false
+	}
+	if _, err = b.VerifySignature(keyring, nil); err != nil {
+		return false
+	}
+	return true
+}
+
+func GetEntityFromPKey(pkey string) *openpgp.Entity {
+	reader := bytes.NewReader([]byte(pkey))
+	if block, err := armor.Decode(reader); err == nil {
+		r := packet.NewReader(block.Body)
+		if e, err := openpgp.ReadEntity(r); err == nil {
+			return e
+		}
+	}
+	return nil
 }
 
 func PgpCheckSignMessage(pkey, msg, signature string) bool {
@@ -407,7 +522,7 @@ func PgpDecryptMessage(secretKey, msg string) (string, error) {
 		logrus.Error(err)
 		return "", errors.New("unable to read message")
 	}
-	by, err := ioutil.ReadAll(md.UnverifiedBody)
+	by, err := io.ReadAll(md.UnverifiedBody)
 	if err != nil {
 		return "", err
 	}
@@ -416,16 +531,8 @@ func PgpDecryptMessage(secretKey, msg string) (string, error) {
 }
 
 func GeneratePgpEncryptedMessage(pkey, msg string) (string, error) {
-	reader := bytes.NewReader([]byte(pkey))
-	block, err := armor.Decode(reader)
-	if err != nil {
-		logrus.Error(err)
-		return "", errors.New("invalid public key")
-	}
-	r := packet.NewReader(block.Body)
-	e, err := openpgp.ReadEntity(r)
-	if err != nil {
-		logrus.Error(err)
+	e := GetEntityFromPKey(pkey)
+	if e == nil {
 		return "", errors.New("invalid public key")
 	}
 	buffer := &bytes.Buffer{}
@@ -454,7 +561,7 @@ func GeneratePgpEncryptedMessage(pkey, msg string) (string, error) {
 
 // LoadLocals ...
 func LoadLocals(bundle *i18n.Bundle) error {
-	err := filepath.Walk(config.Global.ProjectLocalsPath(), func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(config.Global.ProjectLocalsPath.Get(), func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			if strings.HasSuffix(info.Name(), ".yaml") {
 				if _, err = bundle.LoadMessageFile(path); err != nil {
@@ -478,28 +585,36 @@ func MustGetDefaultProjectPath() string {
 
 // MinInt returns the minimum int64 value
 func MinInt[T Ints](vals ...T) T {
-	min := vals[0]
+	minV := vals[0]
 	for _, num := range vals {
-		if num < min {
-			min = num
+		if num < minV {
+			minV = num
 		}
 	}
-	return min
+	return minV
 }
 
 // MaxInt returns the minimum int64 value
 func MaxInt[T Ints](vals ...T) T {
-	max := vals[0]
+	maxV := vals[0]
 	for _, num := range vals {
-		if num > max {
-			max = num
+		if num > maxV {
+			maxV = num
 		}
 	}
-	return max
+	return maxV
+}
+
+func Shuffle[T any](s []T) {
+	rand.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
+}
+
+func Shuffle1[T any](r *rand.Rand, s []T) {
+	r.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
 }
 
 type Ints interface {
-	int | int64
+	int | int64 | ~uint64
 }
 
 // Clamp ensure the value is within a range
@@ -517,17 +632,6 @@ func RandChoice[T any](arr []T) T {
 	return arr[rand.Intn(len(arr))]
 }
 
-// Random generates a number between min and max inclusively
-func Random(min, max int64) int64 {
-	if min == max {
-		return min
-	}
-	if max < min {
-		min, max = max, min
-	}
-	return rand.Int63n(max-min+1) + min
-}
-
 func RandBool() bool {
 	return RandInt(0, 1) == 1
 }
@@ -540,6 +644,17 @@ func DiceRoll(pct int) bool {
 	return RandInt(0, 100) <= pct
 }
 
+// RandI64 generates a number between min and max inclusively
+func RandI64(min, max int64) int64 {
+	if min == max {
+		return min
+	}
+	if max < min {
+		min, max = max, min
+	}
+	return rand.Int63n(max-min+1) + min
+}
+
 func RandInt(min, max int) int {
 	if min == max {
 		return min
@@ -547,7 +662,7 @@ func RandInt(min, max int) int {
 	if max < min {
 		min, max = max, min
 	}
-	return int(rand.Int63n(int64(max-min+1))) + min
+	return rand.Intn(max-min+1) + min
 }
 
 func RandFloat(min, max float64) float64 {
@@ -575,7 +690,7 @@ func RandMin(min, max int64) time.Duration {
 	return randDur(min, max, time.Minute)
 }
 
-// RandMin generates random duration in hours
+// RandHour generates random duration in hours
 func RandHour(min, max int64) time.Duration {
 	return randDur(min, max, time.Hour)
 }
@@ -586,7 +701,7 @@ func randDur(min, max int64, dur time.Duration) time.Duration {
 
 // RandDuration generates random duration
 func RandDuration(min, max time.Duration) time.Duration {
-	n := Random(min.Nanoseconds(), max.Nanoseconds())
+	n := RandI64(min.Nanoseconds(), max.Nanoseconds())
 	return time.Duration(n) * time.Nanosecond
 }
 
@@ -639,6 +754,10 @@ func Last4(cc string) string {
 type Once struct {
 	m    sync.Mutex
 	done uint32
+}
+
+func (o *Once) Now() <-chan time.Time {
+	return o.After(0)
 }
 
 // After if and only if After is being called for the first time for this instance of Once.
@@ -784,11 +903,11 @@ func ParseNextDatetimeAt(hourMinSec string, clock clockwork.Clock) (time.Time, e
 	if !hourMinSecRgx.MatchString(hourMinSec) {
 		return time.Time{}, errors.New("invalid format (should be 00:00:00)")
 	}
-	var hour, min, sec int64
-	if n, err := fmt.Sscanf(hourMinSec, "%d:%d:%d", &hour, &min, &sec); err != nil || n != 3 {
+	var hour, minute, sec int64
+	if n, err := fmt.Sscanf(hourMinSec, "%d:%d:%d", &hour, &minute, &sec); err != nil || n != 3 {
 		return time.Time{}, errors.New("invalid format (should be 00:00:00)")
 	}
-	return GetNextDatetimeAt(hour, min, sec, clock)
+	return GetNextDatetimeAt(hour, minute, sec, clock)
 }
 
 // GetNextDatetimeAt given a hour, minute, second, returns the next Time object at that time.
@@ -820,11 +939,11 @@ func ParsePrevDatetimeAt(hourMinSec string, clock clockwork.Clock) (time.Time, e
 	if !hourMinSecRgx.MatchString(hourMinSec) {
 		return time.Time{}, errors.New("invalid format (should be HH:MM:SS)")
 	}
-	var hour, min, sec int64
-	if n, err := fmt.Sscanf(hourMinSec, "%d:%d:%d", &hour, &min, &sec); err != nil || n != 3 {
+	var hour, minute, sec int64
+	if n, err := fmt.Sscanf(hourMinSec, "%d:%d:%d", &hour, &minute, &sec); err != nil || n != 3 {
 		return time.Time{}, errors.New("invalid format (should be HH:MM:SS)")
 	}
-	return GetPrevDatetimeAt(hour, min, sec, clock)
+	return GetPrevDatetimeAt(hour, minute, sec, clock)
 }
 
 // ParsePrevDatetimeAt2 given a string in this format "mm-dd HH:MM:SS" returns the previous Time object at that time.
@@ -832,11 +951,11 @@ func ParsePrevDatetimeAt2(monthDayHourMinSec string, clock clockwork.Clock) (tim
 	if !monthDayHourMinSecRgx.MatchString(monthDayHourMinSec) {
 		return time.Time{}, errors.New("invalid format (should be mm-dd HH:MM:SS)")
 	}
-	var month, day, hour, min, sec int64
-	if n, err := fmt.Sscanf(monthDayHourMinSec, "%d-%d %d:%d:%d", &month, &day, &hour, &min, &sec); err != nil || n != 5 {
+	var month, day, hour, minute, sec int64
+	if n, err := fmt.Sscanf(monthDayHourMinSec, "%d-%d %d:%d:%d", &month, &day, &hour, &minute, &sec); err != nil || n != 5 {
 		return time.Time{}, errors.New("invalid format (should be mm-dd HH:MM:SS)")
 	}
-	return GetPrevDatetimeAt2(month, day, hour, min, sec, clock)
+	return GetPrevDatetimeAt2(month, day, hour, minute, sec, clock)
 }
 
 // GetPrevDatetimeAt given a hour, minute, second, returns the previous Time object at that time.
@@ -919,6 +1038,12 @@ func Must[T any](v T, err error) T {
 	return v
 }
 
+func Must1(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 func ValidateRuneLength(str string, min, max int) bool {
 	return govalidator.RuneLength(str, strconv.Itoa(min), strconv.Itoa(max))
 }
@@ -934,3 +1059,77 @@ func TernaryOrZero[T any](predicate bool, a T) T {
 	var zero T
 	return Ternary(predicate, a, zero)
 }
+
+func InArr[T comparable](needle T, haystack []T) bool {
+	for _, el := range haystack {
+		if el == needle {
+			return true
+		}
+	}
+	return false
+}
+
+// CountBools given booleans, returns how many are set to true
+func CountBools(vals ...bool) (count int64) {
+	for _, v := range vals {
+		if v {
+			count++
+		}
+	}
+	return count
+}
+
+func CountUppercase(s string) (count, total int64) {
+	for _, r := range s {
+		if unicode.IsLetter(r) {
+			total++
+			if unicode.IsUpper(r) {
+				count++
+			}
+		}
+	}
+	return
+}
+
+func VerifyTorSign(onionAddr, msg, pemSig string) bool {
+	block, _ := pem.Decode([]byte(pemSig))
+	if block == nil {
+		return false
+	}
+	sig := block.Bytes
+	pub := identityKeyFromAddress(onionAddr)
+	return ed25519.Verify(pub, []byte(msg), sig)
+}
+
+func identityKeyFromAddress(onionAddr string) ed25519.PublicKey {
+	trimmedAddr := strings.TrimSuffix(onionAddr, ".onion")
+	upperAddr := strings.ToUpper(trimmedAddr)
+	decodedAddr, _ := base32.StdEncoding.DecodeString(upperAddr)
+	return decodedAddr[:32]
+}
+
+func Slice2Set[T any, U comparable](s []T, f func(T) U) *hashset.HashSet[U] {
+	h := hashset.New[U]()
+	for _, e := range s {
+		h.Set(f(e))
+	}
+	return h
+}
+
+type CryptoRandSource struct{}
+
+func NewCryptoRandSource() CryptoRandSource {
+	return CryptoRandSource{}
+}
+
+func (_ CryptoRandSource) Int63() int64 {
+	var b [8]byte
+	_, _ = cryptoRand.Read(b[:])
+	// mask off sign bit to ensure positive number
+	return int64(binary.LittleEndian.Uint64(b[:]) & (1<<63 - 1))
+}
+
+func (_ CryptoRandSource) Seed(_ int64) {}
+
+func False() bool { return false }
+func True() bool  { return true }

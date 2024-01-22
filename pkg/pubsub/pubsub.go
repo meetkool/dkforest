@@ -2,54 +2,69 @@ package pubsub
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
-// Contains and manage the map of topics -> subscribers
-var topicsSubs struct {
+// PubSub contains and manage the map of topics -> subscribers
+type PubSub[T any] struct {
 	sync.Mutex
-	m map[string][]*Sub
+	m map[string][]*Sub[T]
 }
 
-func init() {
-	topicsSubs.m = make(map[string][]*Sub)
+func NewPubSub[T any]() *PubSub[T] {
+	ps := PubSub[T]{}
+	ps.m = make(map[string][]*Sub[T])
+	return &ps
 }
 
-func getSubscribers(topic string) []*Sub {
-	topicsSubs.Lock()
-	defer topicsSubs.Unlock()
-	return topicsSubs.m[topic]
+func (p *PubSub[T]) getSubscribers(topic string) []*Sub[T] {
+	p.Lock()
+	defer p.Unlock()
+	return p.m[topic]
 }
 
-func addSubscriber(s *Sub) {
-	topicsSubs.Lock()
+func (p *PubSub[T]) addSubscriber(s *Sub[T]) {
+	p.Lock()
 	for _, topic := range s.topics {
-		topicsSubs.m[topic] = append(topicsSubs.m[topic], s)
+		p.m[topic] = append(p.m[topic], s)
 	}
-	topicsSubs.Unlock()
+	p.Unlock()
 }
 
-func removeSubscriber(s *Sub) {
-	topicsSubs.Lock()
+func (p *PubSub[T]) removeSubscriber(s *Sub[T]) {
+	p.Lock()
 	for _, topic := range s.topics {
-		for i, subscriber := range topicsSubs.m[topic] {
+		for i, subscriber := range p.m[topic] {
 			if subscriber == s {
-				topicsSubs.m[topic] = append(topicsSubs.m[topic][:i], topicsSubs.m[topic][i+1:]...)
+				p.m[topic] = append(p.m[topic][:i], p.m[topic][i+1:]...)
 				break
 			}
 		}
 	}
-	topicsSubs.Unlock()
+	p.Unlock()
 }
 
-//
-type payload struct {
-	topic string
-	msg   string
+// Subscribe is an alias for NewSub
+func (p *PubSub[T]) Subscribe(topics []string) *Sub[T] {
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Sub[T]{topics: topics, ch: make(chan Payload[T], 10), ctx: ctx, cancel: cancel, p: p}
+	p.addSubscriber(s)
+	return s
+}
+
+// Pub shortcut for publish which ignore the error
+func (p *PubSub[T]) Pub(topic string, msg T) {
+	for _, s := range p.getSubscribers(topic) {
+		s.publish(Payload[T]{topic, msg})
+	}
+}
+
+type Payload[T any] struct {
+	Topic string
+	Msg   T
 }
 
 // ErrTimeout error returned when timeout occurs
@@ -58,82 +73,61 @@ var ErrTimeout = errors.New("timeout")
 // ErrCancelled error returned when context is cancelled
 var ErrCancelled = errors.New("cancelled")
 
-// Sub subscriber will receive messages published on a topic in his ch
-type Sub struct {
-	topics []string     // Topics subscribed to
-	ch     chan payload // Receives messages in this channel
+// Sub subscriber will receive messages published on a Topic in his ch
+type Sub[T any] struct {
+	topics []string        // Topics subscribed to
+	ch     chan Payload[T] // Receives messages in this channel
 	ctx    context.Context
 	cancel context.CancelFunc
+	p      *PubSub[T]
 }
 
-// NewSub creates a new subscriber for topics
-func NewSub(topics []string) *Sub {
-	ctx, cancel := context.WithCancel(context.Background())
-	s := &Sub{topics: topics, ch: make(chan payload, 10), ctx: ctx, cancel: cancel}
-	addSubscriber(s)
-	return s
-}
-
-// ReceiveTimeout returns a message received on the channel or timeout
-func (s *Sub) ReceiveTimeout(timeout time.Duration) (topic string, msg string, err error) {
+// ReceiveTimeout2 returns a message received on the channel or timeout
+func (s *Sub[T]) ReceiveTimeout2(timeout time.Duration, c1 <-chan struct{}) (topic string, msg T, err error) {
 	select {
 	case p := <-s.ch:
-		return p.topic, p.msg, nil
+		return p.Topic, p.Msg, nil
 	case <-time.After(timeout):
 		return topic, msg, ErrTimeout
+	case <-c1:
+		return topic, msg, ErrCancelled
 	case <-s.ctx.Done():
 		return topic, msg, ErrCancelled
 	}
 }
 
+// ReceiveTimeout returns a message received on the channel or timeout
+func (s *Sub[T]) ReceiveTimeout(timeout time.Duration) (topic string, msg T, err error) {
+	c1 := make(chan struct{})
+	return s.ReceiveTimeout2(timeout, c1)
+}
+
 // Receive returns a message
-func (s *Sub) Receive() (topic string, msg string, err error) {
-	var res string
+func (s *Sub[T]) Receive() (topic string, msg T, err error) {
+	var res T
 	select {
 	case p := <-s.ch:
-		return p.topic, p.msg, nil
+		return p.Topic, p.Msg, nil
 	case <-s.ctx.Done():
 		return topic, res, ErrCancelled
 	}
 }
 
-// Close will remove the subscriber from the topic subscribers
-func (s *Sub) Close() {
+// ReceiveCh returns a message
+func (s *Sub[T]) ReceiveCh() <-chan Payload[T] {
+	return s.ch
+}
+
+// Close will remove the subscriber from the Topic subscribers
+func (s *Sub[T]) Close() {
 	s.cancel()
-	removeSubscriber(s)
+	s.p.removeSubscriber(s)
 }
 
 // publish a message to the subscriber channel
-func (s *Sub) publish(p payload) {
+func (s *Sub[T]) publish(p Payload[T]) {
 	select {
 	case s.ch <- p:
 	default:
 	}
-}
-
-// Subscribe is an alias for NewSub
-func Subscribe(topics []string) *Sub {
-	return NewSub(topics)
-}
-
-// PublishString a message to all subscribers of a topic
-func PublishString(topic string, msg string) {
-	for _, s := range getSubscribers(topic) {
-		s.publish(payload{topic, msg})
-	}
-}
-
-// Publish a message to all subscribers of a topic
-func Publish(topic string, msg any) error {
-	marshalled, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-	PublishString(topic, string(marshalled))
-	return nil
-}
-
-// Pub shortcut for publish which ignore the error
-func Pub(topic string, msg any) {
-	_ = Publish(topic, msg)
 }

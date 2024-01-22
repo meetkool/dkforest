@@ -1,14 +1,21 @@
 package utils
 
 import (
+	"context"
+	"crypto/sha256"
 	"dkforest/pkg/captcha"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	"dkforest/pkg/config"
@@ -19,19 +26,21 @@ import (
 const (
 	HBCookieName        = "dkft" // dkf troll
 	WaitCookieName      = "wait-token"
+	PokerReferralName   = "poker-referral-token"
 	AuthCookieName      = "auth-token"
 	AprilFoolCookieName = "april_fool"
 	ByteRoadCookieName  = "challenge_byte_road_session"
 )
 
+var ForumDisabledErr = errors.New("forum is temporarily disabled")
 var AccountTooYoungErr = errors.New("account must be at least 3 days old")
 
 func CreateCookie(name, value string, maxAge int64) *http.Cookie {
 	cookie := &http.Cookie{
 		Name:     name,
 		Value:    value,
-		Domain:   config.Global.CookieDomain(),
-		Secure:   config.Global.CookieSecure(),
+		Domain:   config.Global.CookieDomain.Get(),
+		Secure:   config.Global.CookieSecure.Get(),
 		Path:     "/",
 		HttpOnly: true,
 		MaxAge:   int(maxAge),
@@ -47,7 +56,7 @@ func CreateEncCookie(name string, value any, maxAge int64) *http.Cookie {
 	if err != nil {
 		return nil
 	}
-	encryptedVal, err := utils.EncryptAES(by, []byte(config.Global.MasterKey()))
+	encryptedVal, err := utils.EncryptAESMaster(by)
 	if err != nil {
 		return nil
 	}
@@ -66,7 +75,7 @@ func EncCookie[T any](c echo.Context, name string) (*http.Cookie, T, error) {
 	if err != nil {
 		return nil, zero, err
 	}
-	v, err := utils.DecryptAES(val, []byte(config.Global.MasterKey()))
+	v, err := utils.DecryptAESMaster(val)
 	if err != nil {
 		return nil, zero, err
 	}
@@ -83,6 +92,10 @@ func DeleteCookie(name string) *http.Cookie {
 
 func getGistCookieName(gistUUID string) string {
 	return fmt.Sprintf("gist_%s_auth", gistUUID)
+}
+
+func getLastMsgCookieName(roomName string) string {
+	return fmt.Sprintf("last_known_msg_%s", roomName)
 }
 
 func getRoomCookieName(roomID int64) string {
@@ -123,6 +136,22 @@ func CreateGistCookie(c echo.Context, gistUUID, v string) {
 	c.SetCookie(CreateCookie(getGistCookieName(gistUUID), v, utils.OneDaySecs))
 }
 
+func CreateLastMsgCookie(c echo.Context, roomName, v string) {
+	c.SetCookie(CreateCookie(getLastMsgCookieName(roomName), v, utils.OneDaySecs))
+}
+
+func GetLastMsgCookie(c echo.Context, roomName string) (*http.Cookie, error) {
+	return c.Cookie(getLastMsgCookieName(roomName))
+}
+
+func CreatePokerReferralCookie(c echo.Context, v string) {
+	c.SetCookie(CreateCookie(PokerReferralName, v, utils.OneDaySecs))
+}
+
+func GetPokerReferralCookie(c echo.Context) (*http.Cookie, error) {
+	return c.Cookie(PokerReferralName)
+}
+
 func GetAprilFoolCookie(c echo.Context) int {
 	v, err := c.Cookie(AprilFoolCookieName)
 	if err != nil {
@@ -140,12 +169,12 @@ func CreateAprilFoolCookie(c echo.Context, v int) {
 }
 
 // CaptchaVerifyString ensure that all captcha across the website makes HB life miserable.
-func CaptchaVerifyString(c echo.Context, id, digits string) error {
+func CaptchaVerifyString(c echo.Context, id, answer string) error {
 	// Can bypass captcha in dev mode
-	if config.Development.IsTrue() && digits == "000000" {
+	if config.Development.IsTrue() && answer == "000000" {
 		return nil
 	}
-	if err := captcha.VerifyString(id, digits); err != nil {
+	if err := captcha.VerifyString(id, answer); err != nil {
 		return errors.New("invalid answer")
 	}
 	// HB has 50% chance of having the captcha fails for no reason
@@ -162,3 +191,112 @@ func KillCircuit(c echo.Context) {
 		config.ConnMap.Close(conn)
 	}
 }
+
+func VerifyPow(username, nonce string, difficulty int) bool {
+	h := sha256.Sum256([]byte(username + ":" + nonce))
+	hashed := hex.EncodeToString(h[:])
+	prefix := strings.Repeat("0", difficulty)
+	return strings.HasPrefix(hashed, prefix)
+}
+
+func setStreamingHeaders(c echo.Context) {
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
+	c.Response().WriteHeader(http.StatusOK)
+	c.Response().Header().Set("Transfer-Encoding", "chunked")
+	c.Response().Header().Set("Connection", "keep-alive")
+}
+
+func closeSignalChan(c echo.Context) <-chan struct{} {
+	ctx, cancel := context.WithCancel(context.Background())
+	// Listen to the closing of HTTP connection via CloseNotifier
+	notify := c.Request().Context().Done()
+	notify1 := make(chan os.Signal, 1)
+	signal.Notify(notify1, syscall.SIGINT, syscall.SIGTERM)
+	utils.SGo(func() {
+		select {
+		case <-notify:
+		case <-notify1:
+		}
+		cancel()
+	})
+	return ctx.Done()
+}
+
+func SetStreaming(c echo.Context) <-chan struct{} {
+	setStreamingHeaders(c)
+	return closeSignalChan(c)
+}
+
+func GetReferer(c echo.Context) string {
+	return c.Request().Referer()
+}
+
+func RedirectReferer(c echo.Context) error {
+	return c.Redirect(http.StatusFound, GetReferer(c))
+}
+
+func MetaRefreshNow() string {
+	return MetaRefresh(0)
+}
+
+func MetaRefresh(delay int) string {
+	return MetaRedirect(delay, "")
+}
+
+func MetaRedirectNow(redirectURL string) string {
+	return MetaRedirect(0, redirectURL)
+}
+
+func MetaRedirect(delay int, redirectURL string) string {
+	content := fmt.Sprintf(`%d`, delay)
+	if redirectURL != "" {
+		content += fmt.Sprintf(`; URL='%s'`, redirectURL)
+	}
+	return fmt.Sprintf(`<meta http-equiv="refresh" content="%s" />`, content)
+}
+
+const CssReset = `html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}`
+
+const HtmlCssReset = `<style>` + CssReset + `</style>`

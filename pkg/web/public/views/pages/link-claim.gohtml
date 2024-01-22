@@ -1,0 +1,36 @@
+{{ define "content" }}
+<div class="container mb-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/links">Links</a></li>
+            <li class="breadcrumb-item"><a href="/links/{{ .Data.Link.UUID }}">{{ .Data.Link.Title }}</a></li>
+            <li class="breadcrumb-item active">Claim ownership</li>
+        </ol>
+        <p>
+            You can claim ownership of an onion address by using your onion private key to sign the following certificate.<br />
+            Once done, send the signature here.<br />
+        </p>
+        <div class="form-group">
+            <textarea name="certificate" class="form-control" rows="7" readonly>{{ .Data.Certificate }}</textarea>
+            <form method="post" action="/links/{{ .Data.Link.UUID }}/claim/download-certificate">
+                <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                <button class="btn btn-secondary mt-2">Downlaod certificate file</button>
+            </form>
+        </div>
+        <p>
+            Use the <a href="/links/claim-instructions">following instructions</a> to sign the certificate file.
+        </p>
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <div class="form-group">
+                <label for="signature">Signature:</label>
+                <input type="text" name="signature" id="signature" class="form-control {{ if .Data.Error }} is-invalid{{ end }}" placeholder="base64 signature" value="{{ .Data.Signature }}" autofocus />
+                {{ if .Data.Error }}<div class="invalid-feedback">{{ .Data.Error }}</div>{{ end }}
+            </div>
+            <button class="btn btn-primary">Claim ownership</button>
+            <a class="btn btn-secondary" href="/links/{{ .Data.Link.UUID }}">Cancel</a>
+        </form>
+    </nav>
+</div>
+
+{{ end }}

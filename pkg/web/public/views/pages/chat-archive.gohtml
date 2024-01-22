@@ -1,5 +1,8 @@
 {{ define "extra-head" }}
 <style>
+    body {
+        background-color: {{ .AuthUser.ChatBackgroundColor }} !important;
+    }
     .mod-btn {
         width: 16px; height: 16px;
         margin: 0; padding: 0;
@@ -54,8 +57,10 @@
     strong { font-weight: bold; }
     em { font-style: italic; }
     ul { list-style-type: disc; margin: 0 0 0 15px; padding: 0; margin-bottom: 0 !important; }
-    pre { border: 1px solid #2b442b; padding: 2px; margin: 2px 0; max-height: 300px; overflow: auto; background-color: rgba(39,40,34,0.6) !important; }
+    pre { border: 1px solid #2b442b; padding: 2px; margin: 2px 0; max-height: {{ .AuthUser.CodeBlockHeight }}px; overflow: auto; background-color: rgba(39,40,34,0.6) !important; }
+    .fullscreen { position: absolute; margin-top: -37px; right: 3px; }
     code {  border: 1px solid #2b442b; color: #f92672; padding: 0 2px; margin: 0px 0; background-color: rgba(39,40,34,0.6) !important; }
+    .o-wrap { overflow-wrap: break-word; }
 </style>
 {{ end }}
 
@@ -75,7 +80,7 @@
     <div class="mb-3">
         {{ range .Data.Messages }}
             {{ if (.UserCanSee $.AuthUser) }}
-                <div class="msg" style="border-bottom: 1px solid #444; color: #888; position: relative;{{ if and (or .User.IsHellbanned .IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7);{{ end }}" id="{{ .UUID }}">
+                <div class="msg" style="border-bottom: 1px solid #444; color: #888; position: relative;{{ if and (or .User.IsHellbanned .IsHellbanned) $.AuthUser.DisplayHellbanned }} background-color: rgba(0, 0, 0, 0.7); opacity: {{ $.AuthUser.GetHellbanOpacityF64 }};{{ end }}" id="{{ .UUID }}">
                     {{ if (.UserCanDelete $.AuthUser) }}
                         {{ if not .TooOldToDelete }}
                             <form method="post" action="/api/v1/chat/messages/delete/{{ .UUID }}" style="display: inline;">
@@ -94,10 +99,17 @@
                         {{ end }}
                         {{ if $.AuthUser.IsModerator }}
                             {{ if ne .UserID $.AuthUser.ID }}
-                                <form method="post" action="/api/v1/users/{{ .UserID }}/toggle-hellban" style="display: inline;">
-                                    <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
-                                    <button class="mod-btn hb_btn" style="color: orange; {{ if .User.IsHellbanned }}text-decoration: line-through;{{ end }}" title="hellban"></button>
-                                </form>
+                                {{- if .User.IsHellbanned -}}
+                                    <form method="post" action="/api/v1/users/{{ .UserID }}/unhellban" style="display: inline;">
+                                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                        <button class="mod-btn hb_btn" style="color: orange; text-decoration: line-through;" title="unhellban"></button>
+                                    </form>
+                                {{- else -}}
+                                    <form method="post" action="/api/v1/users/{{ .UserID }}/hellban" style="display: inline;">
+                                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                                        <button class="mod-btn hb_btn" style="color: orange;" title="hellban"></button>
+                                    </form>
+                                {{- end -}}
                                 <form method="post" action="/api/v1/users/{{ .UserID }}/kick" style="display: inline;">
                                     <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
                                     <button class="mod-btn k_btn" style="color: orange;" title="kick"></button>
@@ -114,7 +126,7 @@
                         {{ end }}
                     {{ end }}
                     {{- if ne $.Data.DateFormat "" -}}
-                        <a style="color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px;" href="#{{ .UUID }}" title="{{ .CreatedAt.Format "01-02 15:04:05" }}">{{ .CreatedAt.Format $.Data.DateFormat }}</a>&nbsp;
+                        <a style="color: #999; font-family: 'Courier New', Courier, monospace; font-size: 14px;" href="?uuid={{ .UUID }}#{{ .UUID }}" title="{{ .CreatedAt.Format "01-02 15:04:05" }}">{{ .CreatedAt.Format $.Data.DateFormat }}</a>&nbsp;
                     {{- end -}}
                     {{- if and $.AuthUser.CanSeeHB (or .IsHellbanned .User.IsHellbanned) (not .ToUserID) -}}
                         -&nbsp;
@@ -123,39 +135,34 @@
                     {{- else -}}
                         <a href="/u/{{ .User.Username }}" target="_blank" style="color: #888;">-</a>&nbsp;
                     {{- end -}}
-                    {{ if .ToUserID }}
-                        [<span {{ .User.GenerateChatStyle | attr }}>{{ .User.Username }}</span> → <span {{ .ToUser.GenerateChatStyle | attr }}>{{ .ToUser.Username }}</span>] -
-                    {{ else if .System }}
-                    {{- else if .IsMe -}}
-                    {{ else }}
+                    {{- if .System -}}
+                        <span class="sysmsg">{{ .Message | safe }}</span>
+                    {{- else -}}
                         {{- if .Moderators -}}<span class="sysmsg">[M]</span>&nbsp;{{- end -}}
-                        <span {{ .User.GenerateChatStyle | attr }}>{{ .User.Username }}</span> -
-                    {{ end }}
-                    {{ if .System }}
-                        <span style="color: #fff; font-family: 'Courier New', Courier, monospace; font-size: 14px;">{{ .Message | safe }}</span>
-                    {{ else }}
-                        {{- if .IsMe -}}
-                            {{- if .Moderators -}}<span class="sysmsg">[M]</span>&nbsp;{{- end -}}
-                            <span style="overflow-wrap: break-word;"><span {{ .User.GenerateChatStyle | attr }}>
-                                    {{ .User.Username }}
-                                    {{ .TrimMe | safe }}
-                                </span>
-                            </span>
+                        {{- if .ToUserID -}}[{{- end -}}
+                        <a {{ .User.GenerateChatStyle | attr }} href="/u/{{ .User.Username }}" rel="noopener noreferrer" target="_blank">{{ .User.Username }}</a>
+                        {{- if .ToUserID -}}
+                            &nbsp;→ <a {{ .ToUser.GenerateChatStyle | attr }} href="/u/{{ .ToUser.Username }}" rel="noopener noreferrer" target="_blank">{{ .ToUser.Username }}</a>] -
                         {{- else -}}
-                            <span {{ .User.GenerateChatStyle | attr }}><span style="overflow-wrap: break-word;">{{ .Message | safe }}</span></span>
+                            {{- if not .IsMe -}}
+                                &nbsp;-
+                            {{- end -}}
                         {{- end -}}
-                    {{ end }}
+                        &nbsp;<span {{ .User.GenerateChatStyle | attr }}><span class="o-wrap">{{ .MsgToDisplay $.AuthUser | safe }}</span></span>
+                    {{- end -}}
                 </div>
-            {{ end }}
+            {{- end -}}
         {{ else }}
             <div><em>No message yet</em></div>
         {{ end }}
     </div>
 
-    <div class="mb-5">
-        <a href="?p={{ add .Data.CurrentPage -1 }}" class="btn btn-light{{ if le .Data.CurrentPage 1 }} disabled{{ end }}">&laquo; {{ t "Prev" . }}</a>
-        <a href="?p={{ add .Data.CurrentPage 1 }}" class="btn btn-light{{ if eq .Data.CurrentPage .Data.MaxPage }} disabled{{ end }}">{{ t "Next" . }} &raquo;</a>
-    </div>
+    {{ if not .Data.UUID }}
+        <div class="mb-5">
+            <a href="?p={{ add .Data.CurrentPage -1 }}" class="btn btn-light{{ if le .Data.CurrentPage 1 }} disabled{{ end }}">&laquo; {{ t "Prev" . }}</a>
+            <a href="?p={{ add .Data.CurrentPage 1 }}" class="btn btn-light{{ if eq .Data.CurrentPage .Data.MaxPage }} disabled{{ end }}">{{ t "Next" . }} &raquo;</a>
+        </div>
+    {{ end }}
 </div>
 
 {{ end }}

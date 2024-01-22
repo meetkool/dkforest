@@ -1,0 +1,65 @@
+{{ define "extra-head" }}
+{{ end }}
+
+{{ define "title" }}dkf - Poker rake back{{ end }}
+
+{{ define "content" }}
+    <div class="container mb-5">
+
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/poker">Poker</a></li>
+                <li class="breadcrumb-item active">Rake back</li>
+            </ol>
+        </nav>
+
+        <h3>Rake back</h3>
+
+        <p>
+            When someone register using your referral code/url,
+            you will receive <strong>{{ .Data.RakeBackPct }}%</strong> of the rake
+            that this person generates while playing poker.
+        </p>
+
+        <hr />
+
+        {{ if .Data.ReferralURL }}
+            <div class="form-group">
+                <label>Your referral token:</label>
+                <input type="text" value="{{ .Data.ReferralToken }}" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+                <label>Your referral URL:</label>
+                <input type="text" value="{{ .Data.ReferralURL }}" class="form-control" readonly />
+            </div>
+        {{ else }}
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <input type="hidden" name="form_name" value="generate_referral_url" />
+                <button class="btn btn-primary">Generate referral URL</button>
+            </form>
+        {{ end }}
+        <p>
+            You referred <strong>{{ .Data.ReferredCount }}</strong> users.
+        </p>
+        <hr />
+
+        <p>
+            If you wish to give your rake back to someone, enter their referral token here.
+        </p>
+
+        {{ if .Data.SetReferralError }}
+            <div class="alert alert-danger">{{ .Data.SetReferralError }}</div>
+        {{ end }}
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <input type="hidden" name="form_name" value="set_referrer" />
+            <div class="input-group">
+                <input type="text" name="referral_token" class="form-control" placeholder="Referral token (9 characters)" maxlength="9" />
+                <div class="input-group-append">
+                    <button class="btn btn-primary">Set referrer</button>
+                </div>
+            </div>
+        </form>
+    </div>
+{{ end }}

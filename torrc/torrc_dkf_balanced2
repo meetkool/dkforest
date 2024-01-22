@@ -1,0 +1,11 @@
+SOCKSPort 0
+DataDirectory /var/lib/tor_dkf_fe2
+ControlPort 6667
+
+HiddenServiceDir /var/lib/hidden_service_dkf_fe2/
+HiddenServicePort 80 127.0.0.1:8080
+HiddenServiceOnionbalanceInstance 1
+HiddenServiceExportCircuitID haproxy
+
+ExitRelay 0
+HardwareAccel 1

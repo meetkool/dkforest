@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"dkforest/pkg/managers"
-	v1 "dkforest/pkg/web/handlers/api/v1"
+	"dkforest/pkg/odometer"
+	"dkforest/pkg/web/handlers/interceptors"
 	"time"
 
 	"dkforest/pkg/database"
@@ -24,16 +25,19 @@ type homeAttackData struct {
 }
 
 type loginData struct {
-	Autofocus       int64
-	Username        string
-	Password        string
-	Error           string
-	HomeUsersList   bool
-	CaptchaRequired bool
-	ErrCaptcha      string
-	CaptchaID       string
-	CaptchaImg      string
-	Online          []managers.UserInfo
+	Autofocus          int64
+	Username           string
+	Password           string
+	SessionDurationSec int64
+	Redirect           string
+	Error              string
+	HomeUsersList      bool
+	CaptchaRequired    bool
+	ErrCaptcha         string
+	CaptchaID          string
+	CaptchaImg         string
+	CaptchaAnswerImg   string
+	Online             []managers.UserInfo
 }
 
 type sessionsTwoFactorData struct {
@@ -72,19 +76,25 @@ type signupData struct {
 	Username         string
 	Password         string
 	RePassword       string
+	Pow              string
 	CaptchaImg       string
+	CaptchaAnswerImg string
 	CaptchaID        string
 	Captcha          string
 	CaptchaSec       int64
 	Frames           []string
 	HasSolvedCaptcha bool
 	ErrCaptcha       string
+	ErrPow           string
 	Errors           database.UserErrors
+	PowEnabled       bool
+	Redirect         string
 }
 
 type byteRoadChallengeData struct {
 	ActiveTab            string
 	CaptchaImg           string
+	CaptchaAnswerImg     string
 	CaptchaID            string
 	Captcha              string
 	Username             string
@@ -98,15 +108,20 @@ type byteRoadChallengeData struct {
 	SessionExp           time.Duration
 }
 
+type forgotPasswordBypassChallengeData struct {
+	ActiveTab string
+}
+
 type forgotPasswordData struct {
 	Error              string
-	Username           string
+	Username           database.Username
 	UsernameError      string
 	Frames             []string
 	CaptchaSec         int64
 	Captcha            string
 	CaptchaID          string
 	CaptchaImg         string
+	CaptchaAnswerImg   string
 	ErrCaptcha         string
 	GpgMode            bool
 	ToBeSignedMessage  string
@@ -121,6 +136,7 @@ type forgotPasswordData struct {
 	ErrorNewPassword   string
 	RePassword         string
 	ErrorRePassword    string
+	Redirect           string
 }
 
 type forgotPasswordResetData struct {
@@ -131,6 +147,7 @@ type forgotPasswordResetData struct {
 }
 
 type newsData struct {
+	News []database.ForumNews
 }
 
 type gistData struct {
@@ -166,6 +183,7 @@ type ForumMessageSearch struct {
 
 type forumSearchData struct {
 	Search        string
+	AuthorFilter  string
 	ForumThreads  []ForumThreadSearch
 	ForumMessages []ForumMessageSearch
 }
@@ -227,6 +245,13 @@ type editLinkData struct {
 	Mirrors             []database.LinksMirror
 }
 
+type claimLinkData struct {
+	Link        database.Link
+	Certificate string
+	Signature   string
+	Error       string
+}
+
 type linkData struct {
 	Link    database.Link
 	PgpKeys []database.LinksPgp
@@ -282,7 +307,8 @@ type deleteLinkMirrorData struct {
 }
 
 type editForumThreadData struct {
-	Thread database.ForumThread
+	Thread     database.ForumThread
+	Categories []database.ForumCategory
 }
 
 type deleteForumThreadData struct {
@@ -348,19 +374,28 @@ type chatData struct {
 	Error            string
 	RoomPassword     string
 	GuestUsername    string
+	Pow              string
 	Room             database.ChatRoom
 	IsOfficialRoom   bool
 	DisplayTutorial  bool
 	Multiline        bool
 	ChatQueryParams  string
-	ToggleMentions   bool
-	TogglePms        int64
 	RedRoom          bool
 	IsSubscribed     bool
 	CaptchaID        string
 	CaptchaImg       string
+	CaptchaAnswerImg string
 	ErrGuestUsername string
+	ErrPow           string
 	ErrCaptcha       string
+	TutoSecs         int64
+	TutoFrames       []string
+	IsStream         bool
+	PowEnabled       bool
+}
+
+type chatCodepData struct {
+	Code string
 }
 
 type chatHelpData struct {
@@ -374,6 +409,7 @@ type chatArchiveData struct {
 	Room          database.ChatRoom
 	Messages      database.ChatMessages
 	DateFormat    string
+	UUID          string
 	MessagesCount int64
 	CurrentPage   int64
 	MaxPage       int64
@@ -384,42 +420,53 @@ type roomChatSettingsData struct {
 }
 
 type chatCreateRoomData struct {
-	RoomName      string
-	Password      string
-	IsListed      bool
-	IsEphemeral   bool
-	Error         string
-	ErrorRoomName string
-	CaptchaImg    string
-	CaptchaID     string
-	Captcha       string
-	ErrCaptcha    string
+	RoomName         string
+	Password         string
+	IsListed         bool
+	IsEphemeral      bool
+	Error            string
+	ErrorRoomName    string
+	CaptchaImg       string
+	CaptchaAnswerImg string
+	CaptchaID        string
+	Captcha          string
+	ErrCaptcha       string
+}
+
+type odometerData struct {
+	Odometer *odometer.Odometer
 }
 
 type captchaData struct {
-	Ts         int64
-	Seed       int64
-	CaptchaSec int64
-	Frames     []string
-	CaptchaImg string
-	CaptchaID  string
-	Captcha    string
-	Success    string
-	Error      string
+	Ts               int64
+	Seed             int64
+	CaptchaSec       int64
+	Frames           []string
+	CaptchaImg       string
+	CaptchaAnswerImg string
+	CaptchaID        string
+	ShowAnswer       bool
+	Answer           string
+	Captcha          string
+	Success          string
+	Error            string
 }
 
 type captchaRequiredData struct {
-	CaptchaID  string
-	CaptchaImg string
-	ErrCaptcha string
+	CaptchaDescription string
+	CaptchaID          string
+	CaptchaImg         string
+	CaptchaAnswerImg   string
+	ErrCaptcha         string
 }
 
 type bhcData struct {
-	CaptchaImg string
-	CaptchaID  string
-	Captcha    string
-	Success    string
-	Error      string
+	CaptchaImg       string
+	CaptchaAnswerImg string
+	CaptchaID        string
+	Captcha          string
+	Success          string
+	Error            string
 }
 
 type adminData struct {
@@ -502,16 +549,19 @@ type adminCaptchaData struct {
 }
 
 type adminSettingsData struct {
-	ActiveTab         string
-	ProtectHome       bool
-	HomeUsersList     bool
-	ForceLoginCaptcha bool
-	SignupEnabled     bool
-	SignupFakeEnabled bool
-	DownloadsEnabled  bool
-	ForumEnabled      bool
-	MaybeAuthEnabled  bool
-	CaptchaDifficulty int64
+	ActiveTab            string
+	ProtectHome          bool
+	HomeUsersList        bool
+	ForceLoginCaptcha    bool
+	SignupEnabled        bool
+	SignupFakeEnabled    bool
+	DownloadsEnabled     bool
+	ForumEnabled         bool
+	MaybeAuthEnabled     bool
+	PowEnabled           bool
+	PokerWithdrawEnabled bool
+	CaptchaDifficulty    int64
+	MoneroPrice          float64
 }
 
 type settingsPGPData struct {
@@ -572,8 +622,8 @@ type settingsChatPMData struct {
 	ActiveTab        string
 	PmMode           int64
 	BlockNewUsersPm  bool
-	AddWhitelist     string
-	AddBlacklist     string
+	AddWhitelist     database.Username
+	AddBlacklist     database.Username
 	WhitelistedUsers []database.PmWhitelistedUsers
 	BlacklistedUsers []database.PmBlacklistedUsers
 	Error            string
@@ -582,7 +632,7 @@ type settingsChatPMData struct {
 type settingsChatIgnoreData struct {
 	ActiveTab    string
 	PmMode       int64
-	AddIgnored   string
+	AddIgnored   database.Username
 	IgnoredUsers []database.IgnoredUser
 	Error        string
 }
@@ -603,6 +653,7 @@ type shopData struct {
 type settingsChatData struct {
 	ActiveTab                   string
 	ChatColor                   string
+	ChatBackgroundColor         string
 	ChatFont                    int64
 	RefreshRate                 int64
 	ChatBold                    bool
@@ -615,13 +666,22 @@ type settingsChatData struct {
 	DisplayHellbanned           bool
 	DisplayModerators           bool
 	HideIgnoredUsersFromList    bool
+	HellbanOpacity              float64
+	CodeBlockHeight             int64
 	HideRightColumn             bool
 	ChatBarAtBottom             bool
 	AutocompleteCommandsEnabled bool
+	SpellcheckEnabled           bool
 	AfkIndicatorEnabled         bool
 	DisplayDeleteButton         bool
 	DisplayKickButton           bool
 	DisplayHellbanButton        bool
+	UseStream                   bool
+	UseStreamMenu               bool
+	ManualMultiline             bool
+	ConfirmExternalLinks        bool
+	ChessSoundsEnabled          bool
+	PokerSoundsEnabled          bool
 	NotifyChessGames            bool
 	NotifyChessMove             bool
 	NotifyNewMessage            bool
@@ -638,12 +698,6 @@ type settingsUploadsData struct {
 	ActiveTab string
 	TotalSize int64
 	Files     []database.Upload
-}
-
-type uploadsDownloadData struct {
-	CaptchaID  string
-	CaptchaImg string
-	ErrCaptcha string
 }
 
 type settingsPublicNotesData struct {
@@ -681,6 +735,12 @@ type settingsInboxSentData struct {
 type WrapperSession struct {
 	database.Session
 	CurrentSession bool
+}
+
+type settingsAPIData struct {
+	ActiveTab   string
+	APIKey      string
+	NeedConfirm bool
 }
 
 type settingsSecurityData struct {
@@ -725,7 +785,7 @@ type settingsPasswordData struct {
 type settingsAccountData struct {
 	AccountTooYoungErrorString   string
 	ActiveTab                    string
-	Username                     string
+	Username                     database.Username
 	Website                      string
 	Email                        string
 	LastSeenPublic               bool
@@ -754,33 +814,35 @@ type settingsWebsiteData struct {
 }
 
 type adminEditUsereData struct {
-	IsEdit            bool
-	ActiveTab         string
-	User              database.User
-	Username          string
-	Password          string
-	RePassword        string
-	ApiKey            string
-	Role              string
-	IsAdmin           bool
-	IsHellbanned      bool
-	Verified          bool
-	IsClubMember      bool
-	CanUploadFile     bool
-	CanUseForum       bool
-	CanUseMultiline   bool
-	CanSeeHellbanned  bool
-	IsIncognito       bool
-	CanChangeUsername bool
-	CanChangeColor    bool
-	Vetted            bool
-	ChatColor         string
-	ChatFont          int64
-	SignupMetadata    string
-	CollectMetadata   bool
-	ChatTutorial      int64
-	Errors            database.UserErrors
-	AllFonts          []utils.Font
+	IsEdit             bool
+	ActiveTab          string
+	User               database.User
+	Username           database.Username
+	Password           string
+	RePassword         string
+	ApiKey             string
+	Role               string
+	IsAdmin            bool
+	IsHellbanned       bool
+	Verified           bool
+	IsClubMember       bool
+	CanUploadFile      bool
+	CanUseForum        bool
+	CanUseMultiline    bool
+	CanUseChessAnalyze bool
+	CanSeeHellbanned   bool
+	IsIncognito        bool
+	CanChangeUsername  bool
+	CanUseUppercase    bool
+	CanChangeColor     bool
+	Vetted             bool
+	ChatColor          string
+	ChatFont           int64
+	SignupMetadata     string
+	CollectMetadata    bool
+	ChatTutorial       int64
+	Errors             database.UserErrors
+	AllFonts           []utils.Font
 }
 
 type adminEditRoomData struct {
@@ -829,17 +891,41 @@ type adminGistsData struct {
 }
 
 type adminCreateGistData struct {
-	ActiveTab  string
-	IsEdit     bool
-	Name       string
-	Content    string
-	Password   string
-	Error      string
-	ErrorName  string
-	CaptchaImg string
-	CaptchaID  string
-	Captcha    string
-	ErrCaptcha string
+	ActiveTab string
+	IsEdit    bool
+	Name      string
+	Content   string
+	Password  string
+	Error     string
+	ErrorName string
+}
+
+type adminPokerTransactionsData struct {
+	ActiveTab           string
+	PokerCasino         database.PokerCasino
+	Transactions        []database.PokerXmrTransaction
+	TransactionsCount   int64
+	CurrentPage         int64
+	MaxPage             int64
+	Balance             database.Piconero
+	UnlockedBalance     database.Piconero
+	SumIn               database.Piconero
+	SumOut              database.Piconero
+	DiffInOut           database.Piconero
+	UsersRakeBack       database.PokerChip
+	Discrepancy         int64
+	DiscrepancyPiconero database.Piconero
+}
+
+type adminSpamFiltersData struct {
+	ActiveTab        string
+	SpamFiltersCount int64
+	SpamFilters      []database.SpamFilter
+	ID               int64
+	Filter           string
+	IsRegex          bool
+	Action           int64
+	Error            string
 }
 
 type publicProfileData struct {
@@ -849,7 +935,9 @@ type publicProfileData struct {
 }
 
 type fileDropData struct {
-	Error string
+	Filedrop database.Filedrop
+	Error    string
+	Success  string
 }
 
 type stego1RoadChallengeData struct {
@@ -858,7 +946,62 @@ type stego1RoadChallengeData struct {
 }
 
 type chessData struct {
-	Games    []v1.ChessGame
+	Games    []interceptors.ChessGame
 	Error    string
-	Username string
+	Username database.Username
+	Color    string
+}
+
+type TmpTable struct {
+	database.PokerTable
+	TableBalance database.PokerChip
+	NbSeated     int
+}
+
+type pokerRakeBackData struct {
+	ReferralToken    string
+	ReferralURL      string
+	ReferredCount    int64
+	RakeBackPct      float64
+	SetReferralError string
+}
+
+type pokerTableData struct {
+	PokerTableSlug string
+}
+
+type pokerData struct {
+	XmrPrice           string
+	XmrBalance         database.Piconero
+	PokerXmrSubAddress string
+	Img                string
+	RakeBack           database.PokerChip
+	ChipsTest          database.PokerChip
+	Tables             []TmpTable
+	Transactions       []database.PokerXmrTransaction
+	MinWithdrawAmount  database.Piconero
+	WithdrawAmount     database.Piconero
+	WithdrawAddress    string
+	WithdrawUnique     int64
+	Error              string
+	ErrorTable         string
+	HelperAmount       string
+	HelperType         string
+	HelperXmr          string
+	HelperpXmr         string
+	HelperChips        database.PokerChip
+	HelperUsd          string
+	RakeBackPct        float64
+}
+
+type powHelperData struct {
+	Difficulty int64
+}
+
+type externalLink1Data struct {
+	Link string
+}
+
+type chessAnalyzeData struct {
+	Pgn string
 }

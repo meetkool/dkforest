@@ -2,44 +2,47 @@ package web
 
 import (
 	"context"
+	"dkforest/bindata"
+	"dkforest/pkg/config"
+	"dkforest/pkg/database"
+	"dkforest/pkg/staticbin"
+	tmp "dkforest/pkg/template"
+	"dkforest/pkg/utils"
+	"dkforest/pkg/web/clientFrontends"
+	"dkforest/pkg/web/handlers"
+	v1 "dkforest/pkg/web/handlers/api/v1"
+	"dkforest/pkg/web/middlewares"
 	"fmt"
+	"github.com/labstack/echo"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/sirupsen/logrus"
 	"github.com/ulule/limiter"
 	"github.com/ulule/limiter/drivers/store/memory"
+	"golang.org/x/text/language"
+	yaml "gopkg.in/yaml.v1"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"dkforest/bindata"
-	"dkforest/pkg/config"
-	"dkforest/pkg/staticbin"
-	tmp "dkforest/pkg/template"
-	"dkforest/pkg/utils"
-	"dkforest/pkg/web/handlers"
-	v1 "dkforest/pkg/web/handlers/api/v1"
-	"dkforest/pkg/web/middlewares"
-	"github.com/labstack/echo"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/text/language"
-	yaml "gopkg.in/yaml.v1"
 )
 
-func getMainServer() echo.HandlerFunc {
-	i18nBundle := getI18nBundle()
-	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
-	e.Debug = true
+func getMainServer(db *database.DkfDB, i18nBundle *i18n.Bundle, renderer *tmp.Templates, clientFE clientFrontends.ClientFrontend) echo.HandlerFunc {
+	e := newEcho()
 
 	e.Server.ReadHeaderTimeout = 10 * time.Second
 	e.Server.ReadTimeout = 10 * time.Second
 	e.Server.WriteTimeout = 10 * time.Second
 
 	e.Use(staticbin.Static(bindata.Asset, staticbin.Options{Dir: "/public", SkipLogging: true}))
-	e.Renderer = tmp.GetRenderer(e)
+	e.Renderer = renderer
+	e.Use(middlewares.SetDatabaseMiddleware(db))
+	e.Use(middlewares.SetClientFEMiddleware(clientFE))
 	e.Use(middlewares.FirstUseMiddleware)
 	e.Use(middlewares.DdosMiddleware)
 	e.Use(middlewares.MaintenanceMiddleware)
@@ -56,6 +59,7 @@ func getMainServer() echo.HandlerFunc {
 	e.GET("/bhcli", handlers.BhcliHandler, middlewares.CircuitRateLimitMiddleware(1*time.Second, 5, false))
 	e.GET("/torchess", handlers.TorchessHandler, middlewares.CircuitRateLimitMiddleware(1*time.Second, 5, false))
 	e.GET("/captcha-help", handlers.CaptchaHelpHandler, middlewares.CircuitRateLimitMiddleware(1*time.Second, 5, false))
+	e.GET("/pow-help", handlers.PowHelpHandler, middlewares.CircuitRateLimitMiddleware(1*time.Second, 5, false))
 	e.GET("/werewolf", handlers.WerewolfHandler, middlewares.CircuitRateLimitMiddleware(1*time.Second, 5, false))
 	e.GET("/gists/:gistUUID", handlers.GistHandler, middlewares.CircuitRateLimitMiddleware(1*time.Second, 5, false))
 	e.POST("/gists/:gistUUID", handlers.GistHandler, middlewares.CircuitRateLimitMiddleware(1*time.Second, 3, false))
@@ -88,13 +92,38 @@ func getMainServer() echo.HandlerFunc {
 	authGroup.GET("/public/img/signal/:signal/:data", handlers.SignalCss1)
 	authGroup.GET("/captcha-required", handlers.CaptchaRequiredHandler, middlewares.AuthRateLimitMiddleware(time.Second, 1))
 	authGroup.POST("/captcha-required", handlers.CaptchaRequiredHandler, middlewares.AuthRateLimitMiddleware(time.Second, 1))
+	authGroup.GET("/odometer", handlers.OdometerHandler, middlewares.AuthRateLimitMiddleware(time.Second, 1))
 	authGroup.GET("/captcha", handlers.CaptchaHandler, middlewares.AuthRateLimitMiddleware(time.Second, 1))
 	authGroup.POST("/captcha", handlers.CaptchaHandler, middlewares.AuthRateLimitMiddleware(time.Second, 1))
+	authGroup.GET("/donate", handlers.DonateHandler)
 	authGroup.GET("/shop", handlers.ShopHandler)
+	authGroup.GET("/poker", handlers.PokerHomeHandler)
+	authGroup.POST("/poker", handlers.PokerHomeHandler, middlewares.AuthRateLimitMiddleware(time.Second, 1))
+	authGroup.GET("/poker/rake-back", handlers.PokerRakeBackHandler)
+	authGroup.POST("/poker/rake-back", handlers.PokerRakeBackHandler, middlewares.AuthRateLimitMiddleware(time.Second, 1))
+	authGroup.GET("/poker/:roomID", handlers.PokerTableHandler)
+	authGroup.GET("/poker/:roomID/stream", handlers.PokerStreamHandler)
+	authGroup.GET("/poker/:roomID/logs", handlers.PokerLogsHandler)
+	authGroup.GET("/poker/:roomID/bet", handlers.PokerBetHandler)
+	authGroup.POST("/poker/:roomID/bet", handlers.PokerBetHandler)
+	authGroup.GET("/poker/:roomID/deal", handlers.PokerDealHandler)
+	authGroup.POST("/poker/:roomID/deal", handlers.PokerDealHandler)
+	authGroup.GET("/poker/:roomID/unsit", handlers.PokerUnSitHandler)
+	authGroup.POST("/poker/:roomID/unsit", handlers.PokerUnSitHandler)
+	authGroup.GET("/poker/:roomID/sit/:pos", handlers.PokerSitHandler)
+	authGroup.POST("/poker/:roomID/sit/:pos", handlers.PokerSitHandler)
 	authGroup.GET("/chess", handlers.ChessHandler)
 	authGroup.POST("/chess", handlers.ChessHandler)
+	authGroup.GET("/chess/analyze", handlers.ChessAnalyzeHandler)
+	authGroup.POST("/chess/analyze", handlers.ChessAnalyzeHandler)
 	authGroup.GET("/chess/:key", handlers.ChessGameHandler)
 	authGroup.POST("/chess/:key", handlers.ChessGameHandler)
+	authGroup.GET("/chess/:key/analyze", handlers.ChessGameAnalyzeHandler)
+	authGroup.POST("/chess/:key/analyze", handlers.ChessGameAnalyzeHandler)
+	authGroup.GET("/chess/:key/form", handlers.ChessGameFormHandler)
+	authGroup.POST("/chess/:key/form", handlers.ChessGameFormHandler)
+	authGroup.GET("/chess/:key/stats", handlers.ChessGameStatsHandler)
+	authGroup.POST("/chess/:key/stats", handlers.ChessGameStatsHandler)
 	authGroup.GET("/settings/chat", handlers.SettingsChatHandler)
 	authGroup.POST("/settings/chat", handlers.SettingsChatHandler, middlewares.AuthRateLimitMiddleware(2*time.Second, 1))
 	authGroup.GET("/settings/chat/pm", handlers.SettingsChatPMHandler)
@@ -109,6 +138,8 @@ func getMainServer() echo.HandlerFunc {
 	authGroup.POST("/settings/private-notes", handlers.SettingsPrivateNotesHandler)
 	authGroup.GET("/settings/sessions", handlers.SettingsSessionsHandler)
 	authGroup.POST("/settings/sessions", handlers.SettingsSessionsHandler)
+	authGroup.GET("/settings/api", handlers.SettingsAPIHandler)
+	authGroup.POST("/settings/api", handlers.SettingsAPIHandler)
 	authGroup.GET("/settings/security", handlers.SettingsSecurityHandler)
 	authGroup.GET("/settings/account", handlers.SettingsAccountHandler)
 	authGroup.POST("/settings/account", handlers.SettingsAccountHandler, middlewares.AuthRateLimitMiddleware(2*time.Second, 1))
@@ -133,19 +164,25 @@ func getMainServer() echo.HandlerFunc {
 	authGroup.GET("/two-factor-authentication/disable", handlers.TwoFactorAuthenticationDisableHandler)
 	authGroup.POST("/two-factor-authentication/disable", handlers.TwoFactorAuthenticationDisableHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
 	authGroup.GET("/api/v1/captcha-svc", v1.GetCaptchaHandler)
-	authGroup.POST("/api/v1/chat/:roomID/notifier", v1.RoomNotifierHandler)
+	authGroup.POST("/api/v1/chat/:roomName/notifier", v1.RoomNotifierHandler)
+	authGroup.POST("/api/v1/battleship", v1.BattleshipHandler)
+	authGroup.POST("/api/v1/werewolf", v1.WerewolfHandler)
 	authGroup.POST("/api/v1/captcha/solver", v1.CaptchaSolverHandler)
+	authGroup.GET("/api/v1/chat/controls/:roomName/:isStream", v1.ChatControlsHandler)
+	authGroup.POST("/api/v1/chat/controls/:roomName/:isStream", v1.ChatControlsHandler)
 	authGroup.GET("/api/v1/chat/top-bar/:roomName", v1.ChatTopBarHandler)
 	authGroup.POST("/api/v1/chat/top-bar/:roomName", v1.ChatTopBarHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 3))
 	authGroup.GET("/api/v1/chat/messages/:roomName", v1.ChatMessagesHandler)
+	authGroup.GET("/api/v1/chat/messages/:roomName/refresh", v1.ChatStreamMessagesRefreshHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 4))
+	authGroup.GET("/api/v1/chat/messages/:roomName/stream", v1.ChatStreamMessagesHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 4))
+	authGroup.GET("/api/v1/chat/messages/:roomName/stream/menu", v1.ChatStreamMenuHandler)
 	authGroup.POST("/api/v1/notifications/delete/:notificationID", v1.DeleteNotificationHandler)
 	authGroup.POST("/api/v1/session-notifications/delete/:sessionNotificationID", v1.DeleteSessionNotificationHandler)
 	authGroup.POST("/api/v1/inbox/delete/:messageID", v1.ChatInboxDeleteMessageHandler)
 	authGroup.POST("/api/v1/inbox/delete-all", v1.ChatInboxDeleteAllMessageHandler)
+	authGroup.GET("/api/v1/chat/messages/delete/:messageUUID", v1.ChatDeleteMessageHandler)
 	authGroup.POST("/api/v1/chat/messages/delete/:messageUUID", v1.ChatDeleteMessageHandler)
 	authGroup.POST("/api/v1/chat/messages/reactions", v1.ChatMessageReactionHandler)
-	authGroup.POST("/api/v1/users/:userID/toggle-hellban", v1.UserHellbanHandler)
-	authGroup.POST("/api/v1/users/:userID/kick", v1.KickHandler)
 	authGroup.POST("/api/v1/rooms/:roomName/subscribe", v1.SubscribeHandler)
 	authGroup.POST("/api/v1/rooms/:roomName/unsubscribe", v1.UnsubscribeHandler)
 	authGroup.POST("/api/v1/threads/:threadUUID/subscribe", v1.ThreadSubscribeHandler)
@@ -159,13 +196,19 @@ func getMainServer() echo.HandlerFunc {
 	authGroup.GET("/bhcli/downloads", handlers.BhcliDownloadsHandler)
 	authGroup.GET("/bhcli/downloads/:filename", handlers.BhcliDownloadFileHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2), middlewares.CaptchaMiddleware())
 	authGroup.POST("/bhcli/downloads/:filename", handlers.BhcliDownloadFileHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2), middlewares.CaptchaMiddleware())
+	authGroup.GET("/memes/:slug", handlers.MemeHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.GET("/news", handlers.NewsHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.GET("/links", handlers.LinksHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.GET("/links/download", handlers.LinksDownloadHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.POST("/links/download", handlers.LinksDownloadHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.GET("/l/:shorthand", handlers.LinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
+	authGroup.GET("/links/claim-instructions", handlers.LinksClaimInstructionsHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.GET("/links/:linkUUID", handlers.LinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.POST("/links/:linkUUID/restore", handlers.RestoreLinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
+	authGroup.GET("/links/:linkUUID/claim", handlers.ClaimLinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
+	authGroup.POST("/links/:linkUUID/claim", handlers.ClaimLinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
+	authGroup.POST("/links/:linkUUID/claim/download-certificate", handlers.ClaimDownloadCertificateLinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
+	authGroup.GET("/links/:linkUUID/claim-certificate", handlers.ClaimCertificateLinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.GET("/links/:linkUUID/edit", handlers.EditLinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.POST("/links/:linkUUID/edit", handlers.EditLinkHandler, middlewares.AuthRateLimitMiddleware(time.Second, 2))
 	authGroup.GET("/links/:linkUUID/delete", handlers.LinkDeleteHandler)
@@ -188,6 +231,7 @@ func getMainServer() echo.HandlerFunc {
 	authGroup.POST("/t/:threadUUID/delete", handlers.ThreadDeleteHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
 	authGroup.GET("/t/:threadUUID/reply", handlers.ThreadReplyHandler)
 	authGroup.POST("/t/:threadUUID/reply", handlers.ThreadReplyHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
+	authGroup.GET("/t/:threadUUID/messages/:messageUUID/raw", handlers.ThreadRawMessageHandler)
 	authGroup.GET("/t/:threadUUID/messages/:messageUUID/edit", handlers.ThreadEditMessageHandler)
 	authGroup.POST("/t/:threadUUID/messages/:messageUUID/edit", handlers.ThreadEditMessageHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
 	authGroup.GET("/t/:threadUUID/messages/:messageUUID/delete", handlers.ThreadDeleteMessageHandler)
@@ -196,18 +240,26 @@ func getMainServer() echo.HandlerFunc {
 	authGroup.POST("/new-thread", handlers.NewThreadHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
 	authGroup.GET("/red-room", handlers.RedRoomHandler)
 	authGroup.GET("/rooms", handlers.RoomsHandler)
-	authGroup.GET("/chat", handlers.ChatHandler)
+	authGroup.GET("/chat", handlers.ChatHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 4))
 	authGroup.POST("/chat", handlers.ChatHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
 	authGroup.GET("/chat/help", handlers.ChatHelpHandler)
-	authGroup.GET("/chat/create-room", handlers.ChatCreateRoomHandler)
+	authGroup.GET("/chat-code/:messageUUID/:idx", handlers.ChatCodeHandler)
+	authGroup.GET("/chat/create-room", handlers.ChatCreateRoomHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
 	authGroup.POST("/chat/create-room", handlers.ChatCreateRoomHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
+	authGroup.GET("/chat/:roomName/stream", handlers.ChatStreamHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 4))
 	authGroup.GET("/chat/:roomName/archive", handlers.ChatArchiveHandler)
 	authGroup.GET("/chat/:roomName/delete", handlers.ChatDeleteHandler)
 	authGroup.POST("/chat/:roomName/delete", handlers.ChatDeleteHandler)
 	authGroup.GET("/chat/:roomName/settings", handlers.RoomChatSettingsHandler)
 	authGroup.POST("/chat/:roomName/settings", handlers.RoomChatSettingsHandler)
+	authGroup.GET("/external-link/:original", handlers.ExternalLink1Handler)
+	authGroup.GET("/external-link/:service/:original", handlers.ExternalLinkHandler)
 	moderatorGroup := e.Group("", middlewares.IsModeratorMiddleware)
+	moderatorGroup.POST("/api/v1/users/:userID/hellban", v1.UserHellbanHandler)
+	moderatorGroup.POST("/api/v1/users/:userID/unhellban", v1.UserUnHellbanHandler)
+	moderatorGroup.POST("/api/v1/users/:userID/kick", v1.KickHandler)
 	moderatorGroup.POST("/links/reindex", handlers.LinksReindexHandler)
+	moderatorGroup.GET("/forum/reindex", handlers.ForumReindexHandler)
 	moderatorGroup.GET("/settings/website", handlers.SettingsWebsiteHandler)
 	moderatorGroup.POST("/settings/website", handlers.SettingsWebsiteHandler)
 	moderatorGroup.GET("/settings/invitations", handlers.SettingsInvitationsHandler)
@@ -221,7 +273,11 @@ func getMainServer() echo.HandlerFunc {
 	adminGroup.GET("/admin/sessions", handlers.SessionsHandler)
 	adminGroup.GET("/admin/backup", handlers.BackupHandler)
 	adminGroup.POST("/admin/backup", handlers.BackupHandler)
+	adminGroup.GET("/admin/poker-transactions", handlers.AdminPokerTransactionsHandler)
+	adminGroup.GET("/admin/spam-filters", handlers.AdminSpamFiltersHandler)
+	adminGroup.POST("/admin/spam-filters", handlers.AdminSpamFiltersHandler)
 	adminGroup.GET("/admin/ddos", handlers.DdosHandler)
+	adminGroup.POST("/admin/ddos", handlers.DdosHandler)
 	adminGroup.GET("/admin/audits", handlers.AdminAuditsHandler)
 	adminGroup.POST("/admin/users/:userID/delete", handlers.AdminDeleteUserHandler)
 	adminGroup.GET("/admin/users/:userID/security-logs", handlers.AdminUserSecurityLogsHandler)
@@ -240,11 +296,13 @@ func getMainServer() echo.HandlerFunc {
 	adminGroup.POST("/admin/filedrops", handlers.AdminFiledropsHandler)
 	adminGroup.GET("/admin/file-drop/:filename", handlers.FiledropDownloadHandler)
 	adminGroup.GET("/admin/downloads", handlers.AdminDownloadsHandler)
+	adminGroup.POST("/admin/downloads/:downloadID/delete", handlers.AdminDeleteDownloadHandler)
 	adminGroup.GET("/admin/gists", handlers.AdminGistsHandler)
 	adminGroup.GET("/admin/gists/new", handlers.AdminNewGistHandler)
 	adminGroup.POST("/admin/gists/new", handlers.AdminNewGistHandler)
 	adminGroup.GET("/admin/gists/:gistUUID/edit", handlers.AdminEditGistHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
 	adminGroup.POST("/admin/gists/:gistUUID/edit", handlers.AdminEditGistHandler, middlewares.AuthRateLimitMiddleware(1*time.Second, 2))
+	adminGroup.GET("/admin/stream-users", handlers.StreamUsersHandler)
 	clubGroup := authGroup.Group("", middlewares.ClubMiddleware)
 	clubGroup.GET("/club", handlers.ClubHandler)
 	clubGroup.GET("/club/threads/:threadID", handlers.ClubThreadHandler)
@@ -260,6 +318,7 @@ func getMainServer() echo.HandlerFunc {
 	vipGroup.GET("/vip", handlers.VipHandler)
 	vipGroup.GET("/vip/challenges/stego1", handlers.Stego1ChallengeHandler)
 	vipGroup.POST("/vip/challenges/stego1", handlers.Stego1ChallengeHandler)
+	vipGroup.GET("/vip/challenges/forgot-password-bypass", handlers.ForgotPasswordBypassChallengeHandler)
 	vipGroup.GET("/vip/challenges/byte-road", handlers.ByteRoadChallengeHandler, middlewares.AuthRateLimitMiddleware(1*time.Minute, 500))
 	vipGroup.POST("/vip/challenges/byte-road", handlers.ByteRoadChallengeHandler, middlewares.AuthRateLimitMiddleware(1*time.Minute, 500))
 	vipGroup.GET("/vip/challenges/re-1", handlers.VipDownloadsHandler)
@@ -277,25 +336,114 @@ func getMainServer() echo.HandlerFunc {
 	}
 }
 
-// Start ...
-func Start(host string, port int) {
-	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
-	e.Debug = true
+func getBaseServer(db *database.DkfDB, clientFE clientFrontends.ClientFrontend) *echo.Echo {
+	e := newEcho()
+	renderer := tmp.GetRenderer(e)
+	i18nBundle := getI18nBundle()
+	e.Renderer = renderer
+	e.Use(middlewares.SetUselessHeadersMiddleware)
+	e.GET("/file-drop/:uuid", handlers.FileDropHandler, middlewares.SetDatabaseMiddleware(db), middlewares.I18nMiddleware(i18nBundle, "en"))
+	e.POST("/file-drop/:uuid", handlers.FileDropHandler, middlewares.SetDatabaseMiddleware(db), middlewares.I18nMiddleware(i18nBundle, "en"))
+	e.POST("/file-drop/:uuid/dkfupload", handlers.FileDropDkfUploadHandler, middlewares.SetDatabaseMiddleware(db), middlewares.I18nMiddleware(i18nBundle, "en"))
+	e.POST("/api/v1/file-drop/:uuid/dkfdownload", handlers.FileDropDkfDownloadHandler, middlewares.SetDatabaseMiddleware(db), middlewares.I18nMiddleware(i18nBundle, "en"), middlewares.SetUserMiddleware, middlewares.IsAuthMiddleware)
+	e.GET("/downloads/:fileName", handlers.FileDropDownloadHandler, middlewares.SetDatabaseMiddleware(db), middlewares.I18nMiddleware(i18nBundle, "en"), middlewares.SetUserMiddleware)
+	e.POST("/downloads/:fileName", handlers.FileDropDownloadHandler, middlewares.SetDatabaseMiddleware(db), middlewares.I18nMiddleware(i18nBundle, "en"), middlewares.SetUserMiddleware)
+	e.Any("*", getMainServer(db, i18nBundle, renderer, clientFE))
+	return e
+}
 
-	e.GET("/file-drop/:uuid", handlers.FileDropHandler)
-	e.POST("/file-drop/:uuid", handlers.FileDropHandler)
-	e.Any("*", getMainServer())
+func getSubdomainServer(db *database.DkfDB, clientFE clientFrontends.ClientFrontend) *echo.Echo {
+	rp := getReverseProxy(config.GogsURL)
+	be := getBaseServer(db, clientFE)
+	e := newEcho()
+	e.Any("*", func(c echo.Context) error {
+		res := c.Response()
+		req := c.Request()
+		host := req.Host
+		hostParts := strings.SplitN(host, ".", 2)
+		if hostParts[0] == "git" {
+			rp.ServeHTTP(res, req)
+			return nil
+		}
+		be.ServeHTTP(res, req)
+		return nil
+	})
+	return e
+}
 
-	if config.Development.IsFalse() {
-		prodServer(e)
+func getI2pServer(db *database.DkfDB) *echo.Echo {
+	if config.Development.IsTrue() {
+		return nil
 	}
-	if err := e.Start(host + ":" + strconv.Itoa(port)); err != nil {
-		if err != http.ErrServerClosed {
-			logrus.Error(err)
+	return getSubdomainServer(db, clientFrontends.I2PClientFE)
+}
+
+func getTorServer(db *database.DkfDB) *echo.Echo {
+	e := getSubdomainServer(db, clientFrontends.TorClientFE)
+	configTorProdServer(e)
+	return e
+}
+
+// Start ...
+func Start(db *database.DkfDB, host string, port int) {
+	// Server for Tor/dev
+	e1 := getTorServer(db)
+	// Start server for I2P
+	e2 := getI2pServer(db)
+
+	serverError1 := make(chan struct{})
+	serverError2 := make(chan struct{})
+
+	utils.SGo(func() {
+		address := host + ":" + strconv.Itoa(port)
+		logrus.Info("start tor server on " + address)
+		if err := e1.Start(address); err != nil {
+			if err != http.ErrServerClosed {
+				logrus.Error(err)
+			}
+			close(serverError1)
+		}
+	})
+
+	utils.SGo(func() {
+		if e2 != nil {
+			address := host + ":" + strconv.Itoa(port+1)
+			logrus.Info("start i2p server on " + address)
+			if err := e2.Start(address); err != nil {
+				if err != http.ErrServerClosed {
+					logrus.Error(err)
+				}
+				close(serverError2)
+			}
+		}
+	})
+
+	// Wait for interrupt signal to gracefully shutdown the server with
+	// a timeout of 10 seconds.
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	select {
+	case <-quit:
+	case <-serverError1:
+	case <-serverError2:
+	}
+
+	logrus.Info("graceful shutdown")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := e1.Shutdown(ctx); err != nil {
+		logrus.Errorf("tor graceful shutdown failed: %s", err.Error())
+	}
+
+	if e2 != nil {
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := e2.Shutdown(ctx); err != nil {
+			logrus.Errorf("i2p graceful shutdown failed: %s", err.Error())
 		}
 	}
+
+	logrus.Info("Bye!")
 }
 
 func extractGlobalCircuitIdentifier(m string) int64 {
@@ -313,7 +461,34 @@ func extractGlobalCircuitIdentifier(m string) int64 {
 	return globalCircuitID
 }
 
-func prodServer(e *echo.Echo) {
+func getReverseProxy(u string) *httputil.ReverseProxy {
+	remote, err := url.Parse(u)
+	if err != nil {
+		panic(err)
+	}
+	reverseProxy := httputil.NewSingleHostReverseProxy(remote)
+	reverseProxy.FlushInterval = 1000 * time.Millisecond
+	reverseProxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, e error) {
+		if e.Error() != "context canceled" {
+			logrus.Error(e.Error())
+		}
+		w.WriteHeader(http.StatusBadGateway)
+	}
+	return reverseProxy
+}
+
+func newEcho() *echo.Echo {
+	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
+	e.Debug = true
+	return e
+}
+
+func configTorProdServer(e *echo.Echo) {
+	if config.Development.IsTrue() {
+		return
+	}
 	rate := limiter.Rate{Period: 5 * time.Second, Limit: 25}
 	store := memory.NewStore()
 	limiterInstance := limiter.New(store, rate)

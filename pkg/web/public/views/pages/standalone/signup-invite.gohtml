@@ -1,0 +1,22 @@
+{{ define "content" }}
+<div id="parent">
+    <div class="container" id="form_login">
+        <div class="row">
+            <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                <div class="mb-3 bg-label">
+                    New signup are temporarily disabled.<br />
+                    However, you can get an invitation code if you ask the right person.<br />
+                </div>
+                <form autocomplete="on" method="get" action="/signup/invitation">
+                    <div class="form-group">
+                        <input class="transparent-input form-control" placeholder="{{ t "Invitation token" . }}" name="invitationToken" type="text" autocorrect="off" autocapitalize="none" autofocus required />
+                    </div>
+                    <div class="form-group">
+                        <input type="submit" class="transparent-input btn btn-lg btn-primary btn-block" value="{{ t "Validate" . }}" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

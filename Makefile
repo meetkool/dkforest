@@ -17,7 +17,7 @@ build-docker-bin: bindata-prod
 		'$(ENVS) go build --tags "fts5" -gcflags=all=-trimpath=$(GOPATH) $(SELF_HOST_FLAGS) -o dist/$(FILENAME) cmd/dkf/main.go'
 
 build-linux: ENVS=$(LINUX_ENVS)
-build-linux: DOCKER_IMG=golang:1.18-stretch
+build-linux: DOCKER_IMG=golang:1.19-buster
 build-linux: FILENAME=$(LINUX_FILENAME)
 build-linux: build-docker-bin tar-file clean-file build-checksum
 
@@ -53,16 +53,21 @@ bindata-prod: bindata
 
 scp-master: FILENAME=$(LINUX_FILENAME)
 scp-master:
-	scp -pr dist/$(FILENAME).tar.gz dkf:/root
+	scp -pr dist/$(FILENAME).tar.gz dkf:/home/dkf
 
 extract-master: FILENAME=$(LINUX_FILENAME)
 extract-master:
-	ssh dkf 'cd /root && tar -xvz -f$(FILENAME).tar.gz && mv ./dist/$(FILENAME) ./dist/darkforest && rm $(FILENAME).tar.gz'
+	ssh dkf 'cd /home/dkf && tar -xvz -f$(FILENAME).tar.gz && cp ./dist/darkforest ./dist/darkforest_prev && mv ./dist/$(FILENAME) ./dist/darkforest && rm $(FILENAME).tar.gz'
+
+rollback-master:
+	ssh dkf 'cd /home/dkf && mv ./dist/darkforest_prev ./dist/darkforest'
 
 restart-master:
-	ssh dkf 'service darkforest restart'
+	ssh dkf 'service dkf restart'
 
 deploy-master: clean-dist build-linux scp-master extract-master restart-master
+
+rollback: rollback-master restart-master
 
 serve:
 	air
