@@ -4,6 +4,9 @@
         color: #aaa;
         font-size: 11px;
     }
+    .search-form {
+        width: 250px;
+    }
 </style>
 {{ end }}
 
@@ -19,9 +22,10 @@
         </ol>
     </nav>
 
+    {{ if .Data.Search }}
     <div class="pb-2 mb-4 border-bottom">
-        <form method="get" class="d-inline">
-            <div class="input-group" style="width: 250px;">
+        <form method="get" class="d-inline search-form">
+            <div class="input-group">
                 <input type="text" name="search" class="form-control form-control-sm d-inline" value="{{ .Data.Search }}" placeholder="Search" />
                 <div class="input-group-append">
                     <button class="btn btn-secondary btn-sm">search</button>
@@ -29,7 +33,9 @@
             </div>
         </form>
     </div>
+    {{ end }}
 
+    {{ if .Data.ForumThreads }}
     <table class="table table-striped">
         <tr>
             <th>Thread name</th>
@@ -44,12 +50,26 @@
                 </td>
                 <td class="text-center" style="vertical-align: middle;">{{ .RepliesCount }}</td>
                 <td>
-                    <a style="color: {{ .AuthorChatColor }};" href="/u/{{ .Author }}">{{ .Author }}</a><br />
+                    {{ if .AuthorChatColor }}
+                    <a style="color: {{ .AuthorChatColor }};" href="/u/{{ .Author }}">{{ .Author }}</a>
+                    {{ else }}
+                    <a href="/u/{{ .Author }}">{{ .Author }}</a>
+                    {{ end }}
+                    <br />
+                    {{ if .CreatedAt }}
                     <span class="timestamp">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+                    {{ end }}
                 </td>
                 <td>
-                    <a style="color: {{ .LastMsgChatColor }};" href="/u/{{ .LastMsgAuthor }}">{{ .LastMsgAuthor }}</a><br />
+                    {{ if .LastMsgChatColor }}
+                    <a style="color: {{ .LastMsgChatColor }};" href="/u/{{ .LastMsgAuthor }}">{{ .LastMsgAuthor }}</a>
+                    {{ else }}
+                    <a href="/u/{{ .LastMsgAuthor }}">{{ .LastMsgAuthor }}</a>
+                    {{ end }}
+                    <br />
+                    {{ if .LastMsgCreatedAt }}
                     <span class="timestamp">{{ .LastMsgCreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
+                    {{ end }}
                 </td>
             </tr>
         {{ else }}
@@ -58,7 +78,11 @@
             </tr>
         {{ end }}
     </table>
+    {{ else }}
+    <p><em>No threads to display</em></p>
+    {{ end }}
 
+    {{ if .Data.ForumMessages }}
     <table class="table table-striped">
         <tr>
             <th>Thread name</th>
@@ -70,18 +94,4 @@
                 <td><a href="/t/{{ .ThreadUUID }}#{{ .UUID }}">{{ .ThreadName }}</a></td>
                 <td>
                     <a href="/t/{{ .ThreadUUID }}#{{ .UUID }}">{{ .Snippet }}</a>
-                </td>
-                <td>
-                    <a style="color: {{ .AuthorChatColor }};" href="/u/{{ .Author }}">{{ .Author }}</a><br />
-                    <span class="timestamp">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
-                </td>
-            </tr>
-        {{ else }}
-            <tr>
-                <td colspan="3"><em>No messages to display</em></td>
-            </tr>
-        {{ end }}
-    </table>
-</div>
-
-{{ end }}
+                </td
