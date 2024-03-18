@@ -1,17 +1,28 @@
-vendor
-downloads
-downloads-bhcli
-downloads-torchess
-tmp
-key.pem
-bindata
-dist
-*.lic
-screenshot*
-uploads
-filedrop
-.idea
-*.db
-*.csv
-cmd/n0tr1v
-rockyou.txt
+#!/bin/bash
+
+# Create directories
+mkdir -p vendor/downloads/downloads-bhcli \
+         vendor/downloads/downloads-torchess \
+         tmp \
+         bindata \
+         dist \
+         cmd/n0tr1v \
+         uploads \
+         filedrop
+
+# Download files
+wget -P vendor/downloads https://example.com/key.pem
+
+# Create and populate files
+echo "Bindata content" > bindata/bindata.bin
+echo "Dist content" > dist/dist.tar.gz
+
+# Set file permissions
+chmod 600 vendor/downloads/key.pem
+chmod 700 cmd/n0tr1v
+
+# Exclude files
+export GLOBIGNORE="*.lic screenshot*"
+
+# Copy files
+cp /path/to/rockyou.txt tmp/
