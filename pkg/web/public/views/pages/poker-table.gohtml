@@ -1,22 +1,30 @@
-{{ define "nav-mb" }} mb-1{{ end }}
+{{/* Define a helper function to add a CSS class if necessary */}}
+{{ $hasMBClass := eq .Site.Params.navClass "mb-1" }}
+{{ define "nav-mb" }}
+  {{ if $hasMBClass }}mb-1{{ end }}
+{{ end }}
 
 {{ define "extra-head" }}
 <style>
-    #poker-content {
-        border: 0;
-        position: absolute;
-        top: 51px;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        height: calc(100% - 51px);
-    }
+  #poker-content {
+    border: 0;
+    position: absolute;
+    top: 51px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: calc(100% - 51px);
+  }
 </style>
 {{ end }}
 
-{{ define "title" }}dkf - Poker ({{ .Data.PokerTableSlug }}){{ end }}
+{{ define "title" }}
+  {{ index .Site.Title " " (add (index .Site.Title " ") (len (index .Site.Title " "))) }} - Poker ({{ .Data.PokerTableSlug }})
+{{ end }}
 
 {{ define "content" }}
+  <div id="poker-content-wrapper">
     <iframe id="poker-content" src="/poker/{{ .Data.PokerTableSlug }}/stream"></iframe>
+  </div>
 {{ end }}
