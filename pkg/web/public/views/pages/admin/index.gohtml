@@ -4,22 +4,10 @@
         <div class="col-4 col-sm-3 col-md-3 col-lg-2 mb-5">
             <div class="card mb-4">
                 <div class="list-group list-group-flush">
-                    <a href="/admin" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "users" }} active{{ end }}">{{ t "Users" . }}</a>
-                    <a href="/admin/sessions" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "sessions" }} active{{ end }}">{{ t "Sessions" . }}</a>
-                    <a href="/admin/ignored" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "ignored" }} active{{ end }}">{{ t "Ignored users" . }}</a>
-                    <a href="/admin/audits" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "audits" }} active{{ end }}">{{ t "Audits" . }}</a>
-                    <a href="/admin/rooms" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "rooms" }} active{{ end }}">{{ t "Rooms" . }}</a>
-                    <a href="/admin/settings" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "settings" }} active{{ end }}">{{ t "Settings" . }}</a>
-                    <a href="/admin/captcha" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "captcha" }} active{{ end }}">{{ t "Captcha" . }}</a>
-                    <a href="/admin/uploads" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "uploads" }} active{{ end }}">{{ t "Uploads" . }}</a>
-                    <a href="/admin/filedrops" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "filedrops" }} active{{ end }}">{{ t "Filedrops" . }}</a>
-                    <a href="/admin/downloads" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "downloads" }} active{{ end }}">{{ t "Downloads" . }}</a>
-                    <a href="/admin/gists" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "gists" }} active{{ end }}">{{ t "Gists" . }}</a>
-                    <a href="/admin/backup" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "backup" }} active{{ end }}">{{ t "Backup" . }}</a>
-                    <a href="/admin/ddos" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "ddos" }} active{{ end }}">{{ t "DDoS" . }}</a>
-                    <a href="/admin/spam-filters" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "spamfilters" }} active{{ end }}">{{ t "Spam filters" . }}</a>
-                    <a href="/admin/poker-transactions" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "pokerTransactions" }} active{{ end }}">{{ t "Poker transactions" . }}</a>
-<!--                    <a href="/admin/update" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab "update" }} active{{ end }}">{{ t "Update" . }}</a>-->
+                    {{ $links := dict "Users" "/admin" "Sessions" "/admin/sessions" "Ignored users" "/admin/ignored" "Audits" "/admin/audits" "Rooms" "/admin/rooms" "Settings" "/admin/settings" "Captcha" "/admin/captcha" "Uploads" "/admin/uploads" "Filedrops" "/admin/filedrops" "Downloads" "/admin/downloads" "Gists" "/admin/gists" "Backup" "/admin/backup" "DDoS" "/admin/ddos" "Spam filters" "/admin/spam-filters" "Poker transactions" "/admin/poker-transactions" }}
+                    {{ range $text, $url := $links }}
+                        <a href="{{ $url }}" class="list-group-item list-group-item-action{{ if eq .Data.ActiveTab $text }} active{{ end }}">{{ t $text . }}</a>
+                    {{ end }}
                 </div>
             </div>
         </div>
