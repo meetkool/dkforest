@@ -3,15 +3,25 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/forum">Forum</a></li>
-            <li class="breadcrumb-item active">{{ .Data.Thread.Name }}</li>
-            <li class="breadcrumb-item active">Delete message {{ .Data.Message.UUID }}</li>
+            <li class="breadcrumb-item"><a href="/t/{{ .Data.Thread.UUID }}">{{ .Data.Thread.Name }}</a></li>
+            <li class="breadcrumb-item">Delete message</li>
         </ol>
-        <form method="post">
-            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-            <button class="btn btn-danger">Confirm Delete Message</button>
-            <a class="btn btn-secondary" href="/t/{{ .Data.Thread.UUID }}">Cancel</a>
-        </form>
     </nav>
-</div>
 
+    {{ if .Data.Message }}
+    <form method="post">
+        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+        <input type="hidden" name="message_uuid" value="{{ .Data.Message.UUID }}" />
+        <div class="alert alert-danger" role="alert">
+            Are you sure you want to delete this message?
+        </div>
+        <button class="btn btn-danger">Confirm Delete Message</button>
+        <a class="btn btn-secondary" href="/t/{{ .Data.Thread.UUID }}">Cancel</a>
+    </form>
+    {{ else }}
+    <div class="alert alert-danger" role="alert">
+        The message you are trying to delete does not exist.
+    </div>
+    {{ end }}
+</div>
 {{ end }}
