@@ -1,11 +1,14 @@
-{{ define "extra-head" }}
-{{ end }}
-
-{{ define "title" }}dkf - Poker rake back{{ end }}
-
-{{ define "content" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ template "title" . }}</title>
+    <meta name="description" content="Get {{ .Data.RakeBackPct }}% rake back when you play poker with our referral program.">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+</head>
+<body>
     <div class="container mb-5">
-
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/poker">Poker</a></li>
@@ -13,53 +16,49 @@
             </ol>
         </nav>
 
-        <h3>Rake back</h3>
+        <h3>{{ template "title" . }}</h3>
 
         <p>
-            When someone register using your referral code/url,
-            you will receive <strong>{{ .Data.RakeBackPct }}%</strong> of the rake
-            that this person generates while playing poker.
+            When someone registers using your referral code/URL, you will receive <strong>{{ .Data.RakeBackPct }}%</strong> of the rake that this person generates while playing poker.
         </p>
 
         <hr />
 
-        {{ if .Data.ReferralURL }}
-            <div class="form-group">
-                <label>Your referral token:</label>
-                <input type="text" value="{{ .Data.ReferralToken }}" class="form-control" readonly />
-            </div>
-            <div class="form-group">
-                <label>Your referral URL:</label>
-                <input type="text" value="{{ .Data.ReferralURL }}" class="form-control" readonly />
-            </div>
+        {{ if .Data.ReferredCount }}
+            {{ if .Data.ReferralURL }}
+                <div class="form-group">
+                    <label>Your referral token:</label>
+                    <input type="text" value="{{ .Data.ReferralToken }}" class="form-control" readonly />
+                </div>
+                <div class="form-group">
+                    <label>Your referral URL:</label>
+                    <input type="text" value="{{ .Data.ReferralURL }}" class="form-control" readonly />
+                </div>
+            {{ else }}
+                <form method="post">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    <input type="hidden" name="form_name" value="generate_referral_url" />
+                    <button class="btn btn-primary">Generate referral URL</button>
+                </form>
+            {{ end }}
+            <p>
+                You referred <strong>{{ .Data.ReferredCount }}</strong> users.
+            </p>
         {{ else }}
-            <form method="post">
-                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-                <input type="hidden" name="form_name" value="generate_referral_url" />
-                <button class="btn btn-primary">Generate referral URL</button>
-            </form>
+            <p>
+                You haven't referred any users yet.
+            </p>
         {{ end }}
-        <p>
-            You referred <strong>{{ .Data.ReferredCount }}</strong> users.
-        </p>
         <hr />
 
         <p>
             If you wish to give your rake back to someone, enter their referral token here.
         </p>
 
-        {{ if .Data.SetReferralError }}
-            <div class="alert alert-danger">{{ .Data.SetReferralError }}</div>
+        {{ if .Data.SetReferrerSuccess }}
+            <div class="alert alert-success">{{ .Data.SetReferrerSuccess }}</div>
         {{ end }}
-        <form method="post">
-            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-            <input type="hidden" name="form_name" value="set_referrer" />
-            <div class="input-group">
-                <input type="text" name="referral_token" class="form-control" placeholder="Referral token (9 characters)" maxlength="9" />
-                <div class="input-group-append">
-                    <button class="btn btn-primary">Set referrer</button>
-                </div>
-            </div>
-        </form>
-    </div>
-{{ end }}
+        {{ if .Data.SetReferrerError }}
+            <div class="alert alert-danger">{{ .Data.SetReferrerError }}</div>
+        {{ end }}
+        <form method
