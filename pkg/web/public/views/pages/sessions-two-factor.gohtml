@@ -1,51 +1,51 @@
 {{ define "content" }}
 <div class="container" style="margin-top:40px">
-    <div class="row">
-        <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
-            <div class="card">
-                <div class="card-header">
-                    <strong>{{ t "Two-factor authentication" . }}</strong>
-                </div>
-                <div class="card-body">
-                    <fieldset>
-                        <div class="row">
-                            <div class="center-block">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-sm-12 col-md-10 offset-md-1 ">
-                                {{ if .Data.Error }}
-                                    <div class="alert alert-danger">
-                                        {{ .Data.Error }}
-                                    </div>
-                                {{ end }}
-                                <form autocomplete="on" method="post">
-                                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-                                    <input type="hidden" name="formName" value="2fa" />
-                                    <input type="hidden" name="token" value="{{ .Data.Token }}" />
-                                    <div class="form-group">
-                                        <input class="form-control{{ if .Data.Error }} is-invalid{{ end }}" placeholder="{{ t "6-digit code" . }}" name="code" type="text" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="none" autofocus required />
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="submit" class="btn btn-lg btn-primary btn-block" value="{{ t "Verify" . }}" />
-                                    </div>
-                                </form>
-                                <form autocomplete="on" method="post">
-                                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-                                    <input type="hidden" name="formName" value="2fa_recovery" />
-                                    <input type="hidden" name="token" value="{{ .Data.Token }}" />
-                                    <div class="form-group">
-                                        <button type="submit" class="ml-0 pl-0 btn btn-link btn-block">{{ t "Enter a two-factor recovery code" . }}</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </fieldset>
-                </div>
-                <div class="card-footer ">
-                </div>
-            </div>
+  <div class="row">
+    <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+      <div class="card">
+        <div class="card-header">
+          <strong>{{ t "Two-factor authentication" . }}</strong>
         </div>
+        <div class="card-body">
+          <fieldset>
+            <div class="row">
+              <div class="center-block">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-sm-12 col-md-10 offset-md-1 ">
+                {{ if .Data.Error }}
+                  <div class="alert alert-danger">
+                    {{ .Data.Error }}
+                  </div>
+                {{ end }}
+                <form autocomplete="on" method="post">
+                  <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                  <input type="hidden" name="formName" value="2fa" />
+                  <input type="hidden" name="token" value="{{ .Data.Token }}" />
+                  <div class="form-group">
+                    <input class="form-control{{ if .Data.Error }} is-invalid{{ end }}" placeholder="{{ t "6-digit code" . }}" name="code" type="text" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="none" autofocus required />
+                  </div>
+                  <div class="form-group">
+                    <input type="submit" class="btn btn-lg btn-primary btn-block" value="{{ t "Verify" . }}" />
+                  </div>
+                </form>
+                <form autocomplete="on" method="post">
+                  <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                  <input type="hidden" name="formName" value="2fa_recovery" />
+                  <input type="hidden" name="token" value="{{ .Data.Token }}" />
+                  <div class="form-group">
+                    <button type="submit" class="ml-0 pl-0 btn btn-link btn-block">{{ t "Enter a two-factor recovery code" . }}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+        <div class="card-footer ">
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 {{ end }}
