@@ -3,6 +3,7 @@ package streamModals
 import (
 	"dkforest/pkg/database"
 	"dkforest/pkg/utils"
+	"strings"
 )
 
 type ModalsManager struct {
@@ -13,36 +14,37 @@ func NewModalsManager() *ModalsManager {
 	return &ModalsManager{}
 }
 
-func (m *ModalsManager) Css() (out string) {
-	out = "<style>"
+func (m *ModalsManager) Css() string {
+	css := "<style>"
 	for _, modal := range m.modals {
-		out += modal.Css()
-		out += "\n"
+		css += modal.Css()
+		css += "\n"
 	}
-	out += "</style>"
-	return
+	css += "</style>"
+	return css
 }
 
 func (m *ModalsManager) Register(modal IStreamModal) {
 	m.modals = append(m.modals, modal)
 }
 
-// Topics gets the topics of all registered modals
-func (m *ModalsManager) Topics() (out []string) {
+// Topics gets the unique topics of all registered modals
+func (m *ModalsManager) Topics() []string {
+	topics := make(map[string]bool)
 	for _, modal := range m.modals {
-		out = append(out, modal.Topics()...)
+		for _, t := range modal.Topics() {
+			topics[t] = true
+		}
 	}
-	return
+	result := make([]string, 0, len(topics))
+	for k := range topics {
+		result = append(result, k)
+	}
+	return result
 }
 
-// Handle returns after the first modal that handle a specific topic
+// Handle returns after the first modal that handles a specific topic
 func (m *ModalsManager) Handle(db *database.DkfDB, authUser database.IUserRenderMessage, topic, csrf string, msgTyp database.ChatMessageType, send func(string)) bool {
 	for _, modal := range m.modals {
 		if utils.InArr(topic, modal.Topics()) {
-			if modal.Handle(db, authUser, topic, csrf, msgTyp, send) {
-				return true
-			}
-		}
-	}
-	return false
-}
+		
