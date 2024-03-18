@@ -1,5 +1,26 @@
-{{ define "anti-prefill" }}
-<input type="text" name="hack_username" value="john" style="position: absolute; top: -10000px;" />
-<input type="email" name="hack_email" value="noreply@something.com" style="position: absolute; top: -10000px;" />
-<input type="password" name="hack_password" value="nopassword" style="position: absolute; top: -10000px;" />
-{{ end }}
+<script>
+  function generateRandomString(length) {
+    let text = "";
+    let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    for (let i = 0; i < length; i++) {
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+
+    return text;
+  }
+
+  function setRandomValues() {
+    const userInput = document.querySelector('input[name="username"]');
+    const emailInput = document.querySelector('input[name="email"]');
+    const passwordInput = document.querySelector('input[name="password"]');
+
+    if (userInput && emailInput && passwordInput) {
+      userInput.value = generateRandomString(10);
+      emailInput.value = generateRandomString(10) + "@example.com";
+      passwordInput.value = generateRandomString(15);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", setRandomValues);
+</script>
