@@ -4,26 +4,26 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type UserForumThreadSubscription struct {
-	UserID    UserID
-	ThreadID  ForumThreadID
-	CreatedAt time.Time
-	User      User
+	gorm.Model
+	UserID    UserID     `gorm:"index;not null" json:"user_id"`
+	ThreadID  ForumThreadID `gorm:"index;not null" json:"thread_id"`
+	User      User       `json:"user,omitempty"`
 }
 
-func (s *UserForumThreadSubscription) DoSave(db *DkfDB) {
-	if err := db.db.Save(s).Error; err != nil {
-		logrus.Error(err)
-	}
+func (s *UserForumThreadSubscription) Save(db *DkfDB) error {
+	return db.db.Save(s).Error
 }
 
-func (d *DkfDB) SubscribeToForumThread(userID UserID, threadID ForumThreadID) (err error) {
-	return d.db.Create(&UserForumThreadSubscription{UserID: userID, ThreadID: threadID}).Error
+func (d *DkfDB) SubscribeToForumThread(userID UserID, threadID ForumThreadID) error {
+	subscription := UserForumThreadSubscription{UserID: userID, ThreadID: threadID}
+	return d.db.Create(&subscription).Error
 }
 
-func (d *DkfDB) UnsubscribeFromForumThread(userID UserID, threadID ForumThreadID) (err error) {
+func (d *DkfDB) UnsubscribeFromForumThread(userID UserID, threadID ForumThreadID) error {
 	return d.db.Delete(&UserForumThreadSubscription{}, "user_id = ? AND thread_id = ?", userID, threadID).Error
 }
 
@@ -33,7 +33,8 @@ func (d *DkfDB) IsUserSubscribedToForumThread(userID UserID, threadID ForumThrea
 	return count == 1
 }
 
-func (d *DkfDB) GetUsersSubscribedToForumThread(threadID ForumThreadID) (out []UserForumThreadSubscription, err error) {
-	err = d.db.Preload("User").Find(&out, "thread_id = ?", threadID).Error
-	return
+func (d *DkfDB) GetUsersSubscribedToForumThread(threadID ForumThreadID) ([]UserForumThreadSubscription, error) {
+	var subscriptions []UserForumThreadSubscription
+	return subscriptions, d.db.Preload("User").Find(&subscriptions, "thread_id = ?", threadID).Error
 }
+
