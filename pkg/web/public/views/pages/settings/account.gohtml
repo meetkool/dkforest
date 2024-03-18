@@ -1,27 +1,25 @@
 {{ define "sub-content" }}
 
-{{ if .Data.Error }}
-    <div class="alert alert-danger">{{ .Data.Error }}</div>
-{{ end }}
+{{ if . }}
 
 <div class="card mb-3">
     <div class="card-header">
         {{ t "Change contact information" . }}
     </div>
     <div class="card-body">
-        <form method="post">
+        <form method="post" action="" novalidate>
             <input type="hidden" name="csrf" value="{{ .CSRF }}" />
             <input type="hidden" name="formName" value="editProfile" />
             <div class="form-group">
                 <label>{{ t "Website" . }}</label>
-                <input name="website" placeholder="Website" value="{{ .Data.Website }}" class="form-control{{ if .Data.ErrorWebsite }} is-invalid{{ end }}" type="url" {{ if .Data.ErrorWebsite }} autofocus{{ end }} />
+                <input name="website" placeholder="{{ t "Website" . }}" value="{{ .Data.Website }}" class="form-control{{ if .Data.ErrorWebsite }} is-invalid{{ end }}" type="url"{{ if .Data.ErrorWebsite }} autofocus{{ end }} />
                 {{ if .Data.ErrorWebsite }}
                     <div class="invalid-feedback">{{ .Data.ErrorWebsite }}</div>
                 {{ end }}
             </div>
             <div class="form-group">
                 <label>{{ t "Email" . }}</label>
-                <input name="email" placeholder="Email" value="{{ .Data.Email }}" class="form-control{{ if .Data.ErrorEmail }} is-invalid{{ end }}" type="email" {{ if .Data.ErrorEmail }} autofocus{{ end }} />
+                <input name="email" placeholder="{{ t "Email" . }}" value="{{ .Data.Email }}" class="form-control{{ if .Data.ErrorEmail }} is-invalid{{ end }}" type="email"{{ if .Data.ErrorEmail }} autofocus{{ end }} />
                 {{ if .Data.ErrorEmail }}
                     <div class="invalid-feedback">{{ .Data.ErrorEmail }}</div>
                 {{ end }}
@@ -32,14 +30,14 @@
                         <input class="my-cbx" type="checkbox" name="last_seen_public" id="last_seen_public" value="1"{{ if .AuthUser.LastSeenPublic }} checked{{ end }} />
                         <label for="last_seen_public" class="toggle"><span></span></label>
                     </div>
-                    <label for="last_seen_public">Display "Last seen" in public profile</label>
+                    <label for="last_seen_public">{{ t "Display 'Last seen' in public profile" . }}</label>
                 </div>
                 <div class="form-check form-check-1">
                     <div class="checkbox-wrapper form-check-input">
                         <input class="my-cbx" type="checkbox" name="terminate_all_sessions_on_logout" id="terminate_all_sessions_on_logout" value="1"{{ if .AuthUser.TerminateAllSessionsOnLogout }} checked{{ end }} />
                         <label for="terminate_all_sessions_on_logout" class="toggle"><span></span></label>
                     </div>
-                    <label for="terminate_all_sessions_on_logout">Terminate all active sessions on logout</label>
+                    <label for="terminate_all_sessions_on_logout">{{ t "Terminate all active sessions on logout" . }}</label>
                 </div>
             </div>
             <div class="form-group">
@@ -54,10 +52,10 @@
         {{ t "Change avatar" . }}
     </div>
     <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" action="">
             <input type="hidden" name="csrf" value="{{ .CSRF }}" />
             <input type="hidden" name="formName" value="changeAvatar" />
-            <table width="100%">
+            <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                     <td>
                         <div class="form-group">
@@ -65,8 +63,8 @@
                                 <p>{{ .Data.AccountTooYoungErrorString }}</p>
                             {{ end }}
                             <p>
-                                The maximum dimensions for avatars are: 120x120 pixels.<br />
-                                The maximum file size for avatars is 300 KB.
+                                {{ t "The maximum dimensions for avatars are: 120x120 pixels." . }}<br />
+                                {{ t "The maximum file size for avatars is 300 KB." . }}
                             </p>
                             <input name="avatar" class="{{ if .Data.ErrorAvatar }} is-invalid{{ end }}" type="file" accept=".bmp,.gif,.png,.jpg,.jpeg,.webp,image/gif,image/png,image/jpeg,image/bmp,image/webp" required />
                             {{ if .Data.ErrorAvatar }}
@@ -75,82 +73,4 @@
                         </div>
                         <div class="form-group">
                             <input type="submit" value="{{ t "Upload avatar" . }}" class="btn btn-primary"{{ if not .AuthUser.CanUpload }} disabled{{ end }} />
-                        </div>
-                    </td>
-                    <td width="150" align="right">
-                        {{ if .AuthUser.Avatar }}
-                            <img src="data:image;base64,{{ .AuthUser.Avatar | b64 }}" alt="avatar" />
-                        {{ else }}
-                            <img src="/public/img/avatar-placeholder.png" alt="avatar" />
-                        {{ end }}
-                    </td>
-                </tr>
-            </table>
-        </form>
-    </div>
-</div>
-
-{{ if .AuthUser.CanChangeUsername }}
-    <div class="card mb-3">
-        <div class="card-header">
-            {{ t "Change username" . }}
-        </div>
-        <div class="card-body">
-            <form method="post" novalidate>
-                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-                <input type="hidden" name="formName" value="changeUsername" />
-                <div class="form-group">
-                    <label>{{ t "New username" . }}</label>
-                    <input name="username" value="{{ .Data.Username }}" class="form-control{{ if .Data.ErrorUsername }} is-invalid{{ end }}" type="text"{{ if .Data.ErrorUsername }} autofocus{{ end }} required />
-                    {{ if .Data.ErrorUsername }}
-                        <div class="invalid-feedback">{{ .Data.ErrorUsername }}</div>
-                    {{ end }}
-                </div>
-                <div class="form-group">
-                    <input type="submit" value="{{ t "Change my username" . }}" class="btn btn-primary" />
-                </div>
-            </form>
-        </div>
-    </div>
-{{ end }}
-
-<div class="card mb-3">
-    <div class="card-header">
-        {{ t "Two-Factor Authentication" . }}
-    </div>
-    <div class="card-body">
-        <div class="mb-3">
-            {{ if eq .AuthUser.TwoFactorSecret "" }}
-                <a href="/two-factor-authentication/verify" class="btn btn-primary">{{ t "Enable TOTP two-factor authentication" . }}</a>
-            {{ else }}
-                <a href="/two-factor-authentication/disable" class="btn btn-danger">{{ t "Disable TOTP two-factor authentication" . }}</a>
-            {{ end }}
-        </div>
-        <div>
-            {{ if not .AuthUser.GpgTwoFactorEnabled }}
-                <a href="/gpg-two-factor-authentication/toggle" class="btn btn-primary">{{ t "Enable PGP two-factor authentication" . }}</a>
-            {{ else }}
-                <a href="/gpg-two-factor-authentication/toggle" class="btn btn-danger">{{ t "Disable PGP two-factor authentication" . }}</a>
-            {{ end }}
-        </div>
-    </div>
-</div>
-
-<div class="mb-5"></div>
-
-<!--<div class="card border-danger mb-3">-->
-<!--    <div class="card-header">-->
-<!--        {{ t "Delete account" . }}-->
-<!--    </div>-->
-<!--    <div class="card-body">-->
-<!--        {{ if eq .AuthUser.ID 1 }}-->
-<!--        <div>-->
-<!--            <p class="text-danger">-->
-<!--                {{ t "Root admin cannot delete his account" . }}-->
-<!--            </p>-->
-<!--        </div>-->
-<!--        {{ end }}-->
-<!--        <button class="btn btn-danger"{{ if eq .AuthUser.ID 1 }} disabled{{ end }}>{{ t "Delete your account" . }}</button>-->
-<!--    </div>-->
-<!--</div>-->
-{{ end }}
+                       
