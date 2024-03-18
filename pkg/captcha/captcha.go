@@ -1,7 +1,3 @@
-// Copyright 2011 Dmitry Chestnykh. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 // Package captcha implements generation and verification of image and audio
 // CAPTCHAs.
 //
@@ -38,15 +34,11 @@
 // the displayed one without reloading the whole page.  Verify and VerifyString
 // are used to verify that the given solution is the right one for the given
 // captcha id.
-//
-// Server provides an http.Handler which can serve image and audio
-// representations of captchas automatically from the URL. It can also be used
-// to reload captchas.  Refer to Server function documentation for details, or
-// take a look at the example in "capexample" subdirectory.
 package captcha
 
 import (
 	"bytes"
+	"crypto/rand"
 	"dkforest/pkg/config"
 	"encoding/base64"
 	"encoding/hex"
@@ -78,137 +70,5 @@ var (
 // SetCustomStore sets custom storage for captchas, replacing the default
 // memory store. This function must be called before generating any captchas.
 func SetCustomStore(s Store) {
-	globalStore = s
-}
-
-func randomId(rnd *rand.Rand) string {
-	b := make([]byte, 10)
-	_, _ = rnd.Read(b)
-	return hex.EncodeToString(b)
-}
-
-// randomAnswer returns a string of the given length containing
-// pseudorandom characters in range A-Z2-7. The string can be used as a captcha
-// solution.
-func randomAnswer(length int, rnd *rand.Rand) string {
-	out := make([]rune, length)
-	alphabet := ALPHABET
-	for i := 0; i < length; i++ {
-		out[i] = rune(alphabet[rnd.Intn(len(alphabet))])
-	}
-	return string(out)
-}
-
-type Params struct {
-	Store Store
-	Rnd   *rand.Rand
-}
-
-// New creates a new captcha with the standard length, saves it in the internal
-// storage and returns its id.
-func New() (string, string) {
-	return newLen(Params{}, false)
-}
-
-func NewWithParams(params Params) (id, b64 string) {
-	return newLen(params, false)
-}
-
-func NewWithSolution(seed int64) (id string, answer string, captchaImg string, captchaHelpImg string) {
-	id, img := newLen(Params{Rnd: rand.New(rand.NewSource(seed))}, false)
-	_, solutionImg := newLen(Params{Rnd: rand.New(rand.NewSource(seed))}, true)
-	answer, _ = globalStore.Get(id, false)
-	return id, answer, img, solutionImg
-}
-
-func newLen(params Params, isHelpImg bool) (id, b64 string) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano())) // rand.New is not thread-safe
-	s := globalStore
-	if params.Store != nil {
-		s = params.Store
-	}
-	if params.Rnd != nil {
-		r = params.Rnd
-	}
-	id = randomId(r)
-	answer := randomAnswer(6, r)
-	s.Set(id, answer)
-
-	var buf bytes.Buffer
-	_ = writeImage(s, &buf, id, r, isHelpImg)
-	captchaImg := base64.StdEncoding.EncodeToString(buf.Bytes())
-
-	return id, captchaImg
-}
-
-// WriteImage writes PNG-encoded image representation of the captcha with the given id.
-func WriteImage(w io.Writer, id string, rnd *rand.Rand) error {
-	return writeImage(globalStore, w, id, rnd, false)
-}
-
-func WriteImageWithStore(store Store, w io.Writer, id string, rnd *rand.Rand) error {
-	return writeImage(store, w, id, rnd, false)
-}
-
-func writeImage(store Store, w io.Writer, id string, rnd *rand.Rand, isHelpImg bool) error {
-	d, err := store.Get(id, false)
-	if err != nil {
-		return err
-	}
-	_, err = NewImage(d, config.CaptchaDifficulty.Load(), rnd, isHelpImg).WriteTo(w)
-	return err
-}
-
-// Verify returns true if the given digits are the ones that were used to
-// create the given captcha id.
-//
-// The function deletes the captcha with the given id from the internal
-// storage, so that the same captcha can't be verified anymore.
-func Verify(id, answer string) error {
-	return verify(globalStore, id, answer, true)
-}
-
-func VerifyDangerous(store Store, id, answer string) error {
-	return verify(store, id, answer, false)
-}
-
-func reverse(s string) string {
-	rns := []rune(s)
-	for i, j := 0, len(rns)-1; i < j; i, j = i+1, j-1 {
-		rns[i], rns[j] = rns[j], rns[i]
-	}
-	return string(rns)
-}
-
-func verify(store Store, id, answer string, clear bool) error {
-	if len(answer) == 0 {
-		return ErrInvalidCaptcha
-	}
-	answer = strings.ToUpper(answer)
-	realID, err := store.Get(id, clear)
-	if err != nil {
-		return err
-	}
-	if answer != realID {
-		answer = reverse(answer)
-		if answer != realID {
-			return ErrInvalidCaptcha
-		}
-	}
-	return nil
-}
-
-// VerifyString is like Verify, but accepts a string of digits.  It removes
-// spaces and commas from the string, but any other characters, apart from
-// digits and listed above, will cause the function to return false.
-func VerifyString(id, answer string) error {
-	return verifyString(globalStore, id, answer, true)
-}
-
-func VerifyStringDangerous(store Store, id, digits string) error {
-	return verifyString(store, id, digits, false)
-}
-
-func verifyString(store Store, id, answer string, clear bool) error {
-	return verify(store, id, answer, clear)
-}
+	if _, ok := s.(memoryStore); !ok {
+	
