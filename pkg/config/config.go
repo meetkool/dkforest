@@ -1,30 +1,19 @@
 package config
 
 import (
+	"fmt"
+	"net"
+
 	"dkforest/pkg/utils/rwmtx"
 	"embed"
-	wallet1 "github.com/monero-ecosystem/go-monero-rpc-client/wallet"
-	"net"
+	"github.com/monero-ecosystem/go-monero-rpc-client/wallet"
+	"github.com/hashicorp/go-version"
+	_ "github.com/lib/pq"
 	"sync"
 	"time"
 
 	"dkforest/pkg/atom"
 	"dkforest/pkg/ratecounter"
-	version "github.com/hashicorp/go-version"
-)
-
-const (
-	GogsURL                = "http://127.0.0.1:3000"
-	DbFileName             = "dkf.db"
-	AppDirName             = ".dkf"
-	MaxUserFileUploadSize  = 30 << 20  // 30 MB
-	MaxUserTotalUploadSize = 100 << 20 // 100 MB
-	MaxAvatarFormSize      = 1 << 20   // 1 MB
-	MaxAvatarSize          = 300 << 10 // 300 KB
-
-	// MaxFileSizeBeforeDownload files that are bigger than this limit will trigger
-	// a file download instead of simple in-browser rendering
-	MaxFileSizeBeforeDownload = 1 << 20 // 1 MB
 )
 
 // DefaultMasterKey Should be overwritten using ldflags
@@ -88,97 +77,4 @@ var (
 	CaptchaRequiredGenerated = atom.NewInt64(0)
 	CaptchaRequiredSuccess   = atom.NewInt64(0)
 	CaptchaRequiredFailed    = atom.NewInt64(0)
-	MoneroPrice              = atom.NewFloat64(0)
 
-	RpsCounter         = ratecounter.NewRateCounter()
-	RejectedReqCounter = ratecounter.NewRateCounter()
-)
-
-var MigrationsFs embed.FS
-var LocalsFs embed.FS
-
-var once sync.Once
-var instance wallet1.Client
-
-func Xmr() wallet1.Client {
-	once.Do(func() {
-		instance = wallet1.New(wallet1.Config{
-			Address: "http://127.0.0.1:6061/json_rpc",
-		})
-	})
-	return instance
-}
-
-type ConnManager struct {
-	sync.RWMutex
-	m           map[net.Conn]int64
-	CircuitIDCh chan int64
-}
-
-func NewConnManager() *ConnManager {
-	m := new(ConnManager)
-	m.m = make(map[net.Conn]int64)
-	m.CircuitIDCh = make(chan int64, 1000)
-	return m
-}
-
-func (m *ConnManager) Set(key net.Conn, val int64) {
-	m.Lock()
-	m.m[key] = val
-	m.Unlock()
-}
-
-func (m *ConnManager) Get(key net.Conn) int64 {
-	m.RLock()
-	val, found := m.m[key]
-	if !found {
-		m.RUnlock()
-		return 0
-	}
-	m.RUnlock()
-	return val
-}
-
-func (m *ConnManager) Delete(key net.Conn) {
-	m.Lock()
-	delete(m.m, key)
-	m.Unlock()
-}
-
-func (m *ConnManager) Close(key net.Conn) {
-	circuitID := m.Get(key)
-	m.CloseCircuit(circuitID)
-}
-
-func (m *ConnManager) CloseCircuit(circuitID int64) {
-	select {
-	case m.CircuitIDCh <- circuitID:
-	default:
-	}
-}
-
-var ConnMap = NewConnManager()
-
-// GlobalConf ...
-type GlobalConf struct {
-	AppVersion           rwmtx.RWMtx[*version.Version]
-	ProjectPath          rwmtx.RWMtx[string] // project path
-	ProjectLocalsPath    rwmtx.RWMtx[string] // directory where we keep custom translation files
-	ProjectHTMLPath      rwmtx.RWMtx[string]
-	ProjectMemesPath     rwmtx.RWMtx[string]
-	ProjectUploadsPath   rwmtx.RWMtx[string]
-	ProjectFiledropPath  rwmtx.RWMtx[string]
-	ProjectDownloadsPath rwmtx.RWMtx[string]
-	Sha                  rwmtx.RWMtx[string]
-	MasterKey            rwmtx.RWMtx[string]
-	CookieSecure         rwmtx.RWMtx[bool]
-	CookieDomain         rwmtx.RWMtx[string]
-	BaseURL              rwmtx.RWMtx[string] // (http://127.0.0.1:8080)
-}
-
-// NewGlobalConf ...
-func NewGlobalConf() *GlobalConf {
-	c := new(GlobalConf)
-	c.MasterKey.Set(DefaultMasterKey)
-	return c
-}
