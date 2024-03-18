@@ -5,76 +5,75 @@
                 <i class="fa fa-plus fa-fw"></i> New filter
             </a>
         </div>
-    <h2>{{ .Data.SpamFiltersCount | comma }} Spam filters</h2>
-</div>
+        <h2>{{ .Data.SpamFiltersCount | comma }} Spam filters</h2>
+    </div>
 
-{{ if .Data.Error }}
-    <div class="alert alert-danger">{{ .Data.Error }}</div>
-{{ end }}
-
-<table class="table table-striped table-sm table-novpadding table-dark">
-    <thead>
-    <tr>
-        <th>Filter</th>
-        <th>Is regex</th>
-        <th>Action</th>
-        <th>Actions</th>
-    </tr>
-    </thead>
-    <tbody>
-    {{ range .Data.SpamFilters }}
-        <form method="post">
-            <input type="hidden" name="id" value="{{ .ID }}" />
-            <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
-            <tr>
-                <td><input type="text" name="filter" value="{{ .Filter }}" class="form-control form-control-sm" /></td>
-                <td class="align-middle">
-                    <div class="form-check form-check-1">
-                        <div class="checkbox-wrapper form-check-input">
-                            <input class="my-cbx" type="checkbox" name="is_regex" id="is_regex_{{ .ID }}" value="1"{{ if .IsRegex }} checked{{ end }} />
-                            <label for="is_regex_{{ .ID }}" class="toggle"><span></span></label>
-                        </div>
-                        <label class="form-check-label" for="is_regex_{{ .ID }}">regex</label>
-                    </div>
-                </td>
-                <td>
-                    <select name="action" class="form-control form-control-sm">
-                        <option value="1"{{ if eq .Action 1 }} selected{{ end }}>Kick</option>
-                        <option value="2"{{ if eq .Action 2 }} selected{{ end }}>Hellban</option>
-                        <option value="0"{{ if eq .Action 0 }} selected{{ end }}>Error</option>
-                    </select>
-                </td>
-                <td class="text-right">
-                    <button type="submit" class="btn btn-sm btn-primary" title="Edit spam filter" name="btn_submit" value="edit">Edit</button>
-                    <button type="submit" class="btn btn-sm btn-danger" title="Delete spam filter" name="btn_submit" value="delete">X</button>
-                </td>
-            </tr>
-        </form>
+    {{ if .Data.Error }}
+        <div class="alert alert-danger">{{ .Data.Error }}</div>
     {{ end }}
-        <form method="post">
-            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-            <tr>
-                <td><input name="filter" type="text" class="form-control form-control-sm" /></td>
-                <td class="align-middle">
-                    <div class="form-check form-check-1">
-                        <div class="checkbox-wrapper form-check-input">
-                            <input class="my-cbx" type="checkbox" name="is_regex" id="is_regex" value="1" />
-                            <label for="is_regex" class="toggle"><span></span></label>
-                        </div>
-                        <label class="form-check-label" for="is_regex">regex</label>
-                    </div>
-                </td>
-                <td>
-                    <select name="action" class="form-control form-control-sm">
-                        <option value="1" selected>Kick</option>
-                        <option value="2">Hellban</option>
-                        <option value="0">Error</option>
-                    </select>
-                </td>
-                <td class="text-right"><button type="submit" class="btn btn-success btn-sm">Add</button></td>
-            </tr>
-        </form>
-    </tbody>
-</table>
 
+    <table class="table table-striped table-sm table-novpadding table-dark">
+        <thead>
+            <tr>
+                <th>Filter</th>
+                <th>Is regex</th>
+                <th>Action</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Data.SpamFilters }}
+                <form method="post">
+                    <input type="hidden" name="id" value="{{ .ID }}" />
+                    <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
+                    <tr>
+                        <td><input type="text" name="filter" value="{{ .Filter }}" class="form-control form-control-sm" /></td>
+                        <td class="align-middle">
+                            <div class="form-check form-check-1">
+                                <input class="my-cbx" type="checkbox" name="is_regex" id="is_regex_{{ .ID }}" value="1"{{ if .IsRegex }} checked{{ end }} />
+                                <label class="form-check-label" for="is_regex_{{ .ID }}">
+                                    regex
+                                </label>
+                            </div>
+                        </td>
+                        <td>
+                            <select name="action" class="form-control form-control-sm">
+                                <option value="1"{{ if eq .Action 1 }} selected{{ end }}>Kick</option>
+                                <option value="2"{{ if eq .Action 2 }} selected{{ end }}>Hellban</option>
+                                <option value="0"{{ if eq .Action 0 }} selected{{ end }}>Error</option>
+                            </select>
+                        </td>
+                        <td class="text-right">
+                            <button type="submit" class="btn btn-sm btn-primary" title="Edit spam filter" name="btn_submit" value="edit">Edit</button>
+                            <button type="submit" class="btn btn-sm btn-danger" title="Delete spam filter" name="btn_submit" value="delete">X</button>
+                        </td>
+                    </tr>
+                </form>
+            {{ end }}
+            <form method="post">
+                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                <tr>
+                    <td><input name="filter" type="text" class="form-control form-control-sm" /></td>
+                    <td class="align-middle">
+                        <div class="form-check form-check-1">
+                            <input class="my-cbx" type="checkbox" name="is_regex" id="is_regex" value="1" />
+                            <label class="form-check-label" for="is_regex">
+                                regex
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <select name="action" class="form-control form-control-sm">
+                            <option value="1" selected>Kick</option>
+                            <option value="2">Hellban</option>
+                            <option value="0">Error</option>
+                        </select>
+                    </td>
+                    <td class="text-right">
+                        <button type="submit" class="btn btn-success btn-sm" name="btn_submit" aria-label="Add spam filter">Add</button>
+                    </td>
+                </tr>
+            </form>
+        </tbody>
+    </table>
 {{ end }}
