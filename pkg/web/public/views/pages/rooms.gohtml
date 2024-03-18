@@ -20,7 +20,7 @@
                 <i class="fa fa-plus fa-fw"></i> Create room
             </a>
         </div>
-        <h2>Rooms</h2>
+        <h2>{{ title "Rooms" }}</h2>
     </div>
 
     <table class="table table-striped table-sm table-novpadding table-dark">
@@ -35,29 +35,19 @@
         <tbody>
             {{ range .Data.Rooms }}
                 <tr>
-                    <td><a href="/chat/{{ .Name }}"{{ if .IsUnread }} class="unread_room"{{ end }}>{{ .Name }}</a></td>
+                    <td><a href="/chat/{{ .Name | html }}"{{ if .IsUnread }} class="unread_room"{{ end }}>{{ .Name | html }}</a></td>
                     <td>
                         {{ if .OwnerUser }}
-                            <a href="/u/{{ .OwnerUser.Username }}" {{ .OwnerUser.GenerateChatStyle | attr }}>{{ .OwnerUser.Username }}</a><br />
+                            <a href="/u/{{ .OwnerUser.Username }}" {{ .OwnerUser.GenerateChatStyle | attr | safepipe }}>{{ .OwnerUser.Username }}</a><br />
                             <span class="timestamp">{{ .CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span>
                         {{ else }}
                             <em>n/a</em>
                         {{ end }}
                     </td>
                     <td class="text-center align-middle">
-                        {{ (ne .Password "") | fmtBool }}
+                        {{ (ne .Password "") | fmtBool | title }}
                     </td>
                     <td class="text-center align-middle">
-                        {{ not .IsEphemeral | fmtBool }}
+                        {{ not .IsEphemeral | fmtBool | title }}
                     </td>
-                </tr>
-            {{ else }}
-                <tr>
-                    <td colspan="4"><em>No room to display</em></td>
-                </tr>
-            {{ end }}
-        </tbody>
-    </table>
-</div>
-
-{{ end }}
+              
