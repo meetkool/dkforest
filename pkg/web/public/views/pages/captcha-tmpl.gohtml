@@ -1,17 +1,20 @@
 {{ define "captcha-tmpl" }}
 <style>
+    /* Animation for captcha image on hover */
     .captcha-img {
-        transition: transform .2s; /* Animation */
+        transition: transform .2s;
     }
     .captcha-img:hover {
         transform: scale(2.5);
     }
 </style>
 <div>
-    <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" class="captcha-img" />
+    <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="Captcha image" class="captcha-img" />
     {{ if .Data.CaptchaAnswerImg }}
-        <img src="data:image/png;base64,{{ .Data.CaptchaAnswerImg }}" alt="captcha answer" class="captcha-img" />
+        <img src="data:image/png;base64,{{ .Data.CaptchaAnswerImg }}" alt="Captcha answer image" class="captcha-img" />
     {{ end }}
-    <div><a href="/captcha-help">Need help to solve the captcha?</a></div>
+    <div style="white-space: nowrap;">
+        <a href="/captcha-help" title="Need help to solve the captcha?">Need help to solve the captcha?</a>
+    </div>
 </div>
 {{ end }}
