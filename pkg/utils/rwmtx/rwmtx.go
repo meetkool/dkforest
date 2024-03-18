@@ -30,7 +30,7 @@ func (m *Mtx[T]) Set(v T) {
 }
 
 func (m *Mtx[T]) With(clb func(v *T)) {
-	_ = m.WithE(func(tx *T) error {
+	m.WithE(func(tx *T) error {
 		clb(tx)
 		return nil
 	})
@@ -78,7 +78,7 @@ func (m *RWMtx[T]) Replace(newVal T) (old T) {
 }
 
 func (m *RWMtx[T]) RWith(clb func(v T)) {
-	_ = m.RWithE(func(tx T) error {
+	m.RWithE(func(tx T) error {
 		clb(tx)
 		return nil
 	})
@@ -91,7 +91,7 @@ func (m *RWMtx[T]) RWithE(clb func(v T) error) error {
 }
 
 func (m *RWMtx[T]) With(clb func(v *T)) {
-	_ = m.WithE(func(tx *T) error {
+	m.WithE(func(tx *T) error {
 		clb(tx)
 		return nil
 	})
@@ -109,32 +109,4 @@ type RWMtxSlice[T any] struct {
 	RWMtx[[]T]
 }
 
-func (s *RWMtxSlice[T]) Each(clb func(T)) {
-	s.RWith(func(v []T) {
-		for _, e := range v {
-			clb(e)
-		}
-	})
-}
-
-func (s *RWMtxSlice[T]) Append(els ...T) {
-	s.With(func(v *[]T) { *v = append(*v, els...) })
-}
-
-func (s *RWMtxSlice[T]) Clone() (out []T) {
-	s.RWith(func(v []T) {
-		out = make([]T, len(v))
-		copy(out, v)
-	})
-	return
-}
-
-//----------------------
-
-type RWMtxUInt64[T ~uint64] struct {
-	RWMtx[T]
-}
-
-func (s *RWMtxUInt64[T]) Incr(diff T) {
-	s.With(func(v *T) { *v += diff })
-}
+func (s *RWMtxSlice
