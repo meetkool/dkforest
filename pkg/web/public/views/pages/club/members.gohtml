@@ -3,9 +3,21 @@
     <tr>
         <th>Username</th>
     </tr>
-    {{ range .Data.Members }}
+    {{ if .Data }}
+    {{ if .Data.Members }}
+        {{ range .Data.Members }}
+            <tr>
+                <td><a href="/u/{{ .Username }}" {{ .GenerateChatStyle | attr }}>{{ .Username }}</a></td>
+            </tr>
+        {{ end }}
+    {{ else }}
         <tr>
-            <td><a href="/u/{{ .Username }}" {{ .GenerateChatStyle | attr }}>{{ .Username }}</a></td>
+            <td colspan="1">No members found.</td>
+        </tr>
+    {{ end }}
+    {{ else }}
+        <tr>
+            <td colspan="1">No data found.</td>
         </tr>
     {{ end }}
 </table>
