@@ -4,36 +4,25 @@
     <link href="/public/img/favicon.ico?v={{ .VERSION }}" rel="icon" type="image/x-icon" />
     <meta charset="UTF-8">
     <title>{{ block "title" . }}DarkForest{{ end }}</title>
-    {{ block "extra-head" . }}{{ end }}
+    <div>
+    {{ block "extra-head" . }}
+    {{ end }}
+    </div>
     <link rel="stylesheet" type="text/css" href="/public/css/bootstrap.min.css?v={{ .VERSION }}" />
     <link rel="stylesheet" type="text/css" href="/public/css/style.css?v={{ .VERSION }}" />
+    <div>
     {{ block "sse" . }}
     {{ end }}
+    </div>
 </head>
 <body>
 
-
+<div>
 {{ block "navbar" . }}
     <nav style="padding: 0px 8px 0px 0px;" class="navbar navbar-expand-sm navbar-dark bg-dark{{ block "nav-mb" . }} mb-3{{ end }}">
-        <a style="padding: 0px 0px;"  class="navbar-brand" href="/">
-            {{ if .IsAprilFool2023 }}
-                <img src="/public/img/logo_donkey_kong.png" alt="logo" />
-            {{ else if .AuthUser }}
-                {{ if eq .AuthUser.Theme 1 }}
-                    <img src="/public/img/logo_christmas.png" alt="logo" />
-                {{ else }}
-                    <img src="/public/img/logo.png" alt="logo" />
-                {{ end }}
-            {{ else }}
-                <img src="/public/img/logo.png" alt="logo" />
-            {{ end }}
-        </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
         <div class="container-fluid">
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <div class="navbar-left">
                 {{ block "left-menu" . }}
                     <ul class="navbar-nav mr-auto">
                         {{ if .AuthUser }}
@@ -49,7 +38,7 @@
                         {{ end }}
                     </ul>
                 {{ end }}
-
+                </div>
                 <div class="navbar-right">
                     <ul class="navbar-nav mr-auto">
                         {{ if .AuthUser }}
@@ -62,52 +51,4 @@
                                     {{ if .AuthUser.IsAdmin }}
                                         <a class="dropdown-item" href="/admin">{{ t "Admin" . }}</a>
                                     {{ end }}
-                                    <div class="dropdown-divider"></div>
-                                    <form action="/logout" method="post">
-                                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-                                        <button type="submit" class="dropdown-item" role="link" style="cursor: pointer;">{{ t "Sign out" . }}</button>
-                                    </form>
-                                    {{ if gt .AuthUser.XmrBalance 0 }}
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="/poker">
-                                            <span style="color: #1ee91e;">{{ .AuthUser.XmrBalance.UsdStr }}</span><br />
-                                            <span style="font-size: 10px;">{{ .AuthUser.XmrBalance.XmrStr }} <small>XMR</small></span>
-                                        </a>
-                                    {{ end }}
-                                    {{- /*
-                                        {{ if not .AuthUser.IsHellbanned }}
-                                            <form action="/logout" method="post">
-                                                <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-                                                <button type="submit" class="dropdown-item" role="link" style="cursor: pointer;">{{ t "Sign out" . }}</button>
-                                            </form>
-                                        {{ else }}
-                                            <button type="button" class="dropdown-item" role="link" style="cursor: pointer;">{{ t "Sign out" . }}</button>
-                                        {{ end }}
-                                    */ -}}
-                                </div>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/settings/inbox">
-                                    {{ if gt .InboxCount 0 }}
-                                        <span class="badge badge-danger">{{ .InboxCount }}</span>
-                                    {{ else }}
-                                        <span class="badge badge-secondary">{{ .InboxCount }}</span>
-                                    {{ end }}
-                                </a>
-                            </li>
-                        {{ else }}
-                            <li class="nav-item"><a class="nav-link" href="/login">{{ t "Login" . }}</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/signup">{{ t "Register" . }}</a></li>
-                        {{ end }}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
-{{ end }}
-
-
-{{ block "content" . }}{{ end }}
-
-</body>
-</html>{{ end }}
+                                    <div class="dropdown-divider
