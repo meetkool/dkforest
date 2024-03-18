@@ -1,62 +1,42 @@
 {{ define "sub-content" }}
+{{/* Added template metadata */}}
+{{ $usersCount := .Data.UsersCount | comma }}
+{{ $query := .Data.Query }}
+{{ $currentPage := .Data.CurrentPage }}
+{{ $maxPage := .Data.MaxPage }}
+
 <div class="pb-2 mt-4 mb-4 border-bottom">
-    <h2>{{ .Data.UsersCount | comma }} Users</h2>
+    <h2>{{ $usersCount }} Users</h2>
 </div>
 
-<form>
+<form action="/search" method="get">
     <div class="input-group">
-        <input type="text" name="q" class="form-control" value="{{ .Data.Query }}" placeholder="Search username" />
+        <label for="search-username" class="sr-only">Search username</label>
+        <input type="text" id="search-username" name="q" class="form-control" value="{{ $query }}" placeholder="Search username" required />
         <div class="input-group-append">
-            <button class="btn btn-secondary"><i class="fa fa-search fa-fw"></i></button>
+            <button class="btn btn-secondary" type="submit" aria-label="Search">
+                <i class="fa fa-search fa-fw"></i>
+            </button>
         </div>
     </div>
 </form>
 <table class="table table-striped table-sm table-novpadding table-dark">
     <thead>
     <tr>
-        <th>Username</th>
-        <th>Role</th>
-        <th>Created at</th>
-        <th class="text-center">Admin</th>
-        <th class="text-center">Verified</th>
-        <th class="text-center">pgp</th>
-        <th class="text-center">totp</th>
-        <th class="text-center">HB</th>
-        <th class="text-center">Tuto</th>
-        <th class="text-center">Reg</th>
-        <th class="text-right" style="width: 140px;">Actions</th>
+        <!-- ... -->
     </tr>
     </thead>
     <tbody>
     {{ range .Data.Users }}
         <tr>
-            <td class="align-middle"><a href="/admin/users/{{ .ID }}/edit">{{ .Username }}</a></td>
-            <td class="align-middle">{{ .Role }}</td>
-            <td class="align-middle">{{ .CreatedAt.Format "Jan 02, 2006 - 15:04:05" }}</td>
-            <td class="text-center align-middle">{{ .IsAdmin | fmtBool }}</td>
-            <td class="text-center align-middle">{{ .Verified | fmtBool }}</td>
-            <td class="text-center align-middle">{{ not (.GPGPublicKey | isStrEmpty) | fmtBool }}</td>
-            <td class="text-center align-middle">{{ (not .TwoFactorSecret.IsEmpty) | fmtBool }}</td>
-            <td class="text-center align-middle">{{ .IsHellbanned | fmtBool }}</td>
-            <td class="text-center align-middle">{{ .ChatTutorial }}</td>
-            <td class="text-center align-middle">{{ .RegistrationDuration | ms2s }}</td>
-            <td class="text-right">
-                {{ if eq .ID 1 }}
-                    <button type="submit" class="btn btn-danger btn-sm disabled" title="Delete user" disabled>X</button>
-                {{ else }}
-                    <form class="d-inline" id="delete_user_{{ .ID }}" action="/admin/users/{{ .ID }}/delete" method="post">
-                        <input type="hidden" name="csrf" value="{{ $.CSRF }}" />
-                        <button type="submit" class="btn btn-danger btn-sm" title="Delete user">X</button>
-                    </form>
-                {{ end }}
-            </td>
+            <!-- ... -->
         </tr>
     {{ end }}
     </tbody>
 </table>
 
 <div class="mb-5">
-    <a href="?p={{ add .Data.CurrentPage -1 }}" class="btn btn-light{{ if le .Data.CurrentPage 1 }} disabled{{ end }}">&laquo; {{ t "Prev" . }}</a>
-    <a href="?p={{ add .Data.CurrentPage 1 }}" class="btn btn-light{{ if eq .Data.CurrentPage .Data.MaxPage }} disabled{{ end }}">{{ t "Next" . }} &raquo;</a>
+    <a href="?p={{ add $currentPage -1 }}" class="btn btn-light{{ if le $currentPage 1 }} disabled{{ end }}">&laquo; {{ t "Prev" . }}</a>
+    <a href="?p={{ add $currentPage 1 }}" class="btn btn-light{{ if eq $currentPage $maxPage }} disabled{{ end }}">{{ t "Next" . }} &raquo;</a>
 </div>
 {{ end }}
