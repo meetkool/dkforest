@@ -3,6 +3,7 @@
     <h2>{{ .Data.AuditLogsCount | comma }} Audits</h2>
 </div>
 
+{{ if .Data.AuditLogsCount }}
 <table class="table table-striped table-sm table-novpadding table-dark">
     <thead>
     <tr>
@@ -23,7 +24,12 @@
 </table>
 
 <div class="mb-5">
-    <a href="?p={{ add .Data.CurrentPage -1 }}" class="btn btn-light{{ if le .Data.CurrentPage 1 }} disabled{{ end }}">&laquo; {{ t "Prev" . }}</a>
-    <a href="?p={{ add .Data.CurrentPage 1 }}" class="btn btn-light{{ if eq .Data.CurrentPage .Data.MaxPage }} disabled{{ end }}">{{ t "Next" . }} &raquo;</a>
+    {{ if .Data.CurrentPage > 1 }}
+    <a href="?p={{ add .Data.CurrentPage -1 }}" class="btn btn-light">&laquo; {{ t "Prev" . }}</a>
+    {{ end }}
+    {{ if .Data.CurrentPage < .Data.MaxPage }}
+    <a href="?p={{ add .Data.CurrentPage 1 }}" class="btn btn-light">{{ t "Next" . }} &raquo;</a>
+    {{ end }}
 </div>
-{{ end }}
+{{ else }}
+<p class="lead text-center">No audits found.</p
