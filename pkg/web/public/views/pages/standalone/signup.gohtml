@@ -15,7 +15,7 @@
     <div class="container" id="form_login">
         <div class="row">
             <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
-                <form autocomplete="on" method="post">
+                <form autocomplete="novalidate" method="post" action="/signup">
                     <input type="hidden" name="csrf" value="{{ .CSRF }}" />
                     <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
                     <input type="hidden" name="captcha_img" value="{{ .Data.CaptchaImg }}" />
@@ -28,52 +28,34 @@
                             <div class="col-sm-12 col-md-10 offset-md-1 ">
                                 <div class="form-group">
                                     <input class="transparent-input form-control{{ if .Data.Errors.Username }} is-invalid{{ end }}" placeholder="{{ t "Username" . }}" name="username" type="text" value="{{ .Data.Username }}" autofocus />
-                                    {{ if .Data.Errors.Username }}<div class="invalid-feedback d-block">{{ .Data.Errors.Username }}</div>{{ end }}
+                                    {{ if .Data.Errors.Username }}
+                                        <div class="invalid-feedback d-block" id="username-error">{{ .Data.Errors.Username }}</div>
+                                    {{ end }}
                                 </div>
                                 <div class="form-group">
-                                    <input class="transparent-input form-control{{ if .Data.Errors.Password }} is-invalid{{ end }}" placeholder="{{ t "Password" . }}" name="password" type="password" value="{{ .Data.Password }}" />
-                                    {{ if .Data.Errors.Password }}<div class="invalid-feedback d-block">{{ .Data.Errors.Password }}</div>{{ end }}
+                                    <input class="transparent-input form-control{{ if .Data.Errors.Password }} is-invalid{{ end }}" placeholder="{{ t "Password" . }}" name="password" type="password" value="{{ .Data.Password }}" autocomplete="new-password" />
+                                    {{ if .Data.Errors.Password }}
+                                        <div class="invalid-feedback d-block" id="password-error">{{ .Data.Errors.Password }}</div>
+                                    {{ end }}
                                 </div>
                                 <div class="form-group">
-                                    <input class="transparent-input form-control" placeholder="{{ t "Confirm password" . }}" name="repassword" type="password" value="{{ .Data.RePassword }}" />
+                                    <input class="transparent-input form-control" placeholder="{{ t "Confirm password" . }}" name="repassword" type="password" value="{{ .Data.RePassword }}" autocomplete="new-password" />
                                 </div>
                                 {{ if .Data.PowEnabled }}
                                     <div class="form-group">
-                                        <div class="text-center mb-2 bg-label"><a href="/pow-help" target="_blank" rel="noopener noreferrer">Proof of work help</a></div>
+                                        <div class="text-center mb-2 bg-label"><a href="/pow-help" target="_blank" rel="noopener noreferrer" title="Proof of work help">Proof of work help</a></div>
                                         <input class="transparent-input form-control{{ if .Data.ErrPow }} is-invalid{{ end }}" placeholder="{{ t "Proof of work" . }}" name="pow" type="text" value="{{ .Data.Pow }}" />
-                                        {{ if .Data.ErrPow }}<div class="invalid-feedback d-block">{{ .Data.ErrPow }}</div>{{ end }}
+                                        {{ if .Data.ErrPow }}
+                                            <div class="invalid-feedback d-block" id="pow-error">{{ .Data.ErrPow }}</div>
+                                        {{ end }}
                                     </div>
                                 {{ end }}
                                 {{ if not .Data.HasSolvedCaptcha }}
                                     <div class="form-group">
-                                        <div class="text-center mb-2 bg-label">Captcha expires in <span id="timer_countdown"></span> seconds (<a href="/captcha-help" target="_blank" rel="noopener noreferrer">help</a>)</div>
+                                        <div class="text-center mb-2 bg-label">Captcha expires in <span id="timer_countdown"></span> seconds (<a href="/captcha-help" target="_blank" rel="noopener noreferrer" title="help">help</a>)</div>
                                         <div class="mb-2 text-center">
-                                            <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" style="background-color: hsl(0, 0%, 90%);"  class="captcha-img" />
+                                            <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" class="captcha-img" />
                                         </div>
-                                        <input class="transparent-input form-control{{ if .Data.ErrCaptcha }} is-invalid{{ end }}" placeholder="{{ t "Captcha (6 digits)" . }}" name="captcha" type="text" value="{{ .Data.Captcha }}" maxlength="6" autocomplete="off" />
-                                        {{ if .Data.ErrCaptcha }}<div class="invalid-feedback d-block">{{ .Data.ErrCaptcha }}</div>{{ end }}
-                                    </div>
-                                {{ else }}
-                                    <div class="form-group">
-                                        <div class="text-center mb-2 bg-label">Captcha is solved (<a href="/captcha-help" target="_blank" rel="noopener noreferrer">help</a>)</div>
-                                        <div class="mb-2 text-center">
-                                            <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" style="background-color: hsl(0, 0%, 90%);" />
-                                        </div>
-                                        <input class="transparent-input form-control is-valid" name="captcha" type="text" value="{{ .Data.Captcha }}" maxlength="6" autocomplete="off" readonly />
-                                    </div>
-                                {{ end }}
-                                <div class="form-group">
-                                    <input type="submit" class="transparent-input btn btn-lg btn-primary btn-block" value="{{ t "Sign up" . }}" />
-                                </div>
-                                <div class="form-group">
-                                    <a href="/{{ if .Data.Redirect }}?redirect={{ .Data.Redirect }}{{ end }}" class="bg-label link">{{ t "Login" . }}</a>
-                                </div>
-                            </div>
-                        </div>
-                    </fieldset>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{{ end }}
+                                        <input class="transparent-input form-control{{ if .Data.ErrCaptcha }} is-invalid{{ end }}" placeholder="{{ t "Captcha (6 digits)" . }}" name="captcha" type="text" value="{{ .Data.Captcha }}" maxlength="6" autocomplete="off" aria-describedby="captcha-error" />
+                                        {{ if .Data.ErrCaptcha }}
+                                            <div class="invalid-feedback d-block" id="captcha-
