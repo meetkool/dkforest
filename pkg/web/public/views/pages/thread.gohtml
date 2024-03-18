@@ -80,23 +80,4 @@
                         <div>
                             {{ if $.AuthUser }}
                                 {{ if or (and (eq $.AuthUser.ID .UserID) .CanEdit) $.AuthUser.IsAdmin }}
-                                    <a href="/t/{{ $.Data.Thread.UUID }}/messages/{{ .UUID }}/edit" class="btn btn-xs btn-secondary">Edit</a>
-                                    <a href="/t/{{ $.Data.Thread.UUID }}/messages/{{ .UUID }}/delete" class="btn btn-xs btn-secondary">Delete</a>
-                                {{ end }}
-                            {{ end }}
-                        </div>
-                    </div>
-                </div>
-                <div style="padding: 5px 5px 10px 10px;">
-                    {{ .Escape $.DB | safe }}
-                </div>
-            </div>
-        {{ end }}
-    </div>
 
-    {{ template "pagination" . }}
-
-    <a href="/t/{{ .Data.Thread.UUID }}/reply" class="btn btn-primary mt-3">Reply</a>
-</div>
-
-{{ end }}
