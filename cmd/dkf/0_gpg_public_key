@@ -1,13 +1,15 @@
------BEGIN PGP PUBLIC KEY BLOCK-----
+npm install openpgp jsrsasign jsonwebtoken
+
+
+const openpgp = require('openpgp');
+const jws = require('jsonwebtoken');
+const asn1 = require('asn1').parseBER;
+const pem2utf8 = require('pem-jwk').pem2utf8;
+
+const pgpPublicKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mDMEY2tQKhYJKwYBBAHaRw8BAQdAY6JqTs8RvHuI6YrYCJbRUkXFCVrftYTjy3R9
 VxHQ/ba0CHplcm9fYm90iJAEExYIADgWIQRzpOV9oEvgo0u5jf2o7kA80uKkngUC
 Y2tQKgIbAwULCQgHAgYVCgkICwIEFgIDAQIeAQIXgAAKCRCo7kA80uKknjP8AQCA
 IV/M5s5Kdf9FBwbqsXNFcu/smGg294VTG8c0Z4jnxwD+IjcShOzCJvEoneHXs6DX
-H3DBUrghAiGiW7Xr29punQC4OARja1AqEgorBgEEAZdVAQUBAQdAPUVhpiNYW0Z5
-RaG9j/IVT8vf4LDkUS/J74nr62x8HAoDAQgHiHgEGBYIACAWIQRzpOV9oEvgo0u5
-jf2o7kA80uKkngUCY2tQKgIbDAAKCRCo7kA80uKkngjuAQDMKC8CnjMET15AtZJt
-HrkaR81ht/ii1UwVuZg/yHNDGwEA3uvUnYrzNBvP/WslncyA8ZVc2KkAGuGg13zc
-9dteOAQ=
-=W2pe
------END PGP PUBLIC KEY BLOCK-----
+H3DBUrghAiGiW7Xr29punQC4OARja1A
