@@ -1,16 +1,34 @@
 {{ define "content" }}
 <div class="container mb-5">
-    <nav aria-label="breadcrumb">
+  {{ if .Data.Link }}
+    {{ if .CurrentUser.IsAdmin }}
+      <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/links">Links</a></li>
-            <li class="breadcrumb-item active">Delete link {{ .Data.Link.URL }}</li>
+          <li class="breadcrumb-item"><a href="/links">Links</a></li>
+          <li class="breadcrumb-item active">Delete link {{ .Data.Link.URL }}</li>
         </ol>
-        <form method="post">
-            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-            <button class="btn btn-danger">Confirm Delete Link</button>
-            <a class="btn btn-secondary" href="/links/{{ .Data.Link.UUID }}">Cancel</a>
-        </form>
-    </nav>
-</div>
+      </nav>
 
+      <form method="post">
+        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+        <p>Are you sure you want to delete the link "<a href="{{ .Data.Link.URL }}">{{ .Data.Link.URL }}</a>"?</p>
+        <button class="btn btn-danger">Confirm Delete Link</button>
+        <a class="btn btn-secondary" href="/links/{{ .Data.Link.UUID }}">Cancel</a>
+      </form>
+
+      {{ if .Flash.Error }}
+        <div class="alert alert-danger mt-3">{{ .Flash.Error }}</div>
+      {{ end }}
+
+      {{ if .Flash.Success }}
+        <div class="alert alert-success mt-3">{{ .Flash.Success }}</div>
+      {{ end }}
+
+    {{ else }}
+      <div class="alert alert-danger mt-3">You do not have permission to delete this link.</div>
+    {{ end }}
+  {{ else }}
+    <div class="alert alert-danger mt-3">The link you are trying to delete does not exist.</div>
+  {{ end }}
+</div>
 {{ end }}
