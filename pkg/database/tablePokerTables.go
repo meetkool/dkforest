@@ -1,12 +1,12 @@
 package database
 
 import (
+	"dkforest/pkg/config"
+	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
-// PokerTable represents a poker table in the database.
 type PokerTable struct {
 	ID       int64
 	IDX      int64
@@ -18,59 +18,46 @@ type PokerTable struct {
 	IsTest   bool
 }
 
-// GetPokerTables returns all poker tables from the database, sorted by ID and IDX.
-func (d *DkfDB) GetPokerTables() ([]PokerTable, error) {
-	var tables []PokerTable
-	err := d.db.Order("id ASC, idx ASC").Find(&tables).Error
-	return tables, err
+func (d *DkfDB) GetPokerTables() (out []PokerTable, err error) {
+	err = d.db.Order("idx ASC, id").Find(&out).Error
+	return
 }
 
-// GetPokerTableBySlug returns a single poker table from the database, identified by its slug.
-func (d *DkfDB) GetPokerTableBySlug(slug string) (PokerTable, error) {
-	var table PokerTable
-	err := d.db.First(&table, "slug = ?", slug).Error
-	return table, err
+func (d *DkfDB) GetPokerTableBySlug(slug string) (out PokerTable, err error) {
+	err = d.db.First(&out, "slug = ?", slug).Error
+	return
 }
 
-// Piconero is the smallest unit of Monero, also known as the atomic unit.
+// Piconero the smallest unit of Monero is 1 piconero (0.000000000001 XMR) also known as the atomic unit
+// https://www.getmonero.org/resources/moneropedia/denominations.html
 type Piconero uint64
 
-// ToPokerChip converts a Piconero value to a PokerChip value.
 func (p Piconero) ToPokerChip() PokerChip {
 	return PokerChip(p / 10_000_000)
 }
 
-// XmrStr returns a string representation of a Piconero value in Monero.
 func (p Piconero) XmrStr() string {
 	return fmt.Sprintf("%.12f", float64(p)/1_000_000_000_000)
 }
 
-// UsdStr returns a string representation of a Piconero value in USD.
 func (p Piconero) UsdStr() string {
 	return fmt.Sprintf("$%.2f", float64(p)/1_000_000_000_000*config.MoneroPrice.Load())
 }
 
-// RawString returns a raw string representation of a Piconero value.
 func (p Piconero) RawString() string { return fmt.Sprintf("%d", p) }
 
-// String returns a formatted string representation of a Piconero value.
 func (p Piconero) String() string { return humanize.Comma(int64(p)) }
 
-// PokerChip represents a chip in a poker game.
 type PokerChip uint64
 
-// ToPiconero converts a PokerChip value to a Piconero value.
 func (p PokerChip) ToPiconero() Piconero {
 	return Piconero(p * 10_000_000)
 }
 
-// String returns a formatted string representation of a PokerChip value.
 func (p PokerChip) String() string { return humanize.Comma(int64(p)) }
 
-// Raw returns the raw value of a PokerChip.
 func (p PokerChip) Raw() uint64 { return uint64(p) }
 
-// PokerTableAccount represents an account for a user in a poker table.
 type PokerTableAccount struct {
 	ID           int64
 	UserID       UserID
@@ -79,42 +66,54 @@ type PokerTableAccount struct {
 	AmountBet    PokerChip
 }
 
-// Save saves the PokerTableAccount to the database.
 func (a *PokerTableAccount) Save(db *DkfDB) error {
 	return db.db.Save(a).Error
 }
 
-// DoSave saves the PokerTableAccount to the database, logging any errors.
 func (a *PokerTableAccount) DoSave(db *DkfDB) {
 	if err := a.Save(db); err != nil {
 		logrus.Error(err)
 	}
 }
 
-// GetPositivePokerTableAccounts returns all PokerTableAccounts with a positive amount or amount_bet.
-func (d *DkfDB) GetPositivePokerTableAccounts() ([]PokerTableAccount, error) {
-	var accounts []PokerTableAccount
-	err := d.db.Find(&accounts, "amount > 0 OR amount_bet > 0").Error
-	return accounts, err
+func (d *DkfDB) GetPositivePokerTableAccounts() (out []PokerTableAccount, err error) {
+	err = d.db.Find(&out, "amount > 0 OR amount_bet > 0").Error
+	return
 }
 
-// GetPokerTableAccount returns a single PokerTableAccount, creating it if it doesn't exist.
-func (d *DkfDB) GetPokerTableAccount(userID UserID, pokerTableID int64) (PokerTableAccount, error) {
-	var account PokerTableAccount
-	err := d.db.First(&account, "user_id = ? AND poker_table_id = ?", userID, pokerTableID).Error
-	if err != nil {
-		account = PokerTableAccount{UserID: userID, PokerTableID: pokerTableID}
-		err = d.db.Create(&account).Error
+func (d *DkfDB) GetPokerTableAccount(userID UserID, pokerTableID int64) (out PokerTableAccount, err error) {
+	if err = d.db.First(&out, "user_id = ? AND poker_table_id = ?", userID, pokerTableID).Error; err != nil {
+		out = PokerTableAccount{UserID: userID, PokerTableID: pokerTableID}
+		err = d.db.Create(&out).Error
 	}
-	return account, err
+	return
 }
 
-// GetPokerTableAccounts returns all PokerTableAccounts for a given user.
-func (d *DkfDB) GetPokerTableAccounts(userID UserID) ([]PokerTableAccount, error) {
-	var accounts []PokerTableAccount
-	err := d.db.Find(&accounts, "user_id = ?", userID).Error
-	return accounts, err
+func (d *DkfDB) GetPokerTableAccounts(userID UserID) (out []PokerTableAccount, err error) {
+	err = d.db.Find(&out, "user_id = ?", userID).Error
+	return
 }
 
-// GetPokerTableAccountSums returns the sum of all amounts and amount_bets in PokerTableAccounts.
-func (d *
+func (d *DkfDB) GetPokerTableAccountSums() (sumAmounts, sumBets PokerChip, err error) {
+	var tmp struct{ SumAmounts, SumBets PokerChip }
+	err = d.db.Raw(`SELECT SUM(amount) AS sum_amounts, SUM(amount_bet) AS sum_bets FROM poker_table_accounts INNER JOIN poker_tables t ON t.id= poker_table_id WHERE t.is_test = 0`).Scan(&tmp).Error
+	return tmp.SumAmounts, tmp.SumBets, err
+}
+
+func (d *DkfDB) PokerTableAccountBet(userID UserID, pokerTableID int64, bet PokerChip) (err error) {
+	err = d.db.Exec(`UPDATE poker_table_accounts SET amount = amount - ?, amount_bet = amount_bet + ? WHERE user_id = ? AND poker_table_id = ?`,
+		bet, bet, userID, pokerTableID).Error
+	return
+}
+
+func (d *DkfDB) PokerTableAccountRefundPartialBet(userID UserID, pokerTableID int64, diff PokerChip) (err error) {
+	err = d.db.Exec(`UPDATE poker_table_accounts SET amount = amount + ?, amount_bet = amount_bet - ? WHERE user_id = ? AND poker_table_id = ?`,
+		diff, diff, userID, pokerTableID).Error
+	return
+}
+
+func (d *DkfDB) PokerTableAccountGain(userID UserID, pokerTableID int64, gain PokerChip) (err error) {
+	err = d.db.Exec(`UPDATE poker_table_accounts SET amount = amount + ?, amount_bet = 0 WHERE user_id = ? AND poker_table_id = ?`,
+		gain, userID, pokerTableID).Error
+	return
+}

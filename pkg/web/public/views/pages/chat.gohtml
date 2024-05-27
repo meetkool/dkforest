@@ -1,7 +1,7 @@
 {{ define "nav-mb" }} mb-1{{ end }}
 
 {{ define "extra-head" }}
-    <style type="text/css">
+    <style>
         {{ if .Data.RedRoom }}
         body {
             background-color: #3b0000 !important;
@@ -43,12 +43,48 @@
             font-size: 11px !important;
         }
         body {
-            background-image: url("/public/img/trees.gif");
+            {{ if .IsAprilFool2023 }}
+                background-image: url("/public/img/trees_donkey_kong.png");
+            {{ else if eq .AuthUser.Theme 1 }}
+                background-image: url("/public/img/trees_christmas.png");
+            {{ else if eq .AuthUser.Theme 2 }}
+            {{ else }}
+                background-image: url("/public/img/trees.gif");
+            {{ end }}
             background-repeat: no-repeat;
             background-attachment: fixed;
             background-position: right bottom;
             background-size: auto calc(100vh - 100px);
         }
+        {{ if .Data.DisplayTutorial }}
+            #tutorial_btn_next {
+                visibility: hidden;
+                animation: {{ .Data.TutoSecs }}s 1s forwards timer_countdown_frames2;
+            }
+            @keyframes timer_countdown_frames2 {
+                99% { visibility: hidden; }
+                100% { visibility: visible; }
+            }
+            #tutorial_secs:before {
+                content: "{{ .Data.TutoSecs }}";
+                animation: {{ .Data.TutoSecs }}s 1s forwards timer_countdown_frames;
+            }
+            @keyframes timer_countdown_frames {
+                {{ range .Data.TutoFrames -}}
+                    {{ . | css }}
+                {{ end -}}
+            }
+            .modal {
+                -moz-backdrop-filter: blur(2px);
+                -webkit-backdrop-filter: blur(2px);
+                backdrop-filter: blur(2px);
+            }
+            @-moz-document url-prefix() {
+                .modal {
+                    background-color: rgba(0, 0, 0, .6);
+                }
+            }
+        {{ end }}
     </style>
 {{ end }}
 
@@ -56,23 +92,165 @@
 
 {{ define "content" }}
 
-    <div style="{{ if not .AuthUser.HideRightColumn }}margin: 0 0 0 15px;{{ else }}margin: 0 15px;{{ end }}">
-        <div>
-            {{ if .AuthUser.ChatBarAtBottom }}
-                <div>
-                    <iframe id="chat-content" name="iframe2" src="/api/v1/chat/messages/{{ .Data.Room.Name }}{{ if .Data.IsStream }}/stream{{ end }}{{ .Data.ChatQueryParams }}"></iframe>
-                    {{ if .Data.IsStream }}<iframe id="chat-menu" src="/api/v1/chat/messages/{{ .Data.Room.Name }}/stream/menu{{ .Data.ChatQueryParams }}"></iframe>{{ end }}
+{{ if .Data.DisplayTutorial }}
+    {{ if eq .AuthUser.ChatTutorial 0 }}
+    <div class="modal d-block">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tutorial (1/3)</h5>
                 </div>
-            {{ end }}
+                <div class="modal-body">
+                    Rules of this chat:
+                    <ul>
+                        <li>No cp (child abuse content)</li>
+                        <li>Be civil</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <span>Wait for <span id="tutorial_secs"></span> seconds</span>
+                    <form method="post">
+                        <input type="hidden" name="formName" value="tutorialP1">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}">
+                        <button type="submit" class="btn btn-primary" id="tutorial_btn_next">I agree</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ else if eq .AuthUser.ChatTutorial 1 }}
+    <div class="modal d-block">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tutorial (2/3)</h5>
+                </div>
+                <div class="modal-body">
+                    If you are looking for <a href="/links" rel="noopener noreferrer" target="_blank">Links</a>,<br />
+                    look at the "<a href="/links" rel="noopener noreferrer" target="_blank">Links</a>" section in the header.
+                </div>
+                <div class="modal-footer">
+                    <span>Wait for <span id="tutorial_secs"></span> seconds</span>
+                    <form method="post">
+                        <input type="hidden" name="formName" value="tutorialP2">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}">
+                        <button type="submit" class="btn btn-primary" id="tutorial_btn_next">I understand</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ else if eq .AuthUser.ChatTutorial 2 }}
+    <div class="modal d-block">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tutorial (3/3)</h5>
+                </div>
+                <div class="modal-body">
+                    Trolls will be kicked on sight<br />
+                    Enjoy your stay
+                </div>
+                <div class="modal-footer">
+                    <span>Wait for <span id="tutorial_secs"></span> seconds</span>
+                    <form method="post">
+                        <input type="hidden" name="formName" value="tutorialP3">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}">
+                        <button type="submit" class="btn btn-primary" id="tutorial_btn_next">Complete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+{{ end }}
+
+<div style="{{ if not .AuthUser.HideRightColumn }}margin: 0 0 0 15px;{{ else }}margin: 0 15px;{{ end }}">
+    <div>
+        {{ if .AuthUser.ChatBarAtBottom }}
             <div>
-                <span>
-                    &gt; {{ t "Room" . }}
-                    {{ if .Data.Room.ExternalLink }}
-                        <a href="{{ .Data.Room.ExternalLink }}" rel="noopener noreferrer" target="_blank">#{{ .Data.Room.Name }}</a>
+                <iframe id="chat-content" name="iframe2" src="/api/v1/chat/messages/{{ .Data.Room.Name }}{{ if .Data.IsStream }}/stream{{ end }}{{ .Data.ChatQueryParams }}"></iframe>
+                {{ if .Data.IsStream }}<iframe id="chat-menu" src="/api/v1/chat/messages/{{ .Data.Room.Name }}/stream/menu{{ .Data.ChatQueryParams }}"></iframe>{{ end }}
+            </div>
+        {{ end }}
+        <div>
+            <span>
+                &gt; {{ t "Room" . }}
+                {{ if .Data.Room.ExternalLink }}
+                    <a href="{{ .Data.Room.ExternalLink }}" rel="noopener noreferrer" target="_blank">#{{ .Data.Room.Name }}</a>
+                {{ else }}
+                    #{{ .Data.Room.Name }}
+                {{ end }}
+            </span>
+            <div style="padding-left: 30px;" class="d-inline">
+<!--                {{ if and .Data.Room.OwnerUserID (eq (derefUserID .Data.Room.OwnerUserID) .AuthUser.ID) }}-->
+<!--                    <a href="/chat/{{ .Data.Room.Name }}/settings" class="btn btn-xs btn-secondary">{{ t "Room settings" . }}</a>-->
+<!--                {{ end }}-->
+                {{ if .Data.Room.Password }}
+                    <form method="post" style="display: inline-block">
+                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                        <input type="hidden" name="formName" value="logout" />
+                        <button type="submit" class="btn btn-xs btn-secondary">{{ t "Logout" . }}</button>
+                    </form>
+                {{ end }}
+                {{ if not .Data.IsOfficialRoom }}
+                    {{ if .Data.IsSubscribed }}
+                        <form method="post" style="display: inline-block" action="/api/v1/rooms/{{ .Data.Room.Name }}/unsubscribe">
+                            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                            <button type="submit" class="btn btn-xs btn-secondary">{{ t "Unsubscribe" . }}</button>
+                        </form>
                     {{ else }}
-                        #{{ .Data.Room.Name }}
+                        <form method="post" style="display: inline-block" action="/api/v1/rooms/{{ .Data.Room.Name }}/subscribe">
+                            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                            <button type="submit" class="btn btn-xs btn-secondary">{{ t "Subscribe" . }}</button>
+                        </form>
                     {{ end }}
-                </span>
-                <div style="padding-left: 30px;" class="d-inline">
-                    {{ if .Data.Room.OwnerUserID }}
-                        {{ if eq (derefUserID .Data.Room.OwnerUserID) .AuthUser.ID }}
+                {{ end }}
+                {{ if and .Data.Room.OwnerUserID (eq (derefUserID .Data.Room.OwnerUserID) .AuthUser.ID) }}
+                    <a href="/chat/{{ .Data.Room.Name }}/delete" class="btn btn-xs btn-danger">{{ t "Delete room" . }}</a>
+                {{ end }}
+            </div>
+        </div>
+        <div>
+            {{/*
+            allow-forms: Needed to send messages using the chat input box
+            allow-scripts: Needed for "autofocus" to work `Blocked autofocusing on a <input> element because the element's frame is sandboxed and the 'allow-scripts' permission is not set.`
+            allow-same-origin: Needed so that the iframe can access the cookies such as CSRF
+            allow-top-navigation-by-user-activation: Needed for links such as "Settings" to navigate the top-level page using "_top"
+
+            How does iframe behave in HTML5 without the sandbox attribute?
+            https://stackoverflow.com/questions/13703760/how-does-iframe-behave-in-html5-without-the-sandbox-attribute
+            */}}
+            <iframe id="chat-top-bar" name="iframe1" src="/api/v1/chat/top-bar/{{ .Data.Room.Name }}{{ .Data.ChatQueryParams }}" sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation-by-user-activation" style="width: 100%;"></iframe>
+        </div>
+        {{ if not .AuthUser.ChatBarAtBottom }}
+            <div>
+                {{/*
+                This iframe cannot be sandboxed, as it would prevent having "form" or "link" with a `target="..."` property.
+                Such form/link would open a new tab instead of sending data from/to the other iframe.
+                */}}
+                {{/*
+                allow-scripts: Needed for html meta refresh `Refused to execute the redirect specified via '<meta http-equiv='refresh' content='...'>'. The document is sandboxed, and the 'allow-scripts' keyword is not set.`
+                allow-forms: Needed for forms within the chat such as battleship
+                allow-same-origin: Needed so that the iframe can access the cookies such as CSRF
+                allow-popups: Needed to open external links in new tab
+                allow-popups-to-escape-sandbox: Allows external websites to not be restricted by the sandbox
+                allow-top-navigation-by-user-activation: Needed for links such as "#suggestions" to navigate the top-level page using "_top"
+                    sandbox="
+                        allow-forms
+                        allow-scripts
+                        allow-same-origin
+                        allow-top-navigation-by-user-activation
+                        allow-popups
+                        allow-popups-to-escape-sandbox"
+                */}}
+                <iframe id="chat-content" name="iframe2" src="/api/v1/chat/messages/{{ .Data.Room.Name }}{{ if .Data.IsStream }}/stream{{ end }}{{ .Data.ChatQueryParams }}"></iframe>
+                {{ if and .Data.IsStream (not .AuthUser.HideRightColumn) }}<iframe id="chat-menu" src="/api/v1/chat/messages/{{ .Data.Room.Name }}/stream/menu{{ .Data.ChatQueryParams }}"></iframe>{{ end }}
+            </div>
+        {{ end }}
+    </div>
+</div>
+
+<iframe id="chat-controls" name="iframe3" src="/api/v1/chat/controls/{{ .Data.Room.Name }}/{{ .Data.IsStream }}{{ .Data.ChatQueryParams }}"></iframe>
+
+{{ end }}

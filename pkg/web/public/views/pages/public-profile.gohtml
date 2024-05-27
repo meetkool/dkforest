@@ -8,9 +8,7 @@
 </style>
 {{ end }}
 
-{{ define "title" }}
-  <span {{ .Data.UserStyle | attr }}>{{ index .Data.User "Username" | safeHTML }}</span>
-{{ end }}
+{{ define "title" }}dkf - /u/{{ .Data.User.Username }}{{ end }}
 
 {{ define "content" }}
 <div class="container">
@@ -26,10 +24,10 @@
                 </div>
             </td>
             <td colspan="2">
-                <span class="username" style="{{ .Data.UserStyle | attr }}">{{ index .Data.User "Username" }}</span>
+                <span {{ .Data.UserStyle | attr }}><span class="username">{{ .Data.User.Username }}</span></span>
                 {{ if .AuthUser }}
                     {{ if .AuthUser.IsAdmin }}
-                        <a href="/admin/users/{{ index .Data.User "ID" }}/edit" class="btn btn-secondary btn-sm">Edit</a>
+                        <a href="/admin/users/{{ .Data.User.ID }}/edit" class="btn btn-secondary btn-sm">Edit</a>
                     {{ end }}
                 {{ end }}
             </td>
@@ -38,32 +36,52 @@
             <td>Joined:</td>
             <td>
                 <span>
-                    {{ index .Data.User "CreatedAt" | format "Jan 02, 2006" }}
-                    {{ if .AuthUser }}{{ if .AuthUser.IsAdmin }}<span style="color: red;">{{ index .Data.User "CreatedAt" | format "15:04:05" }}</span>{{ end }}{{ end }}
+                    {{ .Data.User.CreatedAt.Format "Jan 02, 2006" }}
+                    {{ if .AuthUser }}{{ if .AuthUser.IsAdmin }}<span style="color: red;">{{ .Data.User.CreatedAt.Format "15:04:05" }}</span>{{ end }}{{ end }}
                 </span>
             </td>
         </tr>
-        {{ if index .Data.User "LastSeenPublic" }}
+        {{ if .Data.User.LastSeenPublic }}
             <tr>
                 <td>Last seen:</td>
                 <td>
                     <span>
-                        {{ index .Data.User "LastSeenAt" | format "Jan 02, 2006" }}
-                        {{ if .AuthUser }}{{ if .AuthUser.IsAdmin }}<span style="color: red;">{{ index .Data.User "LastSeenAt" | format "15:04:05" }}</span>{{ end }}{{ end }}
+                        {{ .Data.User.LastSeenAt.Format "Jan 02, 2006" }}
+                        {{ if .AuthUser }}{{ if .AuthUser.IsAdmin }}<span style="color: red;">{{ .Data.User.LastSeenAt.Format "15:04:05" }}</span>{{ end }}{{ end }}
                     </span>
                 </td>
             </tr>
         {{ else if .AuthUser }}
             {{ if .AuthUser.IsAdmin }}
-                <tr><td>Last seen (admin only):</td><td><span>{{ index .Data.User "LastSeenAt" | format "Jan 02, 2006 15:04:05" }}</span></td></tr>
+                <tr><td>Last seen (admin only):</td><td><span>{{ .Data.User.LastSeenAt.Format "Jan 02, 2006 15:04:05" }}</span></td></tr>
             {{ end }}
         {{ end }}
-        <tr><td>Homepage:</td><td><span>{{ if index .Data.User "Website" }}<a href="{{ index .Data.User "Website" }}" rel="noopener noreferrer" target="_blank">{{ index .Data.User "Website" }}</a>{{ else }}none{{ end }}</span></td></tr>
-        <tr><td>Email:</td><td><span>{{ if index .Data.User "Email" }}{{ index .Data.User "Email" }}{{ else }}none{{ end }}</span></td></tr>
+        {{/* <tr><td>Last visit:</td><td><span>{{ .Data.User.CreatedAt.Format "Jan 02, 2006 15:04:05" }}</span></td></tr> */}}
+        <tr><td>Homepage:</td><td><span>{{ if .Data.User.Website }}<a href="{{ .Data.User.Website }}" rel="noopener noreferrer" target="_blank">{{ .Data.User.Website }}</a>{{ else }}none{{ end }}</span></td></tr>
+        <tr><td>Email:</td><td><span>{{ if .Data.User.Email }}{{ .Data.User.Email }}{{ else }}none{{ end }}</span></td></tr>
     </table>
-</div>
-<div class="container">
-    <a href="/forum/search?author={{ index .Data.User "Username" }}">forum threads</a>
+    <a href="/forum/search?author={{ .Data.User.Username }}">forum threads</a>
     <div class="mt-3">
         <label>Age public key:</label>
-        <span style="color: #c0ebff;">{{ if index .Data.User "AgePublicKey" }}{{ index .
+        <span style="color: #c0ebff;">{{ if .Data.User.AgePublicKey }}{{ .Data.User.AgePublicKey }}{{ else }}none{{ end }}</span>
+    </div>
+    <div class="mt-3">
+        <label for="pgpPublicKey">
+            PGP key:
+            <span style="color: #82e17f;">{{ .Data.User.GPGPublicKey | getKeyFingerprint }}</span>
+            {{ if .Data.GpgKeyExpiredTime }}
+                <br />
+                Expires on:
+                <span style="color: {{ if .Data.GpgKeyExpired }}#ff5959;{{ else if .Data.GpgKeyExpiredSoon }}orange{{ else }}#82e17f{{ end }};">
+                    {{ .Data.GpgKeyExpiredTime.Format "Jan 02, 2006 15:04:05" }}
+                </span>
+            {{ end }}
+        </label><br />
+        <textarea id="pgpPublicKey" rows="10" class="form-control mono" readonly>{{ .Data.User.GPGPublicKey }}</textarea>
+    </div>
+    <div class="mt-3">
+        <label for="publicNotes">Public notes:{{ if .Data.PublicNotes.Notes }} <small>(last edited: {{ .Data.PublicNotes.UpdatedAt.Format "Jan 02, 2006" }}){{ end }}</small></label><br />
+        <textarea id="publicNotes" rows="10" class="form-control" readonly>{{ .Data.PublicNotes.Notes }}</textarea>
+    </div>
+</div>
+{{ end }}

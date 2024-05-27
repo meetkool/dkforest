@@ -8,49 +8,21 @@ import (
 	"net/http"
 )
 
-type clubData struct {
-	ActiveTab   string
-	ForumThreads []database.ForumThread
-	ErrorThreadName string
-	ErrorMessage string
-}
-
-type clubNewThread struct {
-	ActiveTab   string
-	ThreadName   string
-	Message      string
-	ErrorThreadName string
-	ErrorMessage string
-}
-
-type clubNewThreadReply struct {
-	ActiveTab   string
-	Thread       database.ForumThread
-	Message      string
-	ErrorMessage string
-	IsEdit       bool
-}
-
 func ClubHandler(c echo.Context) error {
 	authUser := c.Get("authUser").(*database.User)
 	db := c.Get("database").(*database.DkfDB)
-	data := clubData{
-		ActiveTab: "home",
-	}
-	forumThreads, err := db.GetClubForumThreads(authUser.ID)
-	if err != nil {
-		return err
-	}
-	data.ForumThreads = forumThreads
+	var data clubData
+	data.ActiveTab = "home"
+	data.ForumThreads, _ = db.GetClubForumThreads(authUser.ID)
 	return c.Render(http.StatusOK, "club.home", data)
 }
 
 func ClubNewThreadHandler(c echo.Context) error {
 	authUser := c.Get("authUser").(*database.User)
 	db := c.Get("database").(*database.DkfDB)
-	data := clubNewThread{
-		ActiveTab: "home",
-	}
+	var data clubNewThreadData
+	data.ActiveTab = "home"
+
 	if c.Request().Method == http.MethodPost {
 		data.ThreadName = c.Request().PostFormValue("thread_name")
 		data.Message = c.Request().PostFormValue("message")
@@ -63,13 +35,9 @@ func ClubNewThreadHandler(c echo.Context) error {
 			return c.Render(http.StatusOK, "club.new-thread", data)
 		}
 		thread := database.MakeForumThread(data.ThreadName, authUser.ID, 0)
-		if err := db.DB().Create(&thread).Error; err != nil {
-			return err
-		}
+		db.DB().Create(&thread)
 		message := database.MakeForumMessage(data.Message, authUser.ID, thread.ID)
-		if err := db.DB().Create(&message).Error; err != nil {
-			return err
-		}
+		db.DB().Create(&message)
 		return c.Redirect(http.StatusFound, "/club/threads/"+utils.FormatInt64(int64(thread.ID)))
 	}
 
@@ -84,10 +52,10 @@ func ClubThreadReplyHandler(c echo.Context) error {
 	if err != nil {
 		return c.Redirect(http.StatusFound, "/")
 	}
-	data := clubNewThreadReply{
-		ActiveTab:   "home",
-		Thread:       thread,
-	}
+	var data clubNewThreadReplyData
+	data.ActiveTab = "home"
+	data.Thread = thread
+
 	if c.Request().Method == http.MethodPost {
 		data.Message = c.Request().PostFormValue("message")
 		if !govalidator.RuneLength(data.Message, "3", "10000") {
@@ -95,9 +63,7 @@ func ClubThreadReplyHandler(c echo.Context) error {
 			return c.Render(http.StatusOK, "club.new-thread", data)
 		}
 		message := database.MakeForumMessage(data.Message, authUser.ID, thread.ID)
-		if err := db.DB().Create(&message).Error; err != nil {
-			return err
-		}
+		db.DB().Create(&message)
 		return c.Redirect(http.StatusFound, "/club/threads/"+utils.FormatInt64(int64(thread.ID)))
 	}
 
@@ -120,13 +86,49 @@ func ClubThreadEditMessageHandler(c echo.Context) error {
 	if msg.UserID != authUser.ID && !authUser.IsAdmin {
 		return c.Redirect(http.StatusFound, "/")
 	}
-	data := clubNewThreadReply{
-		ActiveTab:   "home",
-		Thread:       thread,
-		Message:      msg.Message,
-		IsEdit:       true,
-	}
+	var data clubNewThreadReplyData
+	data.ActiveTab = "home"
+	data.IsEdit = true
+	data.Thread = thread
+	data.Message = msg.Message
+
 	if c.Request().Method == http.MethodPost {
 		data.Message = c.Request().PostFormValue("message")
 		if !govalidator.RuneLength(data.Message, "3", "10000") {
-			data.
+			data.ErrorMessage = "Message must have at least 3 characters"
+			return c.Render(http.StatusOK, "club.new-thread", data)
+		}
+		msg.Message = data.Message
+		msg.DoSave(db)
+		return c.Redirect(http.StatusFound, "/club/threads/"+utils.FormatInt64(int64(thread.ID)))
+	}
+
+	return c.Render(http.StatusOK, "club.thread-reply", data)
+}
+
+func ClubMembersHandler(c echo.Context) error {
+	db := c.Get("database").(*database.DkfDB)
+	var data clubMembersData
+	data.ActiveTab = "members"
+	data.Members, _ = db.GetClubMembers()
+	return c.Render(http.StatusOK, "club.members", data)
+}
+
+func ClubThreadHandler(c echo.Context) error {
+	authUser := c.Get("authUser").(*database.User)
+	db := c.Get("database").(*database.DkfDB)
+	threadID := database.ForumThreadID(utils.DoParseInt64(c.Param("threadID")))
+	thread, err := db.GetForumThread(threadID)
+	if err != nil {
+		return c.Redirect(http.StatusFound, "/")
+	}
+	var data clubThreadData
+	data.ActiveTab = "home"
+	data.Thread = thread
+	data.Messages, _ = db.GetThreadMessages(threadID)
+
+	// Update read record
+	db.UpdateForumReadRecord(authUser.ID, threadID)
+
+	return c.Render(http.StatusOK, "club.thread", data)
+}

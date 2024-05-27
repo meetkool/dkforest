@@ -44,6 +44,7 @@ type IUserRenderMessage interface {
 	GetAFK() bool
 	GetAfkIndicatorEnabled() bool
 	GetDisplayIgnored() bool
+	GetDisplayAliveIndicator() bool
 	GetDisplayModerators() bool
 	GetNotifyNewMessage() bool
 	GetNotifyTagged() bool
@@ -98,6 +99,7 @@ type User struct {
 	HellbanOpacity               int64
 	CodeBlockHeight              int64
 	DisplayIgnored               bool
+	DisplayAliveIndicator        bool
 	HideIgnoredUsersFromList     bool
 	Verified                     bool
 	Temp                         bool // Temporary account
@@ -177,6 +179,7 @@ func (u *User) GetIsHellbanned() bool          { return u.IsHellbanned }
 func (u *User) GetAFK() bool                   { return u.AFK }
 func (u *User) GetAfkIndicatorEnabled() bool   { return u.AfkIndicatorEnabled }
 func (u *User) GetDisplayIgnored() bool        { return u.DisplayIgnored }
+func (u *User) GetDisplayAliveIndicator() bool { return u.DisplayAliveIndicator }
 func (u *User) GetDisplayModerators() bool     { return u.DisplayModerators }
 func (u *User) GetNotifyNewMessage() bool      { return u.NotifyNewMessage }
 func (u *User) GetNotifyTagged() bool          { return u.NotifyTagged }
@@ -363,6 +366,14 @@ func (u *User) DoSave(db *DkfDB) {
 	}
 }
 
+func (u *User) DisableTotp2FA(db *DkfDB) {
+	db.db.Model(u).Select("TwoFactorSecret", "TwoFactorRecovery").Updates(User{TwoFactorSecret: "", TwoFactorRecovery: ""})
+}
+
+func (u *User) DisableGpg2FA(db *DkfDB) {
+	db.db.Model(u).Select("GpgTwoFactorEnabled").Updates(User{GpgTwoFactorEnabled: false})
+}
+
 func (u *User) SetAgePublicKey(db *DkfDB, agePublicKey string) {
 	db.db.Model(u).Select("AgePublicKey").Updates(User{AgePublicKey: agePublicKey})
 }
@@ -517,6 +528,7 @@ is_admin,
 display_hellban_button,
 display_kick_button,
 display_hellbanned,
+display_alive_indicator,
 syntax_highlight_code,
 date_format,
 confirm_external_links,
@@ -814,6 +826,7 @@ func (d *DkfDB) createUser(usernameStr, password, repassword, gpgPublicKey strin
 		newUser.RegistrationDuration = registrationDuration
 		newUser.UseStream = true
 		newUser.UseStreamMenu = true
+		newUser.DisplayAliveIndicator = true
 		newUser.CodeBlockHeight = 300
 		newUser.HellbanOpacity = 30
 		newUser.SignupMetadata = signupInfoEnc

@@ -93,12 +93,13 @@ func (d *DkfDB) CreatePokerXmrInTransaction(userID UserID, transfer *wallet.Tran
 }
 
 func (d *DkfDB) CreatePokerXmrTransaction(userID UserID, transfer *wallet.ResponseTransfer) (out PokerXmrTransaction, err error) {
-	err = d.db.Create(&PokerXmrTransaction{
+	out = PokerXmrTransaction{
 		Status: PokerXmrTransactionStatusPending,
 		UserID: userID,
 		Amount: Piconero(transfer.Amount),
 		Fee:    Piconero(transfer.Fee),
-		IsIn:   false}).Error
+		IsIn:   false}
+	err = d.db.Create(&out).Error
 	return
 }
 

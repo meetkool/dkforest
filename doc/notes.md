@@ -7,6 +7,10 @@ https://gitlab.torproject.org/legacy/trac/-/issues/32428
 https://web.archive.org/web/20200619230407/https://github.com/torproject/tor/pull/1543/files
 ```
 
+```go
+curl --proxy socks5h://localhost:9050 http://dkforestseeaaq2dqz2uflmlsybvnq2irzn4ygyvu53oazyorednviid.onion
+```
+
 ```
 /etc/systemd/system/dkf.service
 service darkforest restart

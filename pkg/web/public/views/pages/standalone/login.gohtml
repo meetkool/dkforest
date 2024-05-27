@@ -1,41 +1,79 @@
-<!DOCTYPE html>
-<html lang="{{ .Lang }}">
-<head>
-    <title>{{ t "Sign in" . | sitetitle }}</title>
-    <!-- Add any necessary CSS and JavaScript files here -->
-</head>
-<body>
-    <div id="parent">
-        <div class="container" id="form_login">
-            <div class="row">
-                <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
-                    <form autocomplete="on" method="post">
-                        <input type="hidden" name="csrf" value="{{ .CSRF }}" />
-                        {{ if .Data.CaptchaRequired }}
-                            <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
-                        {{ end }}
-                        <fieldset>
-                            <div class="row">
-                                <div class="center-block">
-                                    <h1>{{ t "Sign in" . }}</h1>
-                                </div>
+{{ define "content" }}
+
+<div id="parent">
+    <div class="container" id="form_login">
+        <div class="row">
+            <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                <form autocomplete="on" method="post">
+                    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+                    {{ if .Data.CaptchaRequired }}
+                        <input type="hidden" name="captcha_id" value="{{ .Data.CaptchaID }}" />
+                    {{ end }}
+                    <fieldset>
+                        <div class="row">
+                            <div class="center-block">
                             </div>
-                            <div class="row">
-                                <div class="col-sm-12 col-md-10 offset-md-1 ">
-                                    {{ if .Data.Error }}
-                                        <div class="alert alert-danger">
-                                            {{ .Data.Error }}
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12 col-md-10 offset-md-1 ">
+                                {{ if .Data.Error }}
+                                    <div class="alert alert-danger">
+                                        {{ .Data.Error }}
+                                    </div>
+                                {{ end }}
+                                <div class="form-group">
+                                    <input class="transparent-input form-control{{ if .Data.Error }} is-invalid{{ end }}" placeholder="{{ t "Username" . }}" name="username" type="text" value="{{ .Data.Username }}" autocorrect="off" autocapitalize="none"{{ if eq .Data.Autofocus 0 }} autofocus{{ end }} required />
+                                </div>
+                                <div class="form-group">
+                                    <input class="transparent-input form-control{{ if .Data.Error }} is-invalid{{ end }}" placeholder="{{ t "Password" . }}" name="password" type="password" value="{{ .Data.Password }}"{{ if eq .Data.Autofocus 1 }} autofocus{{ end }} required />
+                                </div>
+                                <div class="form-group">
+                                    <select name="session_duration" class="transparent-input form-control">
+{{/*                                        <option value="60"{{ if eq .Data.SessionDurationSec 60 }} selected{{ end }}>Stay logged in for 1 minute</option>*/}}
+                                        <option value="3600"{{ if eq .Data.SessionDurationSec 3600 }} selected{{ end }}>Stay logged in for 1 hour</option>
+                                        <option value="21600"{{ if eq .Data.SessionDurationSec 21600 }} selected{{ end }}>Stay logged in for 6 hours</option>
+                                        <option value="43200"{{ if eq .Data.SessionDurationSec 43200 }} selected{{ end }}>Stay logged in for 12 hours</option>
+                                        <option value="86400"{{ if eq .Data.SessionDurationSec 86400 }} selected{{ end }}>Stay logged in for 24 hours</option>
+                                        <option value="259200"{{ if eq .Data.SessionDurationSec 259200 }} selected{{ end }}>Stay logged in for 3 days</option>
+                                        <option value="604800"{{ if eq .Data.SessionDurationSec 604800 }} selected{{ end }}>Stay logged in for 7 days</option>
+                                        <option value="2592000"{{ if eq .Data.SessionDurationSec 2592000 }} selected{{ end }}>Stay logged in for 30 days</option>
+                                    </select>
+                                </div>
+                                {{ if .Data.CaptchaRequired }}
+                                    <div class="form-group">
+                                        <div class="mb-2 text-center">
+                                            <img src="data:image/png;base64,{{ .Data.CaptchaImg }}" alt="captcha" style="background-color: hsl(0, 0%, 90%);" class="captcha-img" />
                                         </div>
-                                    {{ end }}
-                                    <div class="form-group">
-                                        <label for="username">{{ t "Username" . }}</label>
-                                        <input class="transparent-input form-control{{ if .Data.Error }} is-invalid{{ end }}" id="username" placeholder="{{ t "Username" . }}" name="username" type="text" value="{{ .Data.Username }}" autocorrect="off" autocapitalize="none"{{ if eq .Data.Autofocus 0 }} autofocus{{ end }} required />
+                                        <input class="transparent-input form-control{{ if .Data.ErrCaptcha }} is-invalid{{ end }}" placeholder="{{ t "Captcha" . }}" name="captcha" type="text" maxlength="6" required{{ if eq .Data.Autofocus 2 }} autofocus{{ end }} autocomplete="off" />
+                                        {{ if .Data.ErrCaptcha }}<div class="invalid-feedback d-block">{{ .Data.ErrCaptcha }}</div>{{ end }}
                                     </div>
+                                {{ end }}
+                                <div class="form-group">
+                                    <input type="submit" class="transparent-input btn btn-lg btn-primary btn-block" value="{{ t "Sign in" . }}" />
+                                </div>
+                                <div class="form-group">
+                                    <a href="/signup{{ if .Data.Redirect }}?redirect={{ .Data.Redirect }}{{ end }}" class="bg-label link">{{ t "Register" . }}</a>
+                                    <a href="/forgot-password{{ if .Data.Redirect }}?redirect={{ .Data.Redirect }}{{ end }}" class="bg-label link ml-2">{{ t "I forgot my password" . }}</a>
+                                </div>
+                                {{ if .Data.HomeUsersList }}
                                     <div class="form-group">
-                                        <label for="password">{{ t "Password" . }}</label>
-                                        <input class="transparent-input form-control{{ if .Data.Error }} is-invalid{{ end }}" id="password" placeholder="{{ t "Password" . }}" name="password" type="password" value="{{ .Data.Password }}"{{ if eq .Data.Autofocus 1 }} autofocus{{ end }} required />
+                                        <div class="bg-label" style="color: white;" class="text-center">
+                                            Online:
+                                            {{ range .Data.Online }}
+                                                <span style="color: {{ .Color }};">{{ .Username }}</span>
+                                            {{ else }}
+                                                <em>none</em>
+                                            {{ end }}
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="session_duration">{{ t "Session duration" . }}</label>
-                                        <select name="session_duration" class="transparent-input form-control" id="session_duration">
-                                            <option value="360
+                                {{ end }}
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ end }}

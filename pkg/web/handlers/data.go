@@ -678,6 +678,7 @@ type settingsChatData struct {
 	DisplayHellbanButton        bool
 	UseStream                   bool
 	UseStreamMenu               bool
+	DisplayAliveIndicator       bool
 	ManualMultiline             bool
 	ConfirmExternalLinks        bool
 	ChessSoundsEnabled          bool
@@ -929,9 +930,12 @@ type adminSpamFiltersData struct {
 }
 
 type publicProfileData struct {
-	User        database.User
-	PublicNotes database.UserPublicNote
-	UserStyle   string
+	User              database.User
+	PublicNotes       database.UserPublicNote
+	UserStyle         string
+	GpgKeyExpiredTime *time.Time
+	GpgKeyExpired     bool
+	GpgKeyExpiredSoon bool
 }
 
 type fileDropData struct {

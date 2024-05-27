@@ -3,15 +3,25 @@ package database
 import "time"
 
 type KarmaHistory struct {
-	ID          int64       `gorm:"column:id;primary_key;auto_increment" json:"id"`
-	Karma       int64       `gorm:"column:karma" json:"karma"`
-	Description string      `gorm:"column:description" json:"description"`
-	UserID      UserID      `gorm:"column:user_id" json:"user_id"`
-	FromUserID  *int64      `gorm:"column:from_user_id" json:"from_user_id"`
-	CreatedAt   time.Time   `gorm:"column:created_at" json:"created_at"`
+	ID          int64
+	Karma       int64
+	Description string
+	UserID      UserID
+	FromUserID  *int64
+	CreatedAt   time.Time
 }
 
-func (d *DkfDB) CreateKarmaHistory(karma int64, description string, userID UserID, fromUserID *int64) (out *KarmaHistory, err error) {
-	out = &KarmaHistory{
+func (d *DkfDB) CreateKarmaHistory(karma int64, description string, userID UserID, fromUserID *int64) (out KarmaHistory, err error) {
+	out = KarmaHistory{
 		Karma:       karma,
-	
+		Description: description,
+		UserID:      userID,
+		FromUserID:  fromUserID,
+	}
+	err = d.db.Create(&out).Error
+	return
+}
+
+func (KarmaHistory) TableName() string {
+	return "karma_history"
+}

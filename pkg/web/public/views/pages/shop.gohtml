@@ -2,16 +2,8 @@
 
 <div class="container">
     <h3>Shop</h3>
-    {{ if .Data.Invoice.GetURL }}
-        <a href="{{ .Data.Invoice.GetURL }}">Invoice</a><br />
-    {{ else }}
-        <p>Invoice URL is not available.</p>
-    {{ end }}
-    {{ if .Data.Img }}
-        <img src="data:image/png;base64,{{ index .Data.Img 0 }}" class="img-thumbnail" />
-    {{ else }}
-        <p>Image is not available.</p>
-    {{ end }}
+    {{ .Data.Invoice.GetURL }}<br />
+    <img src="data:image/png;base64,{{ .Data.Img }}" class="img-thumbnail" />
 </div>
 
 {{ end }}

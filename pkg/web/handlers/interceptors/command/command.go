@@ -2,25 +2,15 @@ package command
 
 import (
 	"dkforest/pkg/database"
+	dutils "dkforest/pkg/database/utils"
 	"errors"
+	"fmt"
+	"github.com/labstack/echo"
 	"net/url"
 )
 
-var (
-	ErrRedirect      = errors.New("redirect")
-	ErrStop          = errors.New("stop")
-	RedirectPmQP     = "pm"
-	RedirectEditQP   = "e"
-	RedirectGroupQP  = "g"
-	RedirectModQP    = "m"
-	RedirectHbmQP    = "hbm"
-	RedirectTagQP    = "tag"
-	RedirectHTagQP   = "htag"
-	RedirectMTagQP   = "mtag"
-	RedirectQuoteQP  = "quote"
-	RedirectMultilineQP = "ml"
-	RedirectPmUsernameQP = "pmusername"
-)
+var ErrRedirect = errors.New("redirect")
+var ErrStop = errors.New("stop")
 
 type ErrSuccess struct {
 	msg string
@@ -34,31 +24,48 @@ func (e ErrSuccess) Error() string {
 	return e.msg
 }
 
+const (
+	RedirectPmQP         = "pm"
+	RedirectEditQP       = "e"
+	RedirectGroupQP      = "g"
+	RedirectModQP        = "m"
+	RedirectHbmQP        = "hbm"
+	RedirectTagQP        = "tag"
+	RedirectHTagQP       = "htag"
+	RedirectMTagQP       = "mtag"
+	RedirectQuoteQP      = "quote"
+	RedirectMultilineQP  = "ml"
+	RedirectPmUsernameQP = "pmusername"
+)
+
 type Command struct {
-	RedirectQP          url.Values            // RedirectURL Query Parameters
-	OrigMessage         string                // This is the original text that the user input (can be changed by /e)
-	DataMessage         string                // This is what the user will have in his input box
-	Message             string                // Un-sanitized message received from the user
-	Room                database.ChatRoom     // Room the user is in
-	RoomKey             string                // Room password (if any)
-	AuthUser            *database.User        // Authenticated user (sender of the message)
-	DB                  *database.DkfDB       // Database instance
-	ToUser              *database.User        // If not nil, will be a PM
-	Upload              *database.Upload      // If the message contains an uploaded file
-	EditMsg             *database.ChatMessage // If we're editing a message
-	GroupID             *database.GroupID     // If the message is for a subgroup
-	HellbanMsg          bool                  // Is the message will be marked HB
-	SystemMsg           bool                  // Is the message system
-	ModMsg              bool                  // Is the message part of the "moderators" group
-	C                   echo.Context
-	SkipInboxes         bool
+	Err error
+
+	// Data that can be mutated
+	RedirectQP  url.Values            // RedirectURL Query Parameters
+	OrigMessage string                // This is the original text that the user input (can be changed by /e)
+	DataMessage string                // This is what the user will have in his input box
+	Message     string                // Un-sanitized message received from the user
+	Room        database.ChatRoom     // Room the user is in
+	RoomKey     string                // Room password (if any)
+	AuthUser    *database.User        // Authenticated user (sender of the message)
+	DB          *database.DkfDB       // Database instance
+	ToUser      *database.User        // If not nil, will be a PM
+	Upload      *database.Upload      // If the message contains an uploaded file
+	EditMsg     *database.ChatMessage // If we're editing a message
+	GroupID     *database.GroupID     // If the message is for a subgroup
+	HellbanMsg  bool                  // Is the message will be marked HB
+	SystemMsg   bool                  // Is the message system
+	ModMsg      bool                  // Is the message part of the "moderators" group
+	C           echo.Context
+	SkipInboxes bool
 
 	zeroUser *database.User // Cache the zero (@0) user
 }
 
 func NewCommand(c echo.Context, origMessage string, room database.ChatRoom, roomKey string) *Command {
-	db := c.Get("database").(*database.DkfDB)
 	authUser := c.Get("authUser").(*database.User)
+	db := c.Get("database").(*database.DkfDB)
 	return &Command{
 		C:           c,
 		AuthUser:    authUser,
@@ -116,4 +123,65 @@ func (c *Command) zeroProcMsgRoom(rawMsg, roomKey string, roomID database.RoomID
 }
 
 // Have the "zero user" send a "processed message" PM to a user in a specific room.
-func (c *Command) ZeroProcMsgRoomToUser(rawMsg, roomKey string, roomID database.RoomID, toUser *database
+func (c *Command) zeroProcMsgRoomToUser(rawMsg, roomKey string, roomID database.RoomID, toUser *database.User) {
+	procMsg, _, _ := dutils.ProcessRawMessage(c.DB, rawMsg, roomKey, c.AuthUser.ID, roomID, nil, c.AuthUser.IsModerator(), true, false)
+	c.zeroRawMsg(toUser, rawMsg, procMsg)
+}
+
+// ZeroMsg have the "zero usser" send an unprocessed private message to the authUser
+func (c *Command) ZeroMsg(msg string) {
+	c.zeroRawMsg(c.AuthUser, msg, msg)
+}
+
+func (c *Command) ZeroSysMsgTo(user2 *database.User, msg string) {
+	c.zeroSysRawMsg(user2, msg, msg, false)
+}
+
+func (c *Command) ZeroSysMsgToSkipNotify(user2 *database.User, msg string) {
+	c.zeroSysRawMsg(user2, msg, msg, true)
+}
+
+// ZeroPublicMsg have the "zero usser" send an unprocessed message in the current room
+func (c *Command) ZeroPublicMsg(raw, msg string) {
+	c.zeroRawMsg(nil, raw, msg)
+}
+
+func (c *Command) zeroRawMsg(user2 *database.User, raw, msg string) {
+	zeroUser := c.GetZeroUser()
+	c.rawMsg(zeroUser, user2, raw, msg)
+}
+
+func (c *Command) zeroSysRawMsg(user2 *database.User, raw, msg string, skipNotify bool) {
+	zeroUser := c.GetZeroUser()
+	c.rawSysMsg(zeroUser, user2, raw, msg, skipNotify)
+}
+
+func (c *Command) rawMsg(user1 database.User, user2 *database.User, raw, msg string) {
+	if c.Room.ReadOnly {
+		return
+	}
+	rawMsgRoom(c.DB, user1, user2, raw, msg, c.RoomKey, c.Room.ID)
+}
+
+func (c *Command) rawSysMsg(user1 database.User, user2 *database.User, raw, msg string, skipNotify bool) {
+	if c.Room.ReadOnly {
+		return
+	}
+	rawSysMsgRoom(c.DB, user1, user2, raw, msg, c.RoomKey, c.Room.ID, skipNotify)
+}
+
+func rawMsgRoom(db *database.DkfDB, user1 database.User, user2 *database.User, raw, msg, roomKey string, roomID database.RoomID) {
+	var toUserID *database.UserID
+	if user2 != nil {
+		toUserID = &user2.ID
+	}
+	_, _ = db.CreateMsg(raw, msg, roomKey, roomID, user1.ID, toUserID)
+}
+
+func rawSysMsgRoom(db *database.DkfDB, user1 database.User, user2 *database.User, raw, msg, roomKey string, roomID database.RoomID, skipNotify bool) {
+	var toUserID *database.UserID
+	if user2 != nil {
+		toUserID = &user2.ID
+	}
+	_ = db.CreateSysMsgPM(raw, msg, roomKey, roomID, user1.ID, toUserID, skipNotify)
+}

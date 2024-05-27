@@ -4,12 +4,13 @@
         <form method="post">
             <input type="hidden" name="csrf" value="{{ .CSRF }}" />
             <div class="form-group">
-                <label for="password">Current password</label>
-                <input type="password" name="password" value="{{ .Data.Password }}" class="form-control" id="password" placeholder="Current password" style="{{ if .Data.ErrorPassword }}is-invalid{{ end }}" autocomplete="off" autocapitalize="none" />
+                <input type="password" name="password" value="{{ .Data.Password }}" class="form-control" placeholder="Current password" style="{{ if .Data.ErrorPassword }}is-invalid{{ end }}" autocomplete="off" autocapitalize="none" />
                 {{ if .Data.ErrorPassword }}<div class="invalid-feedback d-block">{{ .Data.ErrorPassword }}</div>{{ end }}
-                <small id="passwordHelp" class="form-text text-muted">Your password must be at least 8 characters long.</small>
             </div>
             <div class="form-group">
-                <button class="btn btn-success" {{ if .Data.ErrorPassword or .Data.EmptyPassword or .Data.SamePassword or .Data.ShortPassword }}disabled{{ end }}>Disable</button>
-                <button type="reset" class="btn btn-secondary">{{ t "Cancel" . }}</button>
-            </div
+                <button class="btn btn-success">Disable</button>
+                <a href="/settings/account" class="btn btn-secondary">{{ t "Cancel" . }}</a>
+            </div>
+        </form>
+    </div>
+{{ end }}

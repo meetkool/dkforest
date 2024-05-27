@@ -1,28 +1,49 @@
 package database
 
 import (
-	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 	"time"
 )
 
 type ChessGame struct {
-	ID            int64          `gorm:"primary_key" json:"id"`
-	UUID          string        `json:"uuid"`
-	WhiteUserID   UserID        `json:"white_user_id"`
-	BlackUserID   UserID        `json:"black_user_id"`
-	PGN           string        `json:"pgn"`
-	Outcome       string        `json:"outcome"`
-	AccuracyWhite float64       `json:"accuracy_white"`
-	AccuracyBlack float64       `json:"accuracy_black"`
-	Stats         []byte        `json:"stats"`
-	CreatedAt     time.Time     `json:"created_at"`
-	UpdatedAt     time.Time     `json:"updated_at"`
-	GameOver      gorm.DeletedAt `gorm:"index" json:"game_over"`
+	ID            int64
+	UUID          string
+	WhiteUserID   UserID
+	BlackUserID   UserID
+	PGN           string
+	Outcome       string
+	AccuracyWhite float64
+	AccuracyBlack float64
+	Stats         []byte
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 func (d *DkfDB) CreateChessGame(uuid string, whiteUserID, blackUserID UserID) (*ChessGame, error) {
 	chessGame := ChessGame{
 		UUID:        uuid,
 		WhiteUserID: whiteUserID,
-	
+		BlackUserID: blackUserID,
+		Outcome:     "*",
+	}
+	err := d.db.Create(&chessGame).Error
+	return &chessGame, err
+}
+
+func (d *DkfDB) GetChessGame(uuid string) (*ChessGame, error) {
+	out := ChessGame{}
+	err := d.db.First(&out, "uuid = ?", uuid).Error
+	return &out, err
+}
+
+// Save chessGame in the database
+func (g *ChessGame) Save(db *DkfDB) error {
+	return db.db.Save(g).Error
+}
+
+// DoSave chessGame in the database, ignore error
+func (g *ChessGame) DoSave(db *DkfDB) {
+	if err := g.Save(db); err != nil {
+		logrus.Error(err)
+	}
+}

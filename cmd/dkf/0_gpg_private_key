@@ -1,13 +1,14 @@
-gpg --full-generate-key
+-----BEGIN PGP PRIVATE KEY BLOCK-----
 
-
-gpg --armor --output public_key.asc --export your@email.com
-
-
-gpg --armor --output private_key.asc --export-secret-keys your@email.com
-
-
-gpg --output encrypted.gpg --encrypt --recipient your@email.com file.txt
-
-
-gpg --output decrypted.txt --decrypt encrypted.gpg
+lFgEY2tQKhYJKwYBBAHaRw8BAQdAY6JqTs8RvHuI6YrYCJbRUkXFCVrftYTjy3R9
+VxHQ/bYAAP4oda1ujNnYF6apTsg1aDavCahQIsvkfytmct7WxpfyrhH2tAh6ZXJv
+X2JvdIiQBBMWCAA4FiEEc6TlfaBL4KNLuY39qO5APNLipJ4FAmNrUCoCGwMFCwkI
+BwIGFQoJCAsCBBYCAwECHgECF4AACgkQqO5APNLipJ4z/AEAgCFfzObOSnX/RQcG
+6rFzRXLv7JhoNveFUxvHNGeI58cA/iI3EoTswibxKJ3h17Og1x9wwVK4IQIholu1
+69vabp0AnF0EY2tQKhIKKwYBBAGXVQEFAQEHQD1FYaYjWFtGeUWhvY/yFU/L3+Cw
+5FEvye+J6+tsfBwKAwEIBwAA/0JG+vkWQinmRYki8C5T+IEIT7fO3BT/m5dxyrr0
+fWCgEh6IeAQYFggAIBYhBHOk5X2gS+CjS7mN/ajuQDzS4qSeBQJja1AqAhsMAAoJ
+EKjuQDzS4qSeCO4BAMwoLwKeMwRPXkC1km0euRpHzWG3+KLVTBW5mD/Ic0MbAQDe
+69SdivM0G8/9ayWdzIDxlVzYqQAa4aDXfNz12144BA==
+=I1m3
+-----END PGP PRIVATE KEY BLOCK-----

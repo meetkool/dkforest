@@ -1,27 +1,45 @@
 package template
 
 import (
+	"dkforest/pkg/global"
+	"dkforest/pkg/web/clientFrontends"
+	hutils "dkforest/pkg/web/handlers/utils"
 	"fmt"
 	"html/template"
 	"io"
-	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"dkforest/bindata"
+	"dkforest/pkg/config"
+	"dkforest/pkg/database"
+	"dkforest/pkg/utils"
+	"github.com/labstack/echo"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"gopkg.in/yaml.v2"
 )
 
+// Templates ...
 type Templates struct {
-	templates *template.Template
-	funcMap   template.FuncMap
+	Templates map[string]*template.Template
+	funcMap   FuncMap
 	e         *echo.Echo
 }
 
-type TemplateData struct {
+// NewTemplateBuilder ...
+func NewTemplateBuilder(e *echo.Echo) *Templates {
+	t := new(Templates)
+	t.funcMap = make(FuncMap)
+	t.e = e
+	return t
+}
+
+// AddFn ...
+func (t *Templates) AddFn(name string, fn any) {
+	t.funcMap[name] = fn
+}
+
+type templateDataStruct struct {
 	Bundle          *i18n.Bundle
 	AcceptLanguage  string
 	Lang            string
@@ -46,70 +64,110 @@ type TemplateData struct {
 	Reverse         func(string, ...any) string
 }
 
-func NewTemplateBuilder(e *echo.Echo) *Templates {
-	t := &Templates{
-		funcMap: template.FuncMap{
-			"reverse": func(s string, args ...any) string {
-				return reverse(s, args...)
-			},
-		},
-	}
-	t.e = e
-	return t
-}
-
-func (t *Templates) AddFn(name string, fn any) {
-	t.funcMap[name] = fn
-}
-
+// Render render a template
 func (t *Templates) Render(w io.Writer, name string, data any, c echo.Context) error {
-	td := &TemplateData{
-		TmplName: name,
-		Data:     data,
-		VERSION:  config.Global.AppVersion.Get().Original(),
+	tmpl := t.Templates[name]
+
+	db := c.Get("database").(*database.DkfDB)
+	clientFE := c.Get("clientFE").(clientFrontends.ClientFrontend)
+
+	d := templateDataStruct{}
+	d.TmplName = name
+	d.Data = data
+	d.VERSION = config.Global.AppVersion.Get().Original()
+	if config.Development.IsTrue() {
+		d.VERSION += utils.FormatInt64(time.Now().Unix())
 	}
-	td.Reverse = c.Echo().Reverse
-	td.Bundle = c.Get("bundle").(*i18n.Bundle)
-	td.DB = c.Get("database").(*database.DkfDB)
-	td.CSRF = c.Get("csrf").(string)
-	td.AcceptLanguage = c.Get("accept-language").(string)
-	td.Lang = c.Get("lang").(string)
-	td.BaseKeywords = strings.Join(getBaseKeywords(), ", ")
-	td.Development = config.Development.Load()
-	td.AuthUser = c.Get("authUser").(*database.User)
-	td.VersionHTML = template.HTML(fmt.Sprintf("<!-- VERSION: %s -->", td.VERSION))
-	td.ShaHTML = template.HTML(fmt.Sprintf("<!-- SHA: %s -->", config.Global.Sha.Get()))
-	td.NullUsername = config.NullUsername
-	td.WallpaperImg = "/public/img/login_bg.jpg"
-	year, month, day := time.Now().UTC().Date()
-	td.IsAprilFool2023 = year == 2023 && month == time.April && day == 1
-	switch c.Get("clientFE").(clientFrontends.ClientFrontend) {
+	d.Reverse = c.Echo().Reverse // {{ call .Reverse "name" }} || {{ call .Reverse "name" "params" }}
+	d.Bundle = c.Get("bundle").(*i18n.Bundle)
+	//d.SHA = config.Global.Sha()
+	d.VersionHTML = template.HTML(fmt.Sprintf("<!-- VERSION: %s -->", config.Global.AppVersion.Get().Original()))
+	d.ShaHTML = template.HTML(fmt.Sprintf("<!-- SHA: %s -->", config.Global.Sha.Get()))
+	d.NullUsername = config.NullUsername
+	d.CSRF, _ = c.Get("csrf").(string)
+	d.DB = db
+	d.AcceptLanguage = c.Get("accept-language").(string)
+	d.Lang = c.Get("lang").(string)
+	d.BaseKeywords = strings.Join(getBaseKeywords(), ", ")
+	d.Development = config.Development.Load()
+	d.AuthUser = c.Get("authUser").(*database.User)
+	switch clientFE {
 	case clientFrontends.TorClientFE:
-		td.GitURL = config.DkfGitOnion
+		d.GitURL = config.DkfGitOnion
 	case clientFrontends.I2PClientFE:
-		td.GitURL = config.I2pGitOnion
+		d.GitURL = config.I2pGitOnion
 	}
 
-	if td.AuthUser != nil {
+	d.WallpaperImg = "/public/img/login_bg.jpg"
+	year, month, day := time.Now().UTC().Date()
+	d.IsAprilFool2023 = year == 2023 && month == time.April && day == 1
+	if strings.HasPrefix(c.QueryParam("redirect"), "/poker") {
+		d.WallpaperImg = "/public/img/login_bg_poker.jpg"
+	} else if month == time.December {
+		d.WallpaperImg = "/public/img/login_bg_1.jpg"
+	} else if d.IsAprilFool2023 {
+		d.WallpaperImg = "/public/img/login_bg_2.jpg"
+	}
+
+	if d.AuthUser != nil {
 		var sessionToken string
 		if authCookie, err := c.Cookie(hutils.AuthCookieName); err == nil {
 			sessionToken = authCookie.Value
 		}
-		td.InboxCount = global.GetUserNotificationCount(td.DB, td.AuthUser.ID, sessionToken)
+		d.InboxCount = global.GetUserNotificationCount(db, d.AuthUser.ID, sessionToken)
 	}
 
-	return t.templates.ExecuteTemplate(w, name, td)
+	return tmpl.ExecuteTemplate(w, "base", d)
 }
 
+// Keywords use for html meta tag, for SEO
 func getBaseKeywords() []string {
 	return []string{}
 }
 
+// BuildTemplates build all templates
 func (t *Templates) BuildTemplates() {
-	t.templates = template.Must(template.New("").Funcs(t.funcMap).ParseGlob("views/pages/*.gohtml"))
+	t.Templates = make(map[string]*template.Template)
+
+	bases := []string{
+		"views/pages/captcha-tmpl.gohtml",
+		"views/pages/pagination.gohtml",
+		"views/pages/anti-prefill.gohtml"}
+	buildTemplatesHelper("views/pages", t.Templates, "", bases, t.funcMap)
 }
 
-func reverse(s string, args ...any) string {
-	// implementation of the reverse function
+func buildTemplatesHelper(root string, tmpls map[string]*template.Template, prefix string, bases []string, fnsMap FuncMap) {
+	if _, err := bindata.AssetInfo(root + prefix + "/index.gohtml"); err == nil {
+		bases = append(bases, root+prefix+"/index.gohtml")
+	}
+	viewsPages, _ := bindata.AssetDir(root + prefix)
+	for _, page := range viewsPages {
+		// Recursively process folders
+		ext := filepath.Ext(page)
+		if !strings.HasSuffix(page, ".gohtml") {
+			buildTemplatesHelper(root, tmpls, prefix+"/"+page, bases, fnsMap)
+			continue
+		}
+		// Create template
+		page = strings.TrimSuffix(page, ".gohtml")
+		tmpl := New("_", bindata.Asset).Funcs(fnsMap)
+		parseBases(tmpl, bases)
+		tmpl = Must(tmpl.Parse(root + prefix + "/" + page + ext))
+		// Add to templates collection
+		tmplName := buildTemplateName(prefix, page)
+		tmpls[tmplName] = tmpl.Tmpl
+	}
 }
 
+func buildTemplateName(prefix, page string) string {
+	tmplName := strings.TrimPrefix(prefix, "/")
+	tmplName = strings.Join(strings.Split(tmplName, "/"), ".") + "." + page
+	tmplName = strings.TrimPrefix(tmplName, ".")
+	return tmplName
+}
+
+func parseBases(tmpl *Template, bases []string) {
+	for _, b := range bases {
+		tmpl = Must(tmpl.Parse(b))
+	}
+}

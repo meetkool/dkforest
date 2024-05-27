@@ -5,12 +5,6 @@
 <div class="container">
     <div class="row">
         <div class="col-8 offset-2 col-md-8 offset-md-2 col-sm-8 col-lg-6 offset-lg-3 col-xl-6 offset-xl-3">
-            {{ block "title" . }}
-                <h1>{{ t "PGP public key (step 2)" . }}</h1>
-            {{ end }}
-            {{ block "description" . }}
-                <p>{{ t "Enter the required information to validate your PGP public key." . }}</p>
-            {{ end }}
             {{ if .Data.Error }}
                 <div class="alert alert-danger">{{ .Data.Error }}</div>
             {{ end }}
@@ -26,29 +20,30 @@
                         <input type="hidden" name="gpg_mode" value="{{ .Data.GpgMode }}" />
                         {{ if .Data.GpgMode }}
                             <div class="form-group">
-                                <label for="signed_message">{{ t "Please sign the following message with your private key and send the signature" . }}</label>
+                                <label for="encrypted_message">{{ t "Please sign the following message with your private key and send the signature" . }}</label>
                                 <p><code>gpg --armor --detach-sign file</code></p>
                                 <pre class="code-select"><code>{{ .Data.ToBeSignedMessage }}</code></pre>
                                 <input name="to_be_signed_message" value="{{ .Data.ToBeSignedMessage }}" type="hidden" />
-                                <div class="form-group">
-                                    <label for="pgp_signed_message">{{ t "Message detached signature" . }}</label>
-                                    <textarea name="signed_message" id="pgp_signed_message" rows="10" class="form-control mono{{ if .Data.ErrorSignedMessage }} is-invalid{{ end }}" autofocus></textarea>
-                                    {{ if .Data.ErrorSignedMessage }}
-                                        <div class="invalid-feedback">{{ .Data.ErrorSignedMessage }}</div>
-                                    {{ end }}
-                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="signed_message">{{ t "Message detached signature" . }}</label>
+                                <textarea name="signed_message" id="signed_message" rows="10" class="form-control mono{{ if .Data.ErrorSignedMessage }} is-invalid{{ end }}" autofocus>{{ .Data.SignedMessage }}</textarea>
+                                {{ if .Data.ErrorSignedMessage }}
+                                    <div class="invalid-feedback">{{ .Data.ErrorSignedMessage }}</div>
+                                {{ end }}
                             </div>
                         {{ else }}
                             <div class="form-group">
-                                <label for="pgp_code">{{ t "Please decrypt the following message with your private key and send the required code" . }}</label>
+                                <label for="encrypted_message">{{ t "Please decrypt the following message with your private key and send the required code" . }}</label>
                                 <input name="encrypted_message" value="{{ .Data.EncryptedMessage }}" type="hidden" />
-                                <div class="form-group">
-                                    <label for="pgp_code">{{ t "Your decrypted code" . }}</label>
-                                    <input name="pgp_code" id="pgp_code" value="{{ .Data.Code }}" type="text" class="form-control{{ if .Data.ErrorCode }} is-invalid{{ end }}" autofocus placeholder="{{ t "Enter the decrypted code" . }}" />
-                                    {{ if .Data.ErrorCode }}
-                                        <div class="invalid-feedback">{{ .Data.ErrorCode }}</div>
-                                    {{ end }}
-                                </div>
+                                <pre class="code-select"><code>{{ .Data.EncryptedMessage }}</code></pre>
+                            </div>
+                            <div class="form-group">
+                                <label for="pgp_code">{{ t "Your decrypted code" . }}</label>
+                                <input name="pgp_code" id="pgp_code" value="{{ .Data.Code }}" type="text" class="form-control{{ if .Data.ErrorCode }} is-invalid{{ end }}" autofocus />
+                                {{ if .Data.ErrorCode }}
+                                    <div class="invalid-feedback">{{ .Data.ErrorCode }}</div>
+                                {{ end }}
                             </div>
                         {{ end }}
                         <div class="form-group">

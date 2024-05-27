@@ -4,14 +4,10 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
-type UserID = int64
-type SessionNotificationID = int64
-
 type Notification struct {
-	ID        UserID
+	ID        int64
 	Message   string
 	UserID    UserID
 	IsRead    bool
@@ -21,7 +17,7 @@ type Notification struct {
 }
 
 type SessionNotification struct {
-	ID           SessionNotificationID
+	ID           int64
 	Message      string
 	SessionToken string
 	IsRead       bool
@@ -29,48 +25,52 @@ type SessionNotification struct {
 	CreatedAt    time.Time
 }
 
-func (d *DkfDB) DeleteOldSessionNotifications() error {
-	return d.db.Delete(&SessionNotification{}, "created_at < date('now', '-90 Day')").Error
+func (d *DkfDB) DeleteOldSessionNotifications() {
+	if err := d.db.Delete(SessionNotification{}, "created_at < date('now', '-90 Day')").Error; err != nil {
+		logrus.Error(err)
+	}
 }
 
-func (d *DkfDB) GetUserNotifications(userID UserID) ([]Notification, error) {
-	var msgs []Notification
-	err := d.db.Table("notifications").
-		Order("id DESC").
+func (d *DkfDB) GetUserNotifications(userID UserID) (msgs []Notification, err error) {
+	err = d.db.Order("id DESC").
 		Limit(50).
 		Preload("User").
 		Find(&msgs, "user_id = ?", userID).Error
-	if err != nil {
-		return nil, err
+	var ids []int64
+	for _, msg := range msgs {
+		ids = append(ids, msg.ID)
 	}
-	return msgs, nil
+	now := time.Now()
+	if err := d.db.Model(&Notification{}).Where("id IN (?)", ids).
+		Updates(map[string]any{"is_read": true, "read_at": &now}).Error; err != nil {
+		logrus.Error(err)
+	}
+	return
 }
 
-func (d *DkfDB) markNotificationsRead(ids []int64, now *time.Time) error {
-	return d.db.Model(&Notification{}).
-		Where("id IN (?)", ids).
-		Updates(map[string]any{"is_read": true, "read_at": now}).Error
-}
-
-func (d *DkfDB) GetUserSessionNotifications(sessionToken string) ([]SessionNotification, error) {
-	var msgs []SessionNotification
-	err := d.db.Table("session_notifications").
-		Order("session_notifications.id DESC").
+func (d *DkfDB) GetUserSessionNotifications(sessionToken string) (msgs []SessionNotification, err error) {
+	err = d.db.Order("session_notifications.id DESC").
 		Limit(50).
-		Joins("INNER JOIN sessions ON sessions.token = session_notifications.session_token").
-		Joins("INNER JOIN users ON users.id = sessions.user_id").
-		Find(&msgs, "session_notifications.session_token = ?", sessionToken).Error
-	if err != nil {
-		return nil, err
+		Joins("INNER JOIN sessions s ON s.token = session_token").
+		Joins("INNER JOIN users u ON u.id = s.user_id").
+		Find(&msgs, "session_token = ?", sessionToken).Error
+	var ids []int64
+	for _, msg := range msgs {
+		ids = append(ids, msg.ID)
 	}
-	return msgs, nil
+	now := time.Now()
+	if err := d.db.Table("session_notifications").Where("id IN (?)", ids).
+		Updates(map[string]any{"is_read": true, "read_at": &now}).Error; err != nil {
+		logrus.Error(err)
+	}
+	return
 }
 
-func (d *DkfDB) DeleteNotificationByID(notificationID UserID) error {
+func (d *DkfDB) DeleteNotificationByID(notificationID int64) error {
 	return d.db.Where("id = ?", notificationID).Delete(&Notification{}).Error
 }
 
-func (d *DkfDB) DeleteSessionNotificationByID(sessionNotificationID SessionNotificationID) error {
+func (d *DkfDB) DeleteSessionNotificationByID(sessionNotificationID int64) error {
 	return d.db.Where("id = ?", sessionNotificationID).Delete(&SessionNotification{}).Error
 }
 
@@ -105,4 +105,3 @@ func (d *DkfDB) CreateSessionNotification(msg string, sessionToken string) {
 func (d *DkfDB) DeleteAllSessionNotifications(sessionToken string) error {
 	return d.db.Where("session_token = ?", sessionToken).Delete(&SessionNotification{}).Error
 }
-

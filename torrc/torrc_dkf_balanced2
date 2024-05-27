@@ -1,22 +1,11 @@
-# Set SOCKS port to a non-zero value to enable the SOCKS proxy
-SOCKSPort 9050
+SOCKSPort 0
+DataDirectory /var/lib/tor_dkf_fe2
+ControlPort 6667
 
-# Specify the data directory for Tor
-DataDirectory /var/lib/tor
-
-# Set the control port to listen for connections
-ControlPort 9051
-
-# Configure the hidden service
-HiddenServiceDir /var/lib/hidden_service/
+HiddenServiceDir /var/lib/hidden_service_dkf_fe2/
 HiddenServicePort 80 127.0.0.1:8080
-
-# Enable onion balance for the hidden service
 HiddenServiceOnionbalanceInstance 1
 HiddenServiceExportCircuitID haproxy
 
-# Disable exit relay to prevent the Tor relay from being used for exiting traffic
 ExitRelay 0
-
-# Enable hardware acceleration for better performance
 HardwareAccel 1

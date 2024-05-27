@@ -1,9 +1,6 @@
 package database
 
-import (
-	"github.com/sirupsen/logrus"
-	"github.com/jinzhu/gorm"
-)
+import "github.com/sirupsen/logrus"
 
 // Settings table, should always be one row
 type Settings struct {
@@ -16,4 +13,36 @@ type Settings struct {
 	ProtectHome          bool  // ...
 	HomeUsersList        bool  // ...
 	ForceLoginCaptcha    bool  // either or not people are forced to complete captcha at login
-	DownloadsEnabled     bool 
+	DownloadsEnabled     bool  // either or not people can download files
+	PokerWithdrawEnabled bool  // either or not poker withdraw is enabled
+	CaptchaDifficulty    int64 // captcha difficulty
+	PowEnabled           bool
+	MoneroPrice          float64
+}
+
+// GetSettings get the saved settings from the DB
+func (d *DkfDB) GetSettings() (out Settings) {
+	if err := d.db.Model(Settings{}).First(&out).Error; err != nil {
+		out.SignupEnabled = true
+		out.SilentSelfKick = true
+		out.ForumEnabled = true
+		out.MaybeAuthEnabled = true
+		out.DownloadsEnabled = true
+		out.CaptchaDifficulty = 2
+		out.MoneroPrice = 170.0
+		d.db.Create(&out)
+	}
+	return
+}
+
+// Save the settings to DB
+func (s *Settings) Save(db *DkfDB) error {
+	return db.db.Save(s).Error
+}
+
+// DoSave settings in the database, ignore error
+func (s *Settings) DoSave(db *DkfDB) {
+	if err := s.Save(db); err != nil {
+		logrus.Error(err)
+	}
+}

@@ -1,26 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delete Thread</title>
-    <!-- Add your CSS framework and other necessary styles here -->
-</head>
-<body>
-    <div class="container mb-5">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/forum">Forum</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Delete thread {{ .Data.Thread.Name }}</li>
-            </ol>
-        </nav>
+{{ define "content" }}
+<div class="container mb-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/forum">Forum</a></li>
+            <li class="breadcrumb-item active">Delete thread {{ .Data.Thread.Name }}</li>
+        </ol>
         <form method="post">
-            <input type="hidden" name="csrf" value="{{ .CSRF }}">
-            <button class="btn btn-danger" type="submit">Confirm Delete Thread</button>
+            <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+            <button class="btn btn-danger">Confirm Delete Thread</button>
             <a class="btn btn-secondary" href="/t/{{ .Data.Thread.UUID }}">Cancel</a>
         </form>
-    </div>
+    </nav>
+</div>
 
-    <!-- Add your JavaScript framework and other necessary scripts here -->
-</body>
-</html>
+{{ end }}

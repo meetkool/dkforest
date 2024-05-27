@@ -11,8 +11,8 @@ type EncryptedString string
 
 // Scan EncryptedString implements scanner interface
 func (s *EncryptedString) Scan(val any) error {
-	var err error
-	*s, err = decryptAESMaster(val.([]byte))
+	v, err := utils.DecryptAESMaster(val.([]byte))
+	*s = EncryptedString(v)
 	if err != nil {
 		logrus.Error("Failed to Scan EncryptedString : ", err)
 	}
@@ -21,7 +21,7 @@ func (s *EncryptedString) Scan(val any) error {
 
 // Value EncryptedString implements Valuer interface
 func (s EncryptedString) Value() (driver.Value, error) {
-	v, err := encryptAESMaster([]byte(s))
+	v, err := utils.EncryptAESMaster([]byte(s))
 	if err != nil {
 		logrus.Error("Failed to Value EncryptedString : ", err)
 	}
@@ -30,14 +30,4 @@ func (s EncryptedString) Value() (driver.Value, error) {
 
 func (s EncryptedString) IsEmpty() bool {
 	return s == ""
-}
-
-// decryptAESMaster is a helper function to decrypt the value using AES
-func decryptAESMaster(value []byte) (EncryptedString, error) {
-	return EncryptedString(utils.DecryptAESMaster(value)), nil
-}
-
-// encryptAESMaster is a helper function to encrypt the value using AES
-func encryptAESMaster(value []byte) ([]byte, error) {
-	return utils.EncryptAESMaster(value)
 }

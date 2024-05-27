@@ -210,6 +210,18 @@
     <input type="submit" class="btn btn-secondary" value="Reset tutorial ({{ .Data.ChatTutorial }})" />
 </form>
 
+<form method="post" class="d-inline">
+    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+    <input type="hidden" name="formName" value="disable_2fa" />
+    <input type="submit" class="btn btn-secondary" value="Disable 2fa ({{ if or .Data.User.GpgTwoFactorEnabled (ne .Data.User.TwoFactorSecret "") }}on{{ else }}off{{ end }})" />
+</form>
+
+<form method="post" class="d-inline">
+    <input type="hidden" name="csrf" value="{{ .CSRF }}" />
+    <input type="hidden" name="formName" value="reset_login_attempts" />
+    <input type="submit" class="btn btn-secondary" value="Reset login attempts ({{ .Data.User.LoginAttempts }})" />
+</form>
+
 <a href="/u/{{ .Data.Username }}" class="btn btn-secondary">Public profile</a>
 <a href="/admin/users/{{ .Data.User.ID }}/security-logs" class="btn btn-secondary">Security logs</a>
 

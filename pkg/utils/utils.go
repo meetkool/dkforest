@@ -448,6 +448,21 @@ func getGCMKeyBytes(keyBytes []byte) (cipher.AEAD, int, error) {
 	return gcm, nonceSize, nil
 }
 
+func GetKeyExpiredTime(pkey string) (*time.Time, bool) {
+	e := GetEntityFromPKey(pkey)
+	if e == nil {
+		return nil, false
+	}
+	i := e.PrimaryIdentity()
+	sig := i.SelfSignature
+	if sig.KeyLifetimeSecs == nil || *sig.KeyLifetimeSecs == 0 {
+		return nil, false
+	}
+	expiredTime := e.PrimaryKey.CreationTime.Add(time.Duration(*sig.KeyLifetimeSecs) * time.Second)
+	expired := e.PrimaryKey.KeyExpired(sig, time.Now())
+	return &expiredTime, expired
+}
+
 func GetKeyFingerprint(pkey string) string {
 	if e := GetEntityFromPKey(pkey); e != nil {
 		return FormatPgPFingerprint(e.PrimaryKey.Fingerprint)
@@ -539,6 +554,9 @@ func GeneratePgpEncryptedMessage(pkey, msg string) (string, error) {
 	armoredWriter, _ := armor.Encode(buffer, "PGP MESSAGE", nil)
 	w, err := openpgp.Encrypt(armoredWriter, []*openpgp.Entity{e}, nil, nil, nil)
 	if err != nil {
+		if e.PrimaryKey.KeyExpired(e.PrimaryIdentity().SelfSignature, time.Now()) { // Primary key has expired
+			return "", errors.New("PGP key has expired")
+		}
 		// openpgp: invalid argument: cannot encrypt a message to key id xxx because it has no encryption keys
 		// Likely your key is expired or had expired subkeys. (https://github.com/keybase/keybase-issues/issues/2072#issuecomment-183702559)
 		logrus.Error(err)

@@ -2102,9 +2102,9 @@ func buildHelpHtml() (html string) {
 	html += `
 <style>
 .heart::after { content: '♥'; display: block; }
-.diamond::after { content: '♥'; display: block; }
-.spade::after { content: '♥'; display: block; }
-.club::after { content: '♥'; display: block; }
+.diamond::after { content: '♦'; display: block; }
+.spade::after { content: '♠'; display: block; }
+.club::after { content: '♣'; display: block; }
 .help { position: absolute; z-index: 999999; left: 50px; top: 12px; }
 .help-content { display: none; }
 .help:hover .help-content { display: block; }
@@ -2525,8 +2525,8 @@ body {
   background-color: #4caf50;
 }
 @keyframes progressBarAnimation {
-  from { width: 100%; }
-  to   { width: 0;    }
+  from { width: 100%; transform: translateZ(0); }
+  to   { width: 0;    transform: translateZ(0); }
 }
 
 </style>`

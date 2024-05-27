@@ -16,17 +16,31 @@
         <div class="alert alert-danger">{{ .Data.Error }}</div>
     {{ end }}
 
-    <h1 class="sr-only">{{ if .Data.IsEdit }}{{ t "Edit gist" . }}{{ else }}{{ t "Create gist" . }}{{ end }}</h1>
-
     <form method="post">
         <input type="hidden" name="csrf" value="{{ .CSRF }}" />
         <div class="form-group">
-            <label for="name">{{ t "Gist name (3-50 characters, a-zA-Z0-9_.)" . }}</label>
-            <input class="form-control{{ if .Data.ErrorName }} is-invalid{{ end }}" type="text" name="name" id="name" placeholder="Name" value="{{ .Data.Name }}" required minlength="3" maxlength="50" />
+            <label for="name">{{ t "Gist name 3-50 characters [a-zA-Z0-9_.]" . }}</label>
+            <input class="form-control{{ if .Data.ErrorName }} is-invalid{{ end }}" type="text" name="name" id="name" placeholder="Name" value="{{ .Data.Name }}" />
             {{ if .Data.ErrorName }}
                 <div class="invalid-feedback">{{ .Data.ErrorName }}</div>
             {{ end }}
         </div>
         <div class="form-group">
-            <label for="password">{{ t "Optional password (5-50 characters, a-zA-Z0-9_.)" . }}</label>
-            <input class="form-control" type="password" name="
+            <label for="password">{{ t "Optional password" . }}</label>
+            <input class="form-control" type="password" name="password" id="password" placeholder="Password (empty for no password)" value="{{ .Data.Password }}" />
+        </div>
+        <div class="form-group">
+            <label for="content">{{ t "Content" . }}</label>
+            <textarea class="form-control" name="content" id="content" rows="10">{{ .Data.Content }}</textarea>
+        </div>
+        <div class="form-group">
+            {{ if .Data.IsEdit }}
+                <button class="btn btn-primary btn-block">{{ t "Edit gist" . }}</button>
+            {{ else }}
+                <button class="btn btn-primary btn-block">{{ t "Create gist" . }}</button>
+            {{ end }}
+        </div>
+    </form>
+</div>
+
+{{ end }}

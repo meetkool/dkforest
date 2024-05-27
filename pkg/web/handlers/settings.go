@@ -66,6 +66,7 @@ func SettingsChatHandler(c echo.Context) error {
 	data.NotifyChessMove = authUser.NotifyChessMove
 	data.UseStream = authUser.UseStream
 	data.UseStreamMenu = authUser.UseStreamMenu
+	data.DisplayAliveIndicator = authUser.DisplayAliveIndicator
 	data.ConfirmExternalLinks = authUser.ConfirmExternalLinks
 	data.ChessSoundsEnabled = authUser.ChessSoundsEnabled
 	data.PokerSoundsEnabled = authUser.PokerSoundsEnabled
@@ -116,6 +117,7 @@ func changeSettingsForm(c echo.Context, data settingsChatData) error {
 	data.NotifyChessMove = utils.DoParseBool(c.Request().PostFormValue("notify_chess_move"))
 	data.UseStream = utils.DoParseBool(c.Request().PostFormValue("use_stream"))
 	data.UseStreamMenu = utils.DoParseBool(c.Request().PostFormValue("use_stream_menu"))
+	data.DisplayAliveIndicator = utils.DoParseBool(c.Request().PostFormValue("display_alive_indicator"))
 	data.ConfirmExternalLinks = utils.DoParseBool(c.Request().PostFormValue("confirm_external_links"))
 	data.ChessSoundsEnabled = utils.DoParseBool(c.Request().PostFormValue("chess_sounds_enabled"))
 	data.PokerSoundsEnabled = utils.DoParseBool(c.Request().PostFormValue("poker_sounds_enabled"))
@@ -164,6 +166,7 @@ func changeSettingsForm(c echo.Context, data settingsChatData) error {
 	authUser.NotifyChessMove = data.NotifyChessMove
 	authUser.UseStream = data.UseStream
 	authUser.UseStreamMenu = data.UseStreamMenu
+	authUser.DisplayAliveIndicator = data.DisplayAliveIndicator
 	authUser.ConfirmExternalLinks = data.ConfirmExternalLinks
 	authUser.ChessSoundsEnabled = data.ChessSoundsEnabled
 	authUser.PokerSoundsEnabled = data.PokerSoundsEnabled

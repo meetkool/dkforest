@@ -637,7 +637,14 @@ func AdminEditUserHandler(c echo.Context) error {
 	}
 
 	formName := c.Request().PostFormValue("formName")
-	if formName == "reset_tutorial" {
+	if formName == "reset_login_attempts" {
+		user.ResetLoginAttempts(db)
+		return c.Redirect(http.StatusFound, "/admin/users/"+userID.String()+"/edit")
+	} else if formName == "disable_2fa" {
+		user.DisableTotp2FA(db)
+		user.DisableGpg2FA(db)
+		return c.Redirect(http.StatusFound, "/admin/users/"+userID.String()+"/edit")
+	} else if formName == "reset_tutorial" {
 		user.ResetTutorial(db)
 		return c.Redirect(http.StatusFound, "/admin/users/"+userID.String()+"/edit")
 	}
